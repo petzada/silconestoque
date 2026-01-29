@@ -258,7 +258,7 @@ export default function ProductsPage() {
   const validateCSV = useCallback(async (file: File) => {
     setIsValidating(true);
     setValidationResult(null);
-    
+
     try {
       const buffer = await file.arrayBuffer();
       let text: string;
@@ -480,17 +480,17 @@ export default function ProductsPage() {
       </div>
 
       <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-hidden">
+          <Table className="table-fixed w-full">
             <TableHeader className="bg-slate-50">
               <TableRow className="hover:bg-transparent border-slate-100">
-                <TableHead className="py-3 px-6 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[120px]">SKU</TableHead>
+                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[130px]">SKU</TableHead>
                 <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Nome</TableHead>
-                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Setor</TableHead>
-                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">Saldo</TableHead>
-                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Custo Unit.</TableHead>
-                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">Status</TableHead>
-                <TableHead className="py-3 px-6 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Gerir</TableHead>
+                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[140px]">Setor</TableHead>
+                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[80px]">Saldo</TableHead>
+                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[100px]">Custo</TableHead>
+                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[80px]">Status</TableHead>
+                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[110px]">Gerir</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -498,11 +498,11 @@ export default function ProductsPage() {
                 const s = getStatus(p);
                 return (
                   <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
-                    <TableCell className="px-6 py-2.5">
+                    <TableCell className="px-4 py-2.5">
                       <span className="font-mono text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">{p.sku_code || '---'}</span>
                     </TableCell>
-                    <TableCell className="px-4 py-2.5 max-w-[300px]">
-                      <span className="font-bold text-slate-800 text-sm block truncate" title={p.name}>{p.name}</span>
+                    <TableCell className="px-4 py-2.5">
+                      <span className="font-bold text-slate-800 text-sm block overflow-hidden text-ellipsis whitespace-nowrap" title={p.name}>{p.name}</span>
                     </TableCell>
                     <TableCell className="px-4 py-2.5 text-xs font-semibold text-slate-500">{p.sector?.name}</TableCell>
                     <TableCell className="px-4 py-2.5 text-center">
@@ -698,9 +698,9 @@ export default function ProductsPage() {
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
-              <Button 
-                className="bg-emerald-600 hover:bg-emerald-700 h-10 px-8 text-xs font-bold rounded-lg" 
-                onClick={handleImportValidRows} 
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 h-10 px-8 text-xs font-bold rounded-lg"
+                onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
                 {isImporting ? 'Importando...' : `Importar ${validationResult?.valid.length || 0} Válidos`}

@@ -232,30 +232,30 @@ export default function MovementsPage() {
       </div>
 
       <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-hidden">
+          <Table className="table-fixed w-full">
             <TableHeader className="bg-slate-50">
               <TableRow className="border-slate-100 hover:bg-transparent">
-                <TableHead className="py-3 px-6 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[150px]">Data/Hora</TableHead>
+                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[110px]">Data/Hora</TableHead>
                 <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Produto</TableHead>
-                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">Qtd</TableHead>
-                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Envolvido</TableHead>
-                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Unit.</TableHead>
-                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Total</TableHead>
-                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">NF</TableHead>
-                <TableHead className="py-3 px-6 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">Ações</TableHead>
+                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[70px]">Qtd</TableHead>
+                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[150px]">Envolvido</TableHead>
+                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[80px]">Unit.</TableHead>
+                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[90px]">Total</TableHead>
+                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[80px]">NF</TableHead>
+                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[70px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredMovements.map((m) => (
                 <TableRow key={m.id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
-                  <TableCell className="px-6 py-2.5 whitespace-nowrap text-[11px] font-bold text-slate-400">
+                  <TableCell className="px-4 py-2.5 whitespace-nowrap text-[11px] font-bold text-slate-400">
                     {format(new Date(m.created_at), 'dd/MM/yy HH:mm')}
                   </TableCell>
-                  <TableCell className="px-4 py-2.5 max-w-[250px]">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-800 text-sm block truncate" title={m.product?.name}>{m.product?.name}</span>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider ">{m.product?.sector?.name}</span>
+                  <TableCell className="px-4 py-2.5">
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="font-bold text-slate-800 text-sm overflow-hidden text-ellipsis whitespace-nowrap" title={m.product?.name}>{m.product?.name}</span>
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">{m.product?.sector?.name}</span>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-2.5 text-center">
