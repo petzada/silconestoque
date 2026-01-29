@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,10 +42,15 @@ import {
   TrendingDown,
   Trash2,
   AlertTriangle,
+  FileDown,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import type { Product, Sector, ProductFormData, PriceHistory } from '@/lib/types';
 
 const UNIT_OPTIONS = [
@@ -73,6 +78,26 @@ const initialFormData: ProductFormData = {
   cost_price: undefined,
 };
 
+interface CSVValidRow {
+  row: Record<string, string>;
+  sectorId: string;
+  initialQty: number;
+  costPrice: number | null;
+  validUnit: string;
+}
+
+interface CSVErrorRow {
+  line: number;
+  name: string;
+  sector: string;
+  reason: string;
+}
+
+interface CSVValidationResult {
+  valid: CSVValidRow[];
+  errors: CSVErrorRow[];
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
@@ -91,6 +116,8 @@ export default function ProductsPage() {
   const [filterSector, setFilterSector] = useState<string>('all');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -164,11 +191,8 @@ export default function ProductsPage() {
     if (!productToDelete) return;
 
     try {
-      // Primeiro deleta os price_history
       await supabase.from('price_history').delete().eq('product_id', productToDelete.id);
-      // Depois deleta os movements
       await supabase.from('movements').delete().eq('product_id', productToDelete.id);
-      // Por fim deleta o produto
       const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
 
       if (error) throw error;
@@ -231,37 +255,43 @@ export default function ProductsPage() {
     }
   };
 
-  // CSV Import Handler - agora com estoque inicial usando is_initial_import
-  const handleImportCSV = async () => {
-    if (!importFile) {
-      toast.error('Selecione um arquivo CSV');
-      return;
-    }
-
-    setIsImporting(true);
+  const validateCSV = useCallback(async (file: File) => {
+    setIsValidating(true);
+    setValidationResult(null);
+    
     try {
-      const text = await importFile.text();
+      const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
       const header = lines[0].split(';').map(h => h.trim().toLowerCase());
 
       const requiredCols = ['nome', 'setor', 'unidade'];
       const missingCols = requiredCols.filter(col => !header.includes(col));
       if (missingCols.length > 0) {
-        throw new Error(`Colunas obrigatórias faltando: ${missingCols.join(', ')}`);
+        toast.error(`Colunas obrigatórias faltando: ${missingCols.join(', ')}`);
+        setIsValidating(false);
+        return;
       }
 
-      const sectorMap = new Map(sectors.map(s => [s.name.toLowerCase(), s.id]));
-      let imported = 0;
-      let errors = 0;
+      const sectorMap = new Map(sectors.map(s => [s.name.toLowerCase().trim(), s.id]));
+      const valid: CSVValidRow[] = [];
+      const errors: CSVErrorRow[] = [];
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(';').map(v => v.trim());
         const row: Record<string, string> = {};
         header.forEach((h, idx) => { row[h] = values[idx] || ''; });
 
-        const sectorId = sectorMap.get(row.setor?.toLowerCase());
-        if (!row.nome || !sectorId) {
-          errors++;
+        const name = row.nome?.trim() || '';
+        const sectorName = row.setor?.trim() || '';
+        const sectorId = sectorMap.get(sectorName.toLowerCase());
+
+        if (!name) {
+          errors.push({ line: i + 1, name: '(vazio)', sector: sectorName, reason: 'Nome do produto vazio' });
+          continue;
+        }
+
+        if (!sectorId) {
+          errors.push({ line: i + 1, name, sector: sectorName || '(vazio)', reason: `Setor "${sectorName}" não existe` });
           continue;
         }
 
@@ -270,27 +300,96 @@ export default function ProductsPage() {
         const initialQty = parseInt(row.estoque || row.quantidade || row.qty || '0') || 0;
         const costPrice = parseFloat(row.custo || row.cost_price || '0') || null;
 
+        valid.push({ row, sectorId, initialQty, costPrice, validUnit });
+      }
+
+      setValidationResult({ valid, errors });
+    } catch {
+      toast.error('Erro ao processar arquivo CSV');
+    } finally {
+      setIsValidating(false);
+    }
+  }, [sectors]);
+
+  const handleFileSelect = (file: File | null) => {
+    setImportFile(file);
+    setValidationResult(null);
+    if (file) {
+      validateCSV(file);
+    }
+  };
+
+  const exportErrorsPDF = () => {
+    if (!validationResult || validationResult.errors.length === 0) return;
+
+    const doc = new jsPDF();
+    const now = format(new Date(), 'dd/MM/yyyy HH:mm');
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SILCON AMBIENTAL', 14, 20);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Relatório de Erros - Importação CSV', 14, 28);
+    doc.setFontSize(9);
+    doc.text(`Data: ${now}`, 14, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Total de linhas: ${(validationResult.valid.length + validationResult.errors.length)}`, 14, 45);
+    doc.text(`Válidas: ${validationResult.valid.length}`, 14, 51);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Com erro: ${validationResult.errors.length}`, 14, 57);
+    doc.setTextColor(0, 0, 0);
+
+    autoTable(doc, {
+      startY: 65,
+      head: [['Linha', 'Produto', 'Setor', 'Erro']],
+      body: validationResult.errors.map(e => [
+        e.line.toString(),
+        e.name.substring(0, 30) + (e.name.length > 30 ? '...' : ''),
+        e.sector.substring(0, 20) + (e.sector.length > 20 ? '...' : ''),
+        e.reason
+      ]),
+      headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    doc.save(`erros_importacao_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
+    toast.success('PDF de erros exportado');
+  };
+
+  const handleImportValidRows = async () => {
+    if (!validationResult || validationResult.valid.length === 0) {
+      toast.error('Nenhum item válido para importar');
+      return;
+    }
+
+    setIsImporting(true);
+    let imported = 0;
+    let errors = 0;
+
+    try {
+      for (const item of validationResult.valid) {
         try {
-          // Criar produto com current_qty = 0
           const { data: newProduct } = await supabase.from('products').insert({
-            name: row.nome,
-            sku_code: row.sku || row.codigo || null,
-            unit: validUnit,
-            sector_id: sectorId,
+            name: item.row.nome,
+            sku_code: item.row.sku || item.row.codigo || null,
+            unit: item.validUnit,
+            sector_id: item.sectorId,
             current_qty: 0,
-            min_stock: parseInt(row.minimo || row.min_stock || '0') || 0,
-            max_stock: parseInt(row.maximo || row.max_stock || '0') || 0,
-            cost_price: costPrice,
+            min_stock: parseInt(item.row.minimo || item.row.min_stock || '0') || 0,
+            max_stock: parseInt(item.row.maximo || item.row.max_stock || '0') || 0,
+            cost_price: item.costPrice,
           }).select().single();
 
-          // Se tem quantidade inicial, criar movimentação com is_initial_import = true
-          if (initialQty > 0 && newProduct) {
+          if (item.initialQty > 0 && newProduct) {
             await supabase.from('movements').insert({
               product_id: newProduct.id,
               type: 'IN',
-              quantity: initialQty,
+              quantity: item.initialQty,
               entity_name: 'Importação CSV',
-              unit_value: costPrice,
+              unit_value: item.costPrice,
               is_initial_import: true,
             });
           }
@@ -304,14 +403,21 @@ export default function ProductsPage() {
       toast.success(`Importados: ${imported} | Erros: ${errors}`);
       setIsImportDialogOpen(false);
       setImportFile(null);
+      setValidationResult(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchData();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao processar CSV';
-      toast.error(message);
+    } catch {
+      toast.error('Erro ao importar produtos');
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleCloseImportDialog = () => {
+    setIsImportDialogOpen(false);
+    setImportFile(null);
+    setValidationResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const filteredProducts = products.filter((p) => {
@@ -398,16 +504,16 @@ export default function ProductsPage() {
                         <span className="text-[9px] uppercase font-bold text-slate-400 mt-0.5">{p.unit}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-2.5 text-right font-bold text-slate-900 text-sm">{formatCurrency(p.cost_price)}</TableCell>
-                    <TableCell className="px-4 py-2.5 text-center">
-                      <Badge className={cn("rounded-md px-2 py-0.5 font-black text-[9px] text-white border-none", s.color)}>
-                        {s.label}
-                      </Badge>
+                    <TableCell className="px-4 py-2.5 text-right">
+                      <span className="font-bold text-slate-700 text-sm">{formatCurrency(p.cost_price)}</span>
                     </TableCell>
-                    <TableCell className="px-6 py-2.5 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="Histórico de Preços" onClick={() => handleOpenHistory(p)}>
-                          <History className="h-4 w-4" />
+                    <TableCell className="px-4 py-2.5 text-center">
+                      <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none", s.color)}>{s.label}</Badge>
+                    </TableCell>
+                    <TableCell className="px-6 py-2.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => handleOpenHistory(p)}>
+                          <History className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => handleOpenDialog(p)}>
                           <Pencil className="h-3.5 w-3.5" />
@@ -425,7 +531,7 @@ export default function ProductsPage() {
         </div>
       </Card>
 
-      {/* Dialog: Criar/Editar Produto */}
+      {/* Dialog: Novo/Editar Produto */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
           <DialogHeader><DialogTitle className="text-lg font-bold flex items-center gap-2">
@@ -492,9 +598,9 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Importar CSV */}
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
+      {/* Dialog: Importar CSV com Validação */}
+      <Dialog open={isImportDialogOpen} onOpenChange={handleCloseImportDialog}>
+        <DialogContent className={cn("rounded-2xl p-6 shadow-2xl border-none", validationResult ? "max-w-2xl" : "max-w-md")}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <Upload className="h-4 w-4 text-blue-600" /> Importar Produtos via CSV
@@ -509,7 +615,7 @@ export default function ProductsPage() {
                 ref={fileInputRef}
                 type="file"
                 accept=".csv"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
                 className="hidden"
                 id="csv-upload"
               />
@@ -519,14 +625,78 @@ export default function ProductsPage() {
                 <p className="text-[10px] text-slate-400 mt-1">Formato CSV separado por ponto e vírgula (;)</p>
               </label>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-[10px] font-bold text-blue-700">ℹ️ Estoque Inicial</p>
-              <p className="text-[10px] text-blue-600 mt-1">Se a coluna "Estoque" ou "Quantidade" estiver preenchida, será criada uma movimentação de entrada que NÃO afeta os gráficos do Dashboard.</p>
-            </div>
+
+            {isValidating && (
+              <div className="text-center py-4">
+                <p className="text-sm font-bold text-slate-500 animate-pulse">Validando arquivo...</p>
+              </div>
+            )}
+
+            {validationResult && (
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-1 p-3 bg-emerald-50 rounded-lg flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-700">{validationResult.valid.length} válidos</p>
+                      <p className="text-[10px] text-emerald-600">Prontos para importar</p>
+                    </div>
+                  </div>
+                  <div className="flex-1 p-3 bg-red-50 rounded-lg flex items-center gap-2">
+                    <XCircle className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-bold text-red-700">{validationResult.errors.length} com erro</p>
+                      <p className="text-[10px] text-red-600">Verifique abaixo</p>
+                    </div>
+                  </div>
+                </div>
+
+                {validationResult.errors.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-red-50 px-3 py-2 flex items-center justify-between">
+                      <span className="text-xs font-bold text-red-700">Linhas com Erro</span>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-red-700 hover:bg-red-100" onClick={exportErrorsPDF}>
+                        <FileDown className="h-3 w-3 mr-1" /> Exportar PDF
+                      </Button>
+                    </div>
+                    <div className="max-h-[200px] overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="py-2 px-3 text-[10px] font-bold w-[60px]">Linha</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px] font-bold">Produto</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px] font-bold">Setor</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px] font-bold">Erro</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {validationResult.errors.slice(0, 20).map((e, i) => (
+                            <TableRow key={i} className="border-slate-100">
+                              <TableCell className="py-1.5 px-3 text-xs font-mono">{e.line}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs font-medium truncate max-w-[120px]">{e.name}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-slate-500">{e.sector}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-red-600 font-medium">{e.reason}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {validationResult.errors.length > 20 && (
+                        <p className="text-center text-[10px] text-slate-400 py-2">... e mais {validationResult.errors.length - 20} erros. Exporte o PDF para ver todos.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => { setIsImportDialogOpen(false); setImportFile(null); }}>Cancelar</Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 h-10 px-8 text-xs font-bold rounded-lg" onClick={handleImportCSV} disabled={isImporting || !importFile}>
-                {isImporting ? 'Processando...' : 'Importar'}
+              <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-700 h-10 px-8 text-xs font-bold rounded-lg" 
+                onClick={handleImportValidRows} 
+                disabled={isImporting || !validationResult || validationResult.valid.length === 0}
+              >
+                {isImporting ? 'Importando...' : `Importar ${validationResult?.valid.length || 0} Válidos`}
               </Button>
             </div>
           </div>
