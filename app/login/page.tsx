@@ -13,6 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, AlertCircle } from 'lucide-react';
 
+const FALLBACK_PASSWORD = process.env.NEXT_PUBLIC_FALLBACK_PASSWORD || '';
+
 export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,15 +27,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Verify password against database
       const { data, error: dbError } = await supabase
         .from('config')
         .select('access_password')
         .single();
 
       if (dbError) {
-        // If config table doesn't exist or is empty, use fallback password
-        if (password === 'silcon2024') {
+        if (FALLBACK_PASSWORD && password === FALLBACK_PASSWORD) {
           login();
           return;
         }
@@ -45,10 +45,8 @@ export default function LoginPage() {
       } else {
         setError('Senha incorreta. Tente novamente.');
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      // Fallback for when Supabase is not configured
-      if (password === 'silcon2024') {
+    } catch {
+      if (FALLBACK_PASSWORD && password === FALLBACK_PASSWORD) {
         login();
       } else {
         setError('Senha incorreta. Tente novamente.');
