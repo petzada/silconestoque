@@ -252,9 +252,9 @@ export default function MovementsPage() {
                   <TableCell className="px-6 py-2.5 whitespace-nowrap text-[11px] font-bold text-slate-400">
                     {format(new Date(m.created_at), 'dd/MM/yy HH:mm')}
                   </TableCell>
-                  <TableCell className="px-4 py-2.5">
+                  <TableCell className="px-4 py-2.5 max-w-[250px]">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-800 text-sm whitespace-nowrap">{m.product?.name}</span>
+                      <span className="font-bold text-slate-800 text-sm block truncate" title={m.product?.name}>{m.product?.name}</span>
                       <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider ">{m.product?.sector?.name}</span>
                     </div>
                   </TableCell>

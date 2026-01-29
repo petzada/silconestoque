@@ -260,7 +260,14 @@ export default function ProductsPage() {
     setValidationResult(null);
     
     try {
-      const text = await file.text();
+      const buffer = await file.arrayBuffer();
+      let text: string;
+      try {
+        const decoder = new TextDecoder('utf-8', { fatal: true });
+        text = decoder.decode(buffer);
+      } catch {
+        text = new TextDecoder('windows-1252').decode(buffer);
+      }
       const lines = text.split('\n').filter(line => line.trim());
       const header = lines[0].split(';').map(h => h.trim().toLowerCase());
 
@@ -494,8 +501,8 @@ export default function ProductsPage() {
                     <TableCell className="px-6 py-2.5">
                       <span className="font-mono text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">{p.sku_code || '---'}</span>
                     </TableCell>
-                    <TableCell className="px-4 py-2.5">
-                      <span className="font-bold text-slate-800 text-sm whitespace-nowrap">{p.name}</span>
+                    <TableCell className="px-4 py-2.5 max-w-[300px]">
+                      <span className="font-bold text-slate-800 text-sm block truncate" title={p.name}>{p.name}</span>
                     </TableCell>
                     <TableCell className="px-4 py-2.5 text-xs font-semibold text-slate-500">{p.sector?.name}</TableCell>
                     <TableCell className="px-4 py-2.5 text-center">
