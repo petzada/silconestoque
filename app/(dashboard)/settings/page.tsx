@@ -17,13 +17,13 @@ export default function SettingsPage() {
     try {
       const { data: products, error: prodError } = await supabase
         .from('products')
-        .select('id, name, current_qty');
+        .select('id, name, current_qty, cost_price');
 
       if (prodError) throw prodError;
 
       const { data: movements, error: movError } = await supabase
         .from('movements')
-        .select('product_id, type, quantity');
+        .select('product_id, type, quantity, created_at, unit_value');
 
       if (movError) throw movError;
 
