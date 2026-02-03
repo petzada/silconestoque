@@ -7,6 +7,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================
 -- SECTORS TABLE
 -- =====================
+-- =====================
+-- SECTORS TABLE
+-- =====================
 CREATE TABLE IF NOT EXISTS sectors (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT UNIQUE NOT NULL,
@@ -71,6 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_movements_created ON movements(created_at DESC);
 CREATE TABLE IF NOT EXISTS price_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  movement_id UUID REFERENCES movements(id) ON DELETE CASCADE, -- Link to movement for auto-cleanup
   old_price DECIMAL(10, 2),
   new_price DECIMAL(10, 2) NOT NULL,
   invoice_number TEXT,
@@ -78,6 +82,7 @@ CREATE TABLE IF NOT EXISTS price_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_price_history_product ON price_history(product_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_movement ON price_history(movement_id);
 CREATE INDEX IF NOT EXISTS idx_price_history_created ON price_history(created_at DESC);
 
 -- =====================
@@ -135,8 +140,8 @@ BEGIN
   IF NEW.type = 'IN' AND NEW.unit_value IS NOT NULL AND NEW.invoice_number IS NOT NULL THEN
     SELECT cost_price INTO old_cost FROM products WHERE id = NEW.product_id;
     IF old_cost IS NULL OR old_cost != NEW.unit_value THEN
-      INSERT INTO price_history (product_id, old_price, new_price, invoice_number)
-      VALUES (NEW.product_id, old_cost, NEW.unit_value, NEW.invoice_number);
+      INSERT INTO price_history (product_id, movement_id, old_price, new_price, invoice_number)
+      VALUES (NEW.product_id, NEW.id, old_cost, NEW.unit_value, NEW.invoice_number);
 
       UPDATE products
       SET cost_price = NEW.unit_value,

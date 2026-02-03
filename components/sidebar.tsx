@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,11 @@ const navItems = [
     title: 'Pedidos de Compra',
     href: '/purchase-orders',
     icon: ShoppingCart,
+  },
+  {
+    title: 'Ajustes',
+    href: '/settings',
+    icon: Settings,
   },
 ];
 
