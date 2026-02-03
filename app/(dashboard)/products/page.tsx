@@ -258,7 +258,7 @@ export default function ProductsPage() {
   const validateCSV = useCallback(async (file: File) => {
     setIsValidating(true);
     setValidationResult(null);
-    
+
     try {
       const buffer = await file.arrayBuffer();
       let text: string;
@@ -436,7 +436,7 @@ export default function ProductsPage() {
   const getStatus = (p: Product) => {
     if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-red-500' };
     if (p.current_qty <= p.min_stock) return { label: 'CRÍTICO', color: 'bg-amber-600' };
-    return { label: 'ESTÁVEL', color: 'bg-emerald-600' };
+    return { label: 'ESTÁVEL', color: 'bg-[#387146]' };
   };
 
   if (isLoading) return <div className="text-center py-20 text-slate-400 font-bold">Carregando catálogo...</div>;
@@ -452,7 +452,7 @@ export default function ProductsPage() {
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
+          <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
             <Plus className="h-3.5 w-3.5 mr-2" /> Novo Produto
           </Button>
         </div>
@@ -581,7 +581,7 @@ export default function ProductsPage() {
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={handleCloseDialog}>Cancelar</Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 h-10 px-8 rounded-lg font-bold" onClick={handleSave} disabled={isSaving}>Finalizar</Button>
+              <Button className="bg-[#387146] hover:bg-[#2b5836] h-10 px-8 rounded-lg font-bold" onClick={handleSave} disabled={isSaving}>Finalizar</Button>
             </div>
           </div>
         </DialogContent>
@@ -698,9 +698,9 @@ export default function ProductsPage() {
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
-              <Button 
-                className="bg-emerald-600 hover:bg-emerald-700 h-10 px-8 text-xs font-bold rounded-lg" 
-                onClick={handleImportValidRows} 
+              <Button
+                className="bg-[#387146] hover:bg-[#2b5836] h-10 px-8 text-xs font-bold rounded-lg"
+                onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
                 {isImporting ? 'Importando...' : `Importar ${validationResult?.valid.length || 0} Válidos`}

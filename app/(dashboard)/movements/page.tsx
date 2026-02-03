@@ -203,7 +203,7 @@ export default function MovementsPage() {
           <p className="text-xs text-slate-500 font-medium">Histórico auditável de entradas e saídas.</p>
         </div>
         <div className="flex gap-2">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 h-9 text-xs font-bold px-4" onClick={() => handleOpenDialog('IN')}>
+          <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4" onClick={() => handleOpenDialog('IN')}>
             <ArrowDownCircle className="h-3.5 w-3.5 mr-2" /> Registrar Entrada
           </Button>
           <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 h-9 text-xs font-bold px-4" onClick={() => handleOpenDialog('OUT')}>
@@ -225,7 +225,7 @@ export default function MovementsPage() {
         <Tabs value={filterType} onValueChange={setFilterType} className="shrink-0">
           <TabsList className="h-10 p-1 bg-slate-100 rounded-lg">
             <TabsTrigger value="all" className="text-xs font-bold px-4 h-8 rounded-md">TODAS</TabsTrigger>
-            <TabsTrigger value="IN" className="text-xs font-bold px-4 h-8 rounded-md data-[state=active]:bg-emerald-600 data-[state=active]:text-white">ENTRADAS</TabsTrigger>
+            <TabsTrigger value="IN" className="text-xs font-bold px-4 h-8 rounded-md data-[state=active]:bg-[#387146] data-[state=active]:text-white">ENTRADAS</TabsTrigger>
             <TabsTrigger value="OUT" className="text-xs font-bold px-4 h-8 rounded-md data-[state=active]:bg-red-600 data-[state=active]:text-white">SAÍDAS</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -384,7 +384,7 @@ export default function MovementsPage() {
 
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={() => setIsDialogOpen(false)}>Sair</Button>
-              <Button className={cn("h-10 px-8 rounded-lg font-bold text-white", formData.type === 'IN' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700")} onClick={handleSave} disabled={isSaving}>Confirmar</Button>
+              <Button className={cn("h-10 px-8 rounded-lg font-bold text-white", formData.type === 'IN' ? "bg-[#387146] hover:bg-[#2b5836]" : "bg-red-600 hover:bg-red-700")} onClick={handleSave} disabled={isSaving}>Confirmar</Button>
             </div>
           </div>
         </DialogContent>

@@ -101,7 +101,7 @@ export default function SectorsPage() {
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Estrutura de Setores</h1>
           <p className="text-xs text-slate-500 font-medium">Organização dos departamentos e centros de custo.</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
+        <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
           <Plus className="h-3.5 w-3.5 mr-2" /> Novo Setor
         </Button>
       </div>
@@ -140,7 +140,7 @@ export default function SectorsPage() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Sair</Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 h-10 px-8 text-xs font-bold rounded-lg shadow-sm" onClick={handleSave} disabled={isSaving}>Salvar</Button>
+              <Button className="bg-[#387146] hover:bg-[#2b5836] h-10 px-8 text-xs font-bold rounded-lg shadow-sm" onClick={handleSave} disabled={isSaving}>Salvar</Button>
             </div>
           </div>
         </DialogContent>
