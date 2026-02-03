@@ -28,17 +28,28 @@ export default function SettingsPage() {
       if (movError) throw movError;
 
       const calculatedStock = new Map<string, number>();
+      const latestCosts = new Map<string, number | null>();
 
       // Initialize map
-      products.forEach(p => calculatedStock.set(p.id, 0));
+      products.forEach(p => {
+        calculatedStock.set(p.id, 0);
+        latestCosts.set(p.id, null);
+      });
 
-      // Sum movements
-      movements.forEach(m => {
+      // Sum movements & Find latest cost
+      // Sort movements by date ASC to process correctly
+      const sortedMovements = movements.sort((a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+      sortedMovements.forEach(m => {
         const current = calculatedStock.get(m.product_id) || 0;
         if (m.type === 'IN') {
           calculatedStock.set(m.product_id, current + m.quantity);
+          if (m.unit_value && m.unit_value > 0) {
+            latestCosts.set(m.product_id, m.unit_value);
+          }
         } else {
-          // Ensure non-negative stock calculation logic if needed, but strict sum is safer
           calculatedStock.set(m.product_id, current - m.quantity);
         }
       });
@@ -46,19 +57,25 @@ export default function SettingsPage() {
       // Find discrepancies
       const updates = [];
       for (const product of products) {
-        const expected = Math.max(0, calculatedStock.get(product.id) || 0); // Safety floor 0
-        if (product.current_qty !== expected) {
+        const expectedStock = Math.max(0, calculatedStock.get(product.id) || 0); // Safety floor 0
+        const expectedCost = latestCosts.get(product.id) || null; // Can be null
+
+        // Check stock OR cost mismatch
+        // Note: product.cost_price might be undefined/null, handle carefully
+        const currentCost = product.cost_price || null;
+
+        if (product.current_qty !== expectedStock || currentCost !== expectedCost) {
           updates.push({
             id: product.id,
             name: product.name,
-            old: product.current_qty,
-            new: expected
+            current_qty: expectedStock,
+            cost_price: expectedCost
           });
         }
       }
 
       if (updates.length === 0) {
-        toast.success('Todos os saldos estão corretos!');
+        toast.success('Todos os saldos e custos estão corretos!');
         return;
       }
 
@@ -67,21 +84,24 @@ export default function SettingsPage() {
       for (const update of updates) {
         const { error } = await supabase
           .from('products')
-          .update({ current_qty: update.new })
+          .update({
+            current_qty: update.current_qty,
+            cost_price: update.cost_price
+          })
           .eq('id', update.id);
-        
+
         if (error) errorCount++;
       }
 
       if (errorCount > 0) {
-        toast.warning(`Sincronização parcial. ${updates.length - errorCount} corrigidos, ${errorCount} falharam.`);
+        toast.warning(`Correção parcial. ${updates.length - errorCount} corrigidos, ${errorCount} falharam.`);
       } else {
-        toast.success(`${updates.length} produtos tiveram o saldo corrigido.`);
+        toast.success(`${updates.length} produtos corrigidos (Estoque e Custo).`);
       }
 
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao recalcular estoque.');
+      toast.error('Erro ao recalcular dados.');
     } finally {
       setIsRecalculating(false);
     }
@@ -110,14 +130,13 @@ export default function SettingsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between p-4 border border-slate-100 rounded-xl bg-slate-50/30">
               <div className="space-y-1">
-                <p className="text-sm font-bold text-slate-700">Recalcular Saldos de Estoque</p>
+                <p className="text-sm font-bold text-slate-700">Sincronizar Estoques e Custos</p>
                 <p className="text-xs text-slate-500 max-w-[500px]">
-                  Executa uma varredura em todas as movimentações registradas e atualiza o saldo atual de cada produto. 
-                  Use isso caso perceba discrepâncias nos valores.
+                  Executa uma varredura completa. Recalcula o saldo de estoque e restaura o preço de custo baseado na última entrada válida de cada produto.
                 </p>
               </div>
-              <Button 
-                onClick={handleRecalculateStock} 
+              <Button
+                onClick={handleRecalculateStock}
                 disabled={isRecalculating}
                 variant="outline"
                 className="font-bold text-xs h-9 bg-white border-slate-200 hover:bg-slate-50 hover:text-emerald-700"

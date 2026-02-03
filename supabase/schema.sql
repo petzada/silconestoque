@@ -162,12 +162,36 @@ CREATE TRIGGER trigger_handle_price_change
 -- 3. Reverse Movement on Delete
 CREATE OR REPLACE FUNCTION reverse_movement_on_delete()
 RETURNS TRIGGER AS $$
+DECLARE
+  prev_cost DECIMAL(10, 2);
 BEGIN
+  -- Reverter estoque
   IF OLD.type = 'IN' THEN
     UPDATE products
     SET current_qty = current_qty - OLD.quantity,
         updated_at = NOW()
     WHERE id = OLD.product_id;
+
+    -- Se removendo entrada, verificar se precisa reverter preço
+    -- Busca a Última entrada válida que NÃO seja a que está sendo deletada (embora OLD já esteja "sendo removido",
+    -- em um trigger BEFORE ou AFTER DELETE, o state pode variar. No BEFORE, o registro ainda existe.
+    -- Vamos buscar a mais recente excluindo a atual.
+    
+    SELECT unit_value INTO prev_cost
+    FROM movements
+    WHERE product_id = OLD.product_id 
+      AND type = 'IN' 
+      AND unit_value IS NOT NULL
+      AND id != OLD.id -- Garante que não pega a própria
+    ORDER BY created_at DESC
+    LIMIT 1;
+
+    -- Se achou um preço anterior, atualiza. Se não, define null (ou mantém se quiser, mas null é mais correto se não tem histórico)
+    UPDATE products
+    SET cost_price = prev_cost,
+        updated_at = NOW()
+    WHERE id = OLD.product_id;
+
   ELSIF OLD.type = 'OUT' THEN
     UPDATE products
     SET current_qty = current_qty + OLD.quantity,
