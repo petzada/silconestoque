@@ -2,9 +2,10 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// Force UI Update
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -13,21 +14,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 import {
   AlertTriangle,
-  CheckCircle2,
-  Filter,
-  Inbox,
-  LayoutDashboard,
-  Package,
   TrendingDown,
   TrendingUp,
+  CheckCircle2,
+  Inbox,
+  LayoutDashboard,
+  Filter,
+  Package,
 } from 'lucide-react';
 import {
   Dialog,
@@ -40,7 +43,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Movement, PriceHistory, Product, Sector } from '@/lib/types';
+import type { Product, Movement, Sector, PriceHistory } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -49,66 +52,6 @@ function formatCurrency(value: number | null): string {
     currency: 'BRL',
   }).format(value);
 }
-
-function formatCompactCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value);
-}
-
-function abbreviateSector(name: string): string {
-  const stopWords = new Set(['e', 'de', 'da', 'do', 'dos', 'das']);
-  const words = name
-    .split(' ')
-    .map((w) => w.trim())
-    .filter((w) => w.length > 0 && !stopWords.has(w.toLowerCase()));
-
-  if (words.length === 0) return name.slice(0, 3).toUpperCase();
-  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
-  return words.slice(0, 3).map((w) => w[0]).join('').toUpperCase();
-}
-
-function getRedShade(rank: number, total: number): string {
-  if (total <= 1) return '#7f1d1d';
-  const ratio = rank / (total - 1);
-  const lightness = 28 + (ratio * 35);
-  return `hsl(0 72% ${lightness}%)`;
-}
-
-function renderSectorPieLabel(props: {
-  cx?: number;
-  cy?: number;
-  midAngle?: number;
-  innerRadius?: number;
-  outerRadius?: number;
-  payload?: { shortName?: string; value?: number };
-}) {
-  const {
-    cx = 0,
-    cy = 0,
-    midAngle = 0,
-    innerRadius = 0,
-    outerRadius = 0,
-    payload,
-  } = props;
-
-  if (!payload || !payload.shortName || !payload.value) return null;
-
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.62;
-  const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
-  const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
-
-  return (
-    <text x={x} y={y} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight={800}>
-      {`${payload.shortName} ${formatCompactCurrency(payload.value)}`}
-    </text>
-  );
-}
-
-const PRICE_ALERT_THRESHOLD = 0.15;
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
@@ -148,7 +91,7 @@ export default function DashboardPage() {
       years.push(String(currentDate.getFullYear() - i));
     }
     return years;
-  }, [currentDate]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -161,7 +104,7 @@ export default function DashboardPage() {
         supabase.from('products').select('*, sector:sectors(*)').eq('is_active', true),
         supabase.from('movements').select('*, product:products(*, sector:sectors(*))').order('created_at', { ascending: false }),
         supabase.from('sectors').select('*').order('name'),
-        supabase.from('price_history').select('*, product:products(*)').order('created_at', { ascending: false }).limit(500),
+        supabase.from('price_history').select('*, product:products(*)').order('created_at', { ascending: false }).limit(500)
       ]);
 
       setData({
@@ -177,22 +120,25 @@ export default function DashboardPage() {
     }
   };
 
+  // Estatísticas financeiras - IGNORA movimentações de import inicial
   const financeStats = useMemo(() => {
     const selectedMonth = parseInt(filterMonth);
     const selectedYear = parseInt(filterYear);
 
-    let filteredMovements = data.movements.filter((m) => {
-      if (m.is_initial_import) return false;
+    // Filtrar movimentações: mês/ano E excluir is_initial_import
+    let filteredMovements = data.movements.filter(m => {
+      if (m.is_initial_import) return false; // Ignora imports iniciais
       const d = new Date(m.created_at);
       return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     });
 
+    // Filtrar por setor se selecionado
     if (filterSector !== 'all') {
-      filteredMovements = filteredMovements.filter((m) => m.product?.sector_id === filterSector);
+      filteredMovements = filteredMovements.filter(m => m.product?.sector_id === filterSector);
     }
 
-    const ins = filteredMovements.filter((m) => m.type === 'IN');
-    const outs = filteredMovements.filter((m) => m.type === 'OUT');
+    const ins = filteredMovements.filter(m => m.type === 'IN');
+    const outs = filteredMovements.filter(m => m.type === 'OUT');
 
     const totalInValue = ins.reduce((sum, m) => {
       const price = m.unit_value || m.product?.cost_price || 0;
@@ -204,16 +150,17 @@ export default function DashboardPage() {
       return sum + (m.quantity * price);
     }, 0);
 
-    const allOuts = data.movements.filter((m) => {
+    // Gráfico de Barras: SEMPRE mostra todos os setores (independente do filtro)
+    const allOuts = data.movements.filter(m => {
       if (m.is_initial_import) return false;
       const d = new Date(m.created_at);
       return m.type === 'OUT' && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     });
 
     const sectorMap = new Map<string, number>();
-    data.sectors.forEach((s) => sectorMap.set(s.name, 0));
+    data.sectors.forEach(s => sectorMap.set(s.name, 0));
 
-    allOuts.forEach((m) => {
+    allOuts.forEach(m => {
       const sectorName = m.product?.sector?.name;
       if (sectorName) {
         const price = m.unit_value || m.product?.cost_price || 0;
@@ -221,102 +168,44 @@ export default function DashboardPage() {
       }
     });
 
-    const sectorSpendingData = Array.from(sectorMap.entries())
+    const barData = Array.from(sectorMap.entries())
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .filter((item) => item.value > 0)
-      .map((item, index, arr) => ({
-        ...item,
-        shortName: abbreviateSector(item.name),
-        color: getRedShade(index, arr.length),
-      }));
+      .sort((a, b) => b.value - a.value);
 
-    const productMap = new Map<string, {
-      key: string;
-      name: string;
-      sectorName: string;
-      sectorId: string;
-      value: number;
-    }>();
-
-    outs.forEach((m) => {
-      const productName = m.product?.name || 'Insumo';
-      const productId = m.product?.id || productName;
-      const sectorName = m.product?.sector?.name || 'Sem setor';
-      const sectorId = m.product?.sector_id || 'sem-setor';
-      const key = `${sectorId}:${productId}`;
-
-      const current = productMap.get(key);
-      if (current) {
-        current.value += m.quantity;
-      } else {
-        productMap.set(key, {
-          key,
-          name: productName,
-          sectorName,
-          sectorId,
-          value: m.quantity,
-        });
-      }
+    // Lista de consumo por produto (só quando setor selecionado)
+    const productMap = new Map<string, number>();
+    outs.forEach(m => {
+      const name = m.product?.name || 'Insumo';
+      productMap.set(name, (productMap.get(name) || 0) + m.quantity);
     });
 
-    const allProductData = Array.from(productMap.values()).sort((a, b) => b.value - a.value);
+    const productListData = Array.from(productMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
 
-    let productListData = allProductData;
-    if (filterSector === 'all') {
-      const firstBySector = new Map<string, (typeof allProductData)[number]>();
-      allProductData.forEach((item) => {
-        if (!firstBySector.has(item.sectorId)) {
-          firstBySector.set(item.sectorId, item);
-        }
-      });
-
-      const ranked: typeof allProductData = [];
-      const seen = new Set<string>();
-
-      Array.from(firstBySector.values())
-        .sort((a, b) => b.value - a.value)
-        .forEach((item) => {
-          if (ranked.length < 8) {
-            ranked.push(item);
-            seen.add(item.key);
-          }
-        });
-
-      allProductData.forEach((item) => {
-        if (ranked.length < 8 && !seen.has(item.key)) {
-          ranked.push(item);
-          seen.add(item.key);
-        }
-      });
-
-      productListData = ranked;
-    } else {
-      productListData = allProductData.slice(0, 8);
-    }
-
-    const maxProductValue = productListData.length > 0 ? Math.max(...productListData.map((p) => p.value)) : 1;
+    const maxProductValue = productListData.length > 0 ? Math.max(...productListData.map(p => p.value)) : 1;
 
     return {
       totalInValue,
       totalOutValue,
-      sectorSpendingData,
+      barData,
       productListData,
       maxProductValue,
       countIns: ins.length,
-      countOuts: outs.length,
+      countOuts: outs.length
     };
   }, [data, filterMonth, filterYear, filterSector]);
 
   const priceAlerts = useMemo(() => {
     return data.priceHistory
-      .filter((h) => h.old_price && ((h.new_price - h.old_price) / h.old_price) >= PRICE_ALERT_THRESHOLD)
+      .filter(h => h.old_price && ((h.new_price - h.old_price) / h.old_price) >= 0.15)
       .slice(0, 5);
   }, [data.priceHistory]);
 
   const filteredProducts = useMemo(() => {
     if (filterSector === 'all') return data.products;
-    return data.products.filter((p) => p.sector_id === filterSector);
+    return data.products.filter(p => p.sector_id === filterSector);
   }, [data.products, filterSector]);
 
   const kpis = [
@@ -338,7 +227,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Itens Críticos',
-      value: filteredProducts.filter((p) => p.current_qty <= p.min_stock && p.current_qty > 0).length,
+      value: filteredProducts.filter(p => p.current_qty <= p.min_stock && p.current_qty > 0).length,
       sub: 'Abaixo do saldo mínimo',
       icon: AlertTriangle,
       color: 'text-amber-600',
@@ -346,7 +235,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Estoque Zerado',
-      value: filteredProducts.filter((p) => p.current_qty === 0).length,
+      value: filteredProducts.filter(p => p.current_qty === 0).length,
       sub: 'Necessita reposição',
       icon: Inbox,
       color: 'text-red-600',
@@ -364,6 +253,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-[1700px] mx-auto space-y-4 pb-10 px-4 md:px-6">
+      {/* Header com Filtros */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-slate-100 rounded-lg"><LayoutDashboard className="h-5 w-5 text-slate-600" /></div>
@@ -380,7 +270,7 @@ export default function DashboardPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              {MONTHS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterYear} onValueChange={setFilterYear}>
@@ -388,7 +278,7 @@ export default function DashboardPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              {availableYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              {availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="w-px h-6 bg-slate-200" />
@@ -398,18 +288,19 @@ export default function DashboardPage() {
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectItem value="all" className="font-bold">Todos os Setores</SelectItem>
-              {data.sectors.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              {data.sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => (
           <Card key={idx} className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center shrink-0', kpi.bg)}>
-                <kpi.icon className={cn('h-5 w-5', kpi.color)} />
+              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", kpi.bg)}>
+                <kpi.icon className={cn("h-5 w-5", kpi.color)} />
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{kpi.title}</p>
@@ -424,6 +315,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Gráfico de Barras: Gasto por Setor */}
         <Card className="border-none shadow-sm rounded-xl bg-white">
           <CardHeader className="p-4 pb-0">
             <CardTitle className="text-sm font-bold flex items-center gap-2">Gasto por Setor</CardTitle>
@@ -431,84 +323,77 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-4 pt-4">
             <div className="h-[300px] w-full">
-              {financeStats.sectorSpendingData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-slate-300">
-                  <p className="text-xs font-bold">Sem consumo no período</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Tooltip
-                      cursor={false}
-                      content={({ active, payload }) => {
-                        if (!active || !payload || payload.length === 0) return null;
-                        const item = payload[0]?.payload as { name?: string } | undefined;
-                        if (!item?.name) return null;
-
-                        return (
-                          <div className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                            {item.name}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Pie
-                      data={financeStats.sectorSpendingData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={38}
-                      outerRadius={108}
-                      paddingAngle={2}
-                      labelLine={false}
-                      label={renderSectorPieLabel}
-                    >
-                      {financeStats.sectorSpendingData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={financeStats.barData} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} stroke="#f1f5f9" vertical={false} />
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={100}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
+                    formatter={(value: unknown) => [formatCurrency(Number(value) || 0), 'Total']}
+                  />
+                  <Bar
+                    dataKey="value"
+                    fill="#10b981"
+                    radius={[0, 4, 4, 0]}
+                    barSize={18}
+                    label={{
+                      position: 'right',
+                      formatter: (v: unknown) => (Number(v) || 0) > 0 ? formatCurrency(Number(v)) : '',
+                      fontSize: 9,
+                      fontWeight: 700,
+                      fill: '#334155',
+                      offset: 5
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
+        {/* Lista de Consumo por Produto (substitui Pie Chart) */}
         <Card className="xl:col-span-2 border-none shadow-sm rounded-xl bg-white overflow-hidden">
           <CardHeader className="p-4 pb-0">
             <CardTitle className="text-sm font-bold">Consumo por Produto</CardTitle>
-            <CardDescription className="text-[10px]">
-              {filterSector === 'all'
-                ? 'Top 8 mais consumidos no período (primeiro produto de cada setor)'
-                : 'Top 8 produtos mais consumidos no setor selecionado'}
-            </CardDescription>
+            <CardDescription className="text-[10px]">Top 8 produtos mais consumidos no período</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            {financeStats.productListData.length === 0 ? (
+            {filterSector === 'all' ? (
+              // Aviso para selecionar setor
               <div className="h-[280px] flex flex-col items-center justify-center text-slate-300 gap-3">
                 <Package className="h-12 w-12 opacity-30" />
+                <div className="text-center">
+                  <p className="text-sm font-bold text-slate-400">Selecione um setor</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Para visualizar o consumo detalhado por produto</p>
+                </div>
+              </div>
+            ) : financeStats.productListData.length === 0 ? (
+              <div className="h-[280px] flex flex-col items-center justify-center text-slate-300 gap-3">
+                <CheckCircle2 className="h-12 w-12 opacity-30" />
                 <p className="text-sm font-bold text-slate-400">Nenhum consumo registrado</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {financeStats.productListData.map((item, index) => (
-                  <div key={item.key} className="flex items-center gap-3">
-                    <div className="w-[220px] min-w-0">
-                      <p
-                        className="text-[11px] font-bold text-slate-600 truncate"
-                        title={`${item.name} - ${item.sectorName}`}
-                      >
-                        {item.name}
-                      </p>
-                      <p className="text-[10px] font-semibold text-slate-400 truncate">{item.sectorName}</p>
-                    </div>
+                  <div key={index} className="flex items-center gap-3">
+                    <span className="text-[11px] font-bold text-slate-600 w-[140px] truncate" title={item.name}>
+                      {item.name.length > 18 ? `${item.name.substring(0, 18)}...` : item.name}
+                    </span>
                     <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${(item.value / financeStats.maxProductValue) * 100}%`,
-                          backgroundColor: COLORS[index % COLORS.length],
+                          backgroundColor: COLORS[index % COLORS.length]
                         }}
                       />
                     </div>
@@ -522,10 +407,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {/* Alertas de Inflação */}
         <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
           <CardHeader className="p-4 bg-slate-50/50">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" /> Var. de Preço (+{Math.round(PRICE_ALERT_THRESHOLD * 100)}%)
+              <AlertTriangle className="h-4 w-4 text-amber-500" /> Var. de Preço (+15%)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
@@ -566,6 +452,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Fila de Reposição */}
         <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
           <CardHeader className="p-4 bg-slate-50/50">
             <CardTitle className="text-sm font-bold flex items-center gap-2">Fila de Reposição</CardTitle>
@@ -573,7 +460,7 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="space-y-2">
               {filteredProducts
-                .filter((p) => p.current_qty <= p.min_stock)
+                .filter(p => p.current_qty <= p.min_stock)
                 .slice(0, 5)
                 .map((p) => (
                   <div key={p.id} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-lg">
@@ -584,7 +471,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
                         <span className="text-[10px] font-bold text-slate-400 block">SALDO</span>
-                        <span className={cn('text-xs font-black', p.current_qty === 0 ? 'text-red-600' : 'text-amber-600')}>
+                        <span className={cn("text-xs font-black", p.current_qty === 0 ? "text-red-600" : "text-amber-600")}>
                           {p.current_qty} {p.unit}
                         </span>
                       </div>
@@ -596,6 +483,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Modal de Detalhe do Alerta */}
       <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
         <DialogContent className="max-w-md rounded-2xl p-6 border-none shadow-2xl">
           <DialogHeader>
