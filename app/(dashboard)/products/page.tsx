@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +78,8 @@ const initialFormData: ProductFormData = {
   cost_price: undefined,
 };
 
+const PRICE_ALERT_THRESHOLD = 0.15;
+
 interface CSVValidRow {
   row: Record<string, string>;
   sectorId: string;
@@ -105,15 +107,20 @@ export default function ProductsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [isVariationHistoryDialogOpen, setIsVariationHistoryDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedProductForHistory, setSelectedProductForHistory] = useState<Product | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
+  const [variationHistory, setVariationHistory] = useState<PriceHistory[]>([]);
+  const [isLoadingVariationHistory, setIsLoadingVariationHistory] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSector, setFilterSector] = useState<string>('all');
+  const [variationSearchTerm, setVariationSearchTerm] = useState('');
+  const [variationFilterSector, setVariationFilterSector] = useState<string>('all');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
@@ -179,6 +186,33 @@ export default function ProductsPage() {
       setPriceHistory(data || []);
     } catch {
       toast.error('Erro ao carregar histórico de preços');
+    }
+  };
+
+  const handleOpenVariationHistory = async () => {
+    setIsVariationHistoryDialogOpen(true);
+    setIsLoadingVariationHistory(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('price_history')
+        .select('*, product:products(*, sector:sectors(*))')
+        .not('old_price', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+
+      const highVariations = (data || []).filter((item) => {
+        if (!item.old_price || item.old_price <= 0) return false;
+        return ((item.new_price - item.old_price) / item.old_price) >= PRICE_ALERT_THRESHOLD;
+      });
+
+      setVariationHistory(highVariations);
+    } catch {
+      toast.error('Erro ao carregar historico global de variacoes');
+    } finally {
+      setIsLoadingVariationHistory(false);
     }
   };
 
@@ -433,6 +467,16 @@ export default function ProductsPage() {
     return matchesSearch && matchesSector;
   });
 
+  const filteredVariationHistory = useMemo(() => {
+    return variationHistory.filter((h) => {
+      const productName = h.product?.name || '';
+      const sectorId = h.product?.sector_id || '';
+      const matchesSearch = productName.toLowerCase().includes(variationSearchTerm.toLowerCase());
+      const matchesSector = variationFilterSector === 'all' || sectorId === variationFilterSector;
+      return matchesSearch && matchesSector;
+    });
+  }, [variationFilterSector, variationHistory, variationSearchTerm]);
+
   const getStatus = (p: Product) => {
     if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-red-500' };
     if (p.current_qty <= p.min_stock) return { label: 'CRÍTICO', color: 'bg-amber-600' };
@@ -451,6 +495,9 @@ export default function ProductsPage() {
         <div className="flex gap-2">
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV
+          </Button>
+          <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={handleOpenVariationHistory}>
+            <History className="h-3.5 w-3.5 mr-2" /> Hist. VariaÃ§Ãµes
           </Button>
           <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
             <Plus className="h-3.5 w-3.5 mr-2" /> Novo Produto
@@ -711,6 +758,76 @@ export default function ProductsPage() {
       </Dialog>
 
       {/* Dialog: Histórico de Preços */}
+      <Dialog open={isVariationHistoryDialogOpen} onOpenChange={setIsVariationHistoryDialogOpen}>
+        <DialogContent className="max-w-4xl rounded-2xl p-6 shadow-2xl border-none">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <History className="h-4 w-4 text-emerald-600" /> Historico de Variacoes de Preco ({Math.round(PRICE_ALERT_THRESHOLD * 100)}%+)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Consulte variacoes acima do limite configurado e filtre por setor ou nome do produto.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar produto..."
+                  value={variationSearchTerm}
+                  onChange={(e) => setVariationSearchTerm(e.target.value)}
+                  className="pl-9 h-10 border-slate-200 rounded-lg font-medium text-sm"
+                />
+              </div>
+              <Select value={variationFilterSector} onValueChange={setVariationFilterSector}>
+                <SelectTrigger className="w-full sm:w-[220px] h-10 border-slate-200 rounded-lg text-sm font-semibold">
+                  <SelectValue placeholder="Setor" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all" className="font-bold">Todos os setores</SelectItem>
+                  {sectors.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isLoadingVariationHistory ? (
+              <div className="text-center py-10 text-slate-400 font-bold">Carregando variacoes...</div>
+            ) : filteredVariationHistory.length === 0 ? (
+              <div className="text-center py-10 text-slate-300">
+                <History className="h-10 w-10 mx-auto opacity-30 mb-2" />
+                <p className="text-xs font-bold">Nenhuma variacao acima do limite encontrada</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                {filteredVariationHistory.map((h) => {
+                  const variation = h.old_price ? ((h.new_price - h.old_price) / h.old_price) * 100 : 0;
+                  return (
+                    <div key={h.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">{h.product?.name || 'Produto removido'}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider truncate">{h.product?.sector?.name || 'Sem setor'}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')} | NF: {h.invoice_number || '---'}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          {h.old_price && <p className="text-[10px] text-slate-400 line-through">{formatCurrency(h.old_price)}</p>}
+                          <p className="text-sm font-bold text-slate-900">{formatCurrency(h.new_price)}</p>
+                        </div>
+                        <Badge className="bg-red-100 text-red-700 font-bold text-[10px] h-6 px-2 border-none">
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          {Math.abs(variation).toFixed(0)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
         <DialogContent className="max-w-lg rounded-2xl p-6 shadow-2xl border-none">
           <DialogHeader>
