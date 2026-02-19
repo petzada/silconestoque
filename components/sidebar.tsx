@@ -110,7 +110,7 @@ export function Sidebar() {
         )}
       >
         {/* Logo Section */}
-        <div className="flex items-center gap-3 px-6 py-8 border-b border-white/10">
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10">
           <div className="flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm">
             <Image src="/logo.png" alt="Silcon Logo" width={36} height={36} className="object-contain" />
           </div>
@@ -121,12 +121,12 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
-          <div className="space-y-4">
+        <nav className="flex-1 px-4 py-4 overflow-y-auto custom-scrollbar">
+          <div className="space-y-3">
             {navSections.map((section, sectionIndex) => (
               <div key={section.label ?? `section-${sectionIndex}`} className="space-y-1">
                 {section.label && (
-                  <p className="text-[9px] uppercase font-bold tracking-widest text-emerald-100/50 px-4 pb-2 font-inter">
+                  <p className="text-[8px] uppercase font-bold tracking-widest text-emerald-100/50 px-4 pb-1 font-inter">
                     {section.label}
                   </p>
                 )}
@@ -139,7 +139,7 @@ export function Sidebar() {
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        'group flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-200 font-inter',
+                        'group flex items-center gap-2.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200 font-inter',
                         isActive
                           ? 'bg-white text-[#387146] shadow-md'
                           : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
@@ -147,7 +147,7 @@ export function Sidebar() {
                     >
                       <item.icon
                         className={cn(
-                          'h-4 w-4 transition-colors',
+                          'h-3.5 w-3.5 transition-colors',
                           isActive ? 'text-[#387146]' : 'text-emerald-100/70 group-hover:text-white'
                         )}
                       />
@@ -161,12 +161,12 @@ export function Sidebar() {
         </nav>
 
         {/* Bottom Section: Settings & Logout */}
-        <div className="p-4 border-t border-white/10 space-y-2">
+        <div className="p-3 border-t border-white/10 space-y-1.5">
           <Link
             href="/settings"
             onClick={() => setMobileOpen(false)}
             className={cn(
-              'group flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 font-inter',
+              'group flex items-center gap-2.5 px-4 py-2 rounded-lg text-[11px] font-bold transition-all duration-200 font-inter',
               pathname === '/settings'
                 ? 'bg-white text-[#387146] shadow-md'
                 : 'text-emerald-100 hover:text-white hover:bg-white/10'
@@ -174,7 +174,7 @@ export function Sidebar() {
           >
             <Settings
               className={cn(
-                'h-4 w-4 transition-colors',
+                'h-3.5 w-3.5 transition-colors',
                 pathname === '/settings' ? 'text-[#387146]' : 'text-emerald-100 group-hover:text-white'
               )}
             />
@@ -183,10 +183,10 @@ export function Sidebar() {
 
           <Button
             variant="ghost"
-            className="w-full justify-start h-10 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-all text-xs font-bold font-inter px-4"
+            className="w-full justify-start h-9 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-all text-[11px] font-bold font-inter px-4"
             onClick={logout}
           >
-            <LogOut className="h-4 w-4 mr-3" />
+            <LogOut className="h-3.5 w-3.5 mr-2.5" />
             Sair
           </Button>
         </div>
