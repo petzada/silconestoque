@@ -66,6 +66,14 @@ export type MovementFormData = {
   is_initial_import?: boolean;
 };
 
+export type MovementFilters = {
+  searchTerm: string;
+  type: MovementType | 'all';
+  month: string;
+  year: string;
+  sectorId: string;
+};
+
 // Purchase Order types
 export type PurchaseOrderType = 'emergency' | 'monthly';
 
