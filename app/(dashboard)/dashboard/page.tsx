@@ -31,18 +31,10 @@ import {
   Filter,
   Package,
 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { PageContainer } from '@/components/layout/page-container';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Product, Movement, Sector, PriceHistory } from '@/lib/types';
+import type { Product, Movement, Sector } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -74,10 +66,8 @@ export default function DashboardPage() {
     products: [] as Product[],
     movements: [] as Movement[],
     sectors: [] as Sector[],
-    priceHistory: [] as PriceHistory[],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedAlert, setSelectedAlert] = useState<PriceHistory | null>(null);
 
   const currentDate = new Date();
   const [filterMonth, setFilterMonth] = useState<string>(String(currentDate.getMonth()));
@@ -99,18 +89,16 @@ export default function DashboardPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [productsRes, movementsRes, sectorsRes, priceHistoryRes] = await Promise.all([
+      const [productsRes, movementsRes, sectorsRes] = await Promise.all([
         supabase.from('products').select('*, sector:sectors(*)').eq('is_active', true),
         supabase.from('movements').select('*, product:products(*, sector:sectors(*))').order('created_at', { ascending: false }),
         supabase.from('sectors').select('*').order('name'),
-        supabase.from('price_history').select('*, product:products(*)').order('created_at', { ascending: false }).limit(500)
       ]);
 
       setData({
         products: productsRes.data || [],
         movements: movementsRes.data || [],
         sectors: sectorsRes.data || [],
-        priceHistory: priceHistoryRes.data || [],
       });
     } catch {
       toast.error('Erro ao carregar dados do dashboard');
@@ -195,12 +183,6 @@ export default function DashboardPage() {
       countOuts: outs.length
     };
   }, [data, filterMonth, filterYear, filterSector]);
-
-  const priceAlerts = useMemo(() => {
-    return data.priceHistory
-      .filter(h => h.old_price && ((h.new_price - h.old_price) / h.old_price) >= 0.15)
-      .slice(0, 5);
-  }, [data.priceHistory]);
 
   const filteredProducts = useMemo(() => {
     if (filterSector === 'all') return data.products;
@@ -398,119 +380,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Alertas de Inflação */}
-        <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
-          <CardHeader className="p-4 bg-slate-50/50">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" /> Var. de Preço (+15%)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            {priceAlerts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-slate-300 gap-2">
-                <CheckCircle2 className="h-8 w-8 opacity-20" />
-                <p className="text-xs font-bold">Nenhuma variação atípica</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {priceAlerts.map((alert) => {
-                  const variation = ((alert.new_price - alert.old_price!) / alert.old_price!) * 100;
-                  return (
-                    <div
-                      key={alert.id}
-                      onClick={() => setSelectedAlert(alert)}
-                      className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-800 text-[12px] truncate">{alert.product?.name}</p>
-                        <p className="text-[10px] text-slate-500 font-medium tracking-tight">NF: {alert.invoice_number}</p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-slate-400 line-through leading-none">{formatCurrency(alert.old_price)}</p>
-                          <p className="text-[12px] font-bold text-red-600 leading-tight">{formatCurrency(alert.new_price)}</p>
-                        </div>
-                        <Badge className="bg-red-100 text-red-700 border-none font-bold text-[10px] h-6 px-2">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          {variation.toFixed(0)}%
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Fila de Reposição */}
-        <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
-          <CardHeader className="p-4 bg-slate-50/50">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">Fila de Reposição</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              {filteredProducts
-                .filter(p => p.current_qty <= p.min_stock)
-                .slice(0, 5)
-                .map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-lg">
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-700 text-[12px] truncate">{p.name}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{p.sector?.name}</p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-slate-400 block">SALDO</span>
-                        <span className={cn("text-xs font-black", p.current_qty === 0 ? "text-red-600" : "text-amber-600")}>
-                          {p.current_qty} {p.unit}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Modal de Detalhe do Alerta */}
-      <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
-        <DialogContent className="max-w-md rounded-2xl p-6 border-none shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-red-500" /> Detalhes da Variação
-            </DialogTitle>
-          </DialogHeader>
-          {selectedAlert && (
-            <div className="pt-4 space-y-4">
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Produto</p>
-                <p className="text-lg font-bold text-slate-800 leading-tight">{selectedAlert.product?.name}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Preço Anterior</p>
-                  <p className="text-lg font-bold text-slate-600">{formatCurrency(selectedAlert.old_price)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Preço Atualizado</p>
-                  <p className="text-lg font-bold text-red-600">{formatCurrency(selectedAlert.new_price)}</p>
-                </div>
-              </div>
-              <div className="p-4 border border-red-100 bg-red-50 rounded-xl flex items-center justify-between">
-                <span className="text-xs font-bold text-red-800">Variação Real</span>
-                <span className="text-xl font-black text-red-600">
-                  +{(((selectedAlert.new_price - selectedAlert.old_price!) / selectedAlert.old_price!) * 100).toFixed(1)}%
-                </span>
-              </div>
-              <p className="text-[10px] text-center text-slate-400 font-medium pt-2">Registrado em {format(new Date(selectedAlert.created_at), "dd/MM/yyyy 'às' HH:mm")}</p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   );
 }
