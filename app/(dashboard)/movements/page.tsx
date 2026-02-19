@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -134,6 +134,7 @@ export default function MovementsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [filters, setFilters] = useState<MovementFilters>(initialMovementFilters);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+  const saveLockRef = useRef(false);
 
   const form = useForm<MovementFormValues>({
     resolver: zodResolver(movementSchema),
@@ -221,6 +222,8 @@ export default function MovementsPage() {
   };
 
   const handleSave = form.handleSubmit(async (values) => {
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setIsSaving(true);
     try {
       const movementData = {
@@ -244,6 +247,7 @@ export default function MovementsPage() {
       toast.error(message.includes('stock') ? 'Estoque insuficiente' : 'Erro ao salvar');
     } finally {
       setIsSaving(false);
+      saveLockRef.current = false;
     }
   });
 

@@ -105,25 +105,54 @@ ON CONFLICT DO NOTHING;
 -- 1. Update Product Quantity
 CREATE OR REPLACE FUNCTION update_product_quantity()
 RETURNS TRIGGER AS $$
+DECLARE
+  available_qty INTEGER;
 BEGIN
-  IF NEW.type = 'IN' THEN
-    UPDATE products
-    SET current_qty = current_qty + NEW.quantity,
-        updated_at = NOW()
-    WHERE id = NEW.product_id;
-  ELSIF NEW.type = 'OUT' THEN
-    IF (SELECT current_qty FROM products WHERE id = NEW.product_id) < NEW.quantity THEN
-      RAISE EXCEPTION 'Insufficient stock for this product';
-    END IF;
+  SELECT current_qty INTO available_qty
+  FROM products
+  WHERE id = NEW.product_id
+  FOR UPDATE;
 
-    UPDATE products
-    SET current_qty = current_qty - NEW.quantity,
-        updated_at = NOW()
-    WHERE id = NEW.product_id;
+  IF NEW.type = 'OUT' AND available_qty < NEW.quantity THEN
+    RAISE EXCEPTION 'Insufficient stock for this product';
   END IF;
+
+  UPDATE products
+  SET current_qty = COALESCE(
+        (
+          SELECT SUM(
+            CASE
+              WHEN m.type = 'IN' THEN m.quantity
+              ELSE -m.quantity
+            END
+          )
+          FROM movements m
+          WHERE m.product_id = NEW.product_id
+        ),
+        0
+      ),
+      updated_at = NOW()
+  WHERE id = NEW.product_id;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Remove any legacy movement trigger to keep a single source of truth for stock.
+DO $$
+DECLARE
+  trigger_name TEXT;
+BEGIN
+  FOR trigger_name IN
+    SELECT tgname
+    FROM pg_trigger
+    WHERE tgrelid = 'movements'::regclass
+      AND NOT tgisinternal
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON movements;', trigger_name);
+  END LOOP;
+END;
+$$;
 
 DROP TRIGGER IF EXISTS trigger_update_product_qty ON movements;
 CREATE TRIGGER trigger_update_product_qty
@@ -202,11 +231,84 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Canonical stock reversion on movement delete.
+CREATE OR REPLACE FUNCTION reconcile_product_on_delete()
+RETURNS TRIGGER AS $$
+DECLARE
+  prev_cost DECIMAL(10, 2);
+BEGIN
+  UPDATE products
+  SET current_qty = COALESCE(
+        (
+          SELECT SUM(
+            CASE
+              WHEN m.type = 'IN' THEN m.quantity
+              ELSE -m.quantity
+            END
+          )
+          FROM movements m
+          WHERE m.product_id = OLD.product_id
+            AND m.id != OLD.id
+        ),
+        0
+      ),
+      updated_at = NOW()
+  WHERE id = OLD.product_id;
+
+  IF OLD.type = 'IN' THEN
+    -- If removing an IN movement, restore the most recent previous purchase price.
+    SELECT unit_value INTO prev_cost
+    FROM movements
+    WHERE product_id = OLD.product_id
+      AND type = 'IN'
+      AND unit_value IS NOT NULL
+      AND id != OLD.id
+    ORDER BY created_at DESC
+    LIMIT 1;
+
+    UPDATE products
+    SET cost_price = prev_cost,
+        updated_at = NOW()
+    WHERE id = OLD.product_id;
+  END IF;
+
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
 DROP TRIGGER IF EXISTS trigger_reverse_movement ON movements;
 CREATE TRIGGER trigger_reverse_movement
   BEFORE DELETE ON movements
   FOR EACH ROW
-  EXECUTE FUNCTION reverse_movement_on_delete();
+  EXECUTE FUNCTION reconcile_product_on_delete();
+
+-- 4. Reconcile current stock with movement history (one-time correction on apply).
+UPDATE products p
+SET current_qty = COALESCE(calc.qty, 0),
+    updated_at = NOW()
+FROM (
+  SELECT
+    product_id,
+    SUM(
+      CASE
+        WHEN type = 'IN' THEN quantity
+        ELSE -quantity
+      END
+    ) AS qty
+  FROM movements
+  GROUP BY product_id
+) calc
+WHERE p.id = calc.product_id;
+
+UPDATE products p
+SET current_qty = 0,
+    updated_at = NOW()
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM movements m
+  WHERE m.product_id = p.id
+)
+AND p.current_qty <> 0;
 
 -- =====================
 -- RLS POLICIES
