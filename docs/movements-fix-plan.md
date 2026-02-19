@@ -47,8 +47,16 @@ Corrigir o sumico de entradas na tela de Movimentacoes e adicionar filtros de me
 
 ## Sem Alteracoes Deliberadas
 1. Logica do Dashboard (KPIs continuam ignorando `is_initial_import`).
-2. Logica do botao `Sincronizar Agora`.
-3. Funcoes SQL de variacao de preco e schema do Supabase.
+2. Funcoes SQL de variacao de preco e schema do Supabase.
+
+## Adendo Pos-Auditoria (2026-02-19)
+- O botao `Sincronizar Agora` foi removido da tela de configuracoes.
+- Motivo: o recalculo manual sobrescrevia `products.current_qty` e `products.cost_price` fora do fluxo oficial de movimentacoes, com risco de inconsistencias em bases legadas.
+- Regra vigente: ajuste de estoque/custo deve ocorrer somente por:
+  - entrada (`movements.type = IN`)
+  - saida (`movements.type = OUT`)
+  - exclusao manual de movimentacao
+  - exclusao completa do produto
 
 ## Cenarios de Aceite
 1. Entradas antigas fora do top 100 aparecem em Movimentacoes.
@@ -62,17 +70,9 @@ Corrigir o sumico de entradas na tela de Movimentacoes e adicionar filtros de me
 
 ## Validacao de Correlacao (Execucao em ambiente com Supabase configurado)
 
-### A) Sync nao remove movimentacoes
-1. Antes:
-```sql
-select count(*) as total_movements from movements;
-```
-2. Clicar em `Configuracoes > Sincronizar Agora`.
-3. Depois:
-```sql
-select count(*) as total_movements from movements;
-```
-4. Esperado: mesmo total antes/depois.
+### A) Nao existe mais recalculo manual em Configuracoes
+1. A tela `Configuracoes` nao deve exibir acao de sincronizacao/recalculo de estoque.
+2. Esperado: qualquer alteracao de saldo/custo ocorre apenas por movimentacoes.
 
 ### B) Variacao de preco nao remove movimentacoes
 1. Antes:
