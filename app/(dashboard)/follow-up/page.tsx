@@ -112,26 +112,32 @@ export default function FollowUpPage() {
     invoice_value: undefined,
   });
 
+  // Submitting state to prevent double-clicks
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Context for modals
   const [activeSolicitationId, setActiveSolicitationId] = useState<string | null>(null);
   const [activePurchaseOrderId, setActivePurchaseOrderId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'solicitation' | 'purchase_order'; id: string } | null>(null);
 
-  const fetchSolicitations = useCallback(async () => {
-    setIsLoading(true);
+  const refreshSolicitations = useCallback(async () => {
     const { data, error } = await supabase
       .from('follow_up_solicitations')
       .select('*, purchase_orders:follow_up_purchase_orders(*, receipt:follow_up_receipts(*))')
       .order('created_at', { ascending: false });
 
     if (error) {
-      toast.error('Erro ao carregar solicitações');
       console.error(error);
-    } else {
-      setSolicitations(data || []);
+      return;
     }
-    setIsLoading(false);
+    setSolicitations(data || []);
   }, []);
+
+  const fetchSolicitations = useCallback(async () => {
+    setIsLoading(true);
+    await refreshSolicitations();
+    setIsLoading(false);
+  }, [refreshSolicitations]);
 
   useEffect(() => {
     fetchSolicitations();
@@ -139,49 +145,60 @@ export default function FollowUpPage() {
 
   // Status sync helper
   const syncStatus = async (solicitationId: string) => {
-    // Fetch fresh data for this solicitation
-    const { data } = await supabase
-      .from('follow_up_solicitations')
-      .select('*, purchase_orders:follow_up_purchase_orders(*, receipt:follow_up_receipts(*))')
-      .eq('id', solicitationId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('follow_up_solicitations')
+        .select('*, purchase_orders:follow_up_purchase_orders(*, receipt:follow_up_receipts(*))')
+        .eq('id', solicitationId)
+        .single();
 
-    if (data) {
-      const newStatus = computeStatus(data);
-      if (data.status !== newStatus) {
-        await supabase
-          .from('follow_up_solicitations')
-          .update({ status: newStatus, updated_at: new Date().toISOString() })
-          .eq('id', solicitationId);
+      if (error) {
+        console.error('syncStatus fetch error:', error);
+      } else if (data) {
+        const newStatus = computeStatus(data);
+        if (data.status !== newStatus) {
+          await supabase
+            .from('follow_up_solicitations')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', solicitationId);
+        }
       }
+    } catch (err) {
+      console.error('syncStatus error:', err);
     }
-    await fetchSolicitations();
+    await refreshSolicitations();
   };
 
   // --- CRUD: Solicitação ---
   const handleCreateSolicitation = async () => {
+    if (isSubmitting) return;
     const isoDate = parseDateInput(dateDisplay);
     if (!solicitationForm.request_number || !isoDate || !solicitationForm.description) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
-    const { error } = await supabase.from('follow_up_solicitations').insert({
-      request_number: solicitationForm.request_number,
-      request_date: isoDate,
-      description: solicitationForm.description,
-      status: 'pendente',
-    });
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('follow_up_solicitations').insert({
+        request_number: solicitationForm.request_number,
+        request_date: isoDate,
+        description: solicitationForm.description,
+        status: 'pendente',
+      });
 
-    if (error) {
-      toast.error('Erro ao criar solicitação');
-      console.error(error);
-    } else {
-      toast.success('Solicitação criada com sucesso');
-      setSolicitationModalOpen(false);
-      setSolicitationForm({ request_number: '', request_date: '', description: '' });
-      setDateDisplay('');
-      fetchSolicitations();
+      if (error) {
+        toast.error('Erro ao criar solicitação');
+        console.error(error);
+      } else {
+        toast.success('Solicitação criada com sucesso');
+        setSolicitationModalOpen(false);
+        setSolicitationForm({ request_number: '', request_date: '', description: '' });
+        setDateDisplay('');
+        await refreshSolicitations();
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -192,12 +209,13 @@ export default function FollowUpPage() {
     } else {
       toast.success('Solicitação removida');
       if (expandedId === id) setExpandedId(null);
-      fetchSolicitations();
+      await refreshSolicitations();
     }
   };
 
   // --- CRUD: Pedido de Compra ---
   const handleCreatePurchaseOrder = async () => {
+    if (isSubmitting) return;
     if (!activeSolicitationId || !poForm.po_number || !poForm.supplier_name) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
@@ -205,22 +223,27 @@ export default function FollowUpPage() {
 
     const isoDate = poDateDisplay ? parseDateInput(poDateDisplay) : null;
 
-    const { error } = await supabase.from('follow_up_purchase_orders').insert({
-      solicitation_id: activeSolicitationId,
-      po_number: poForm.po_number,
-      supplier_name: poForm.supplier_name,
-      estimated_delivery: isoDate || null,
-    });
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('follow_up_purchase_orders').insert({
+        solicitation_id: activeSolicitationId,
+        po_number: poForm.po_number,
+        supplier_name: poForm.supplier_name,
+        estimated_delivery: isoDate || null,
+      });
 
-    if (error) {
-      toast.error('Erro ao criar pedido de compra');
-      console.error(error);
-    } else {
-      toast.success('Pedido de compra adicionado');
-      setPoModalOpen(false);
-      setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
-      setPoDateDisplay('');
-      syncStatus(activeSolicitationId);
+      if (error) {
+        toast.error('Erro ao criar pedido de compra');
+        console.error(error);
+      } else {
+        toast.success('Pedido de compra adicionado');
+        setPoModalOpen(false);
+        setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
+        setPoDateDisplay('');
+        await syncStatus(activeSolicitationId);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -230,35 +253,55 @@ export default function FollowUpPage() {
       toast.error('Erro ao deletar pedido');
     } else {
       toast.success('Pedido removido');
-      syncStatus(solicitationId);
+      await syncStatus(solicitationId);
     }
   };
 
   // --- CRUD: Recebimento ---
   const handleCreateReceipt = async () => {
+    if (isSubmitting) return;
     if (!activePurchaseOrderId || !receiptForm.supplier_name) {
       toast.error('Preencha o fornecedor');
       return;
     }
 
-    const { error } = await supabase.from('follow_up_receipts').insert({
-      purchase_order_id: activePurchaseOrderId,
-      supplier_name: receiptForm.supplier_name,
-      invoice_value: receiptForm.invoice_value || null,
-    });
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('follow_up_receipts').insert({
+        purchase_order_id: activePurchaseOrderId,
+        supplier_name: receiptForm.supplier_name,
+        invoice_value: receiptForm.invoice_value || null,
+      });
 
-    if (error) {
-      toast.error('Erro ao confirmar recebimento');
-      console.error(error);
-    } else {
+      if (error) {
+        // Handle duplicate receipt (UNIQUE constraint violation)
+        if (error.code === '23505') {
+          toast.error('Este pedido já possui um recebimento registrado');
+          setReceiptModalOpen(false);
+          await refreshSolicitations();
+        } else {
+          toast.error('Erro ao confirmar recebimento');
+          console.error(error);
+        }
+        return;
+      }
+
       toast.success('Recebimento confirmado');
       setReceiptModalOpen(false);
       setReceiptForm({ supplier_name: '', invoice_value: undefined });
-      // Find the solicitation for this PO
+
+      // Find the solicitation for this PO and sync status
       const sol = solicitations.find(s =>
         s.purchase_orders?.some(po => po.id === activePurchaseOrderId)
       );
-      if (sol) syncStatus(sol.id);
+      if (sol) {
+        await syncStatus(sol.id);
+      } else {
+        // Fallback: refresh all data even if solicitation lookup fails
+        await refreshSolicitations();
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -268,22 +311,22 @@ export default function FollowUpPage() {
       toast.error('Erro ao remover recebimento');
     } else {
       toast.success('Recebimento removido');
-      syncStatus(solicitationId);
+      await syncStatus(solicitationId);
     }
   };
 
   // Confirm delete handler
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
+    setDeleteConfirmOpen(false);
     if (deleteTarget.type === 'solicitation') {
-      handleDeleteSolicitation(deleteTarget.id);
+      await handleDeleteSolicitation(deleteTarget.id);
     } else {
       const sol = solicitations.find(s =>
         s.purchase_orders?.some(po => po.id === deleteTarget.id)
       );
-      handleDeletePurchaseOrder(deleteTarget.id, sol?.id || '');
+      await handleDeletePurchaseOrder(deleteTarget.id, sol?.id || '');
     }
-    setDeleteConfirmOpen(false);
     setDeleteTarget(null);
   };
 
@@ -370,7 +413,7 @@ export default function FollowUpPage() {
                     <span className="text-xs text-slate-600 truncate max-w-[300px]">{sol.description}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    {statusBadge(sol.status as FollowUpStatus)}
+                    {statusBadge(computeStatus(sol))}
                   </div>
                 </button>
 
@@ -575,9 +618,10 @@ export default function FollowUpPage() {
             </div>
             <Button
               onClick={handleCreateSolicitation}
+              disabled={isSubmitting}
               className="w-full bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold"
             >
-              Criar Solicitação
+              {isSubmitting ? 'Criando...' : 'Criar Solicitação'}
             </Button>
           </div>
         </DialogContent>
@@ -623,9 +667,10 @@ export default function FollowUpPage() {
             </div>
             <Button
               onClick={handleCreatePurchaseOrder}
+              disabled={isSubmitting}
               className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-xs font-bold text-white"
             >
-              Adicionar Pedido
+              {isSubmitting ? 'Adicionando...' : 'Adicionar Pedido'}
             </Button>
           </div>
         </DialogContent>
@@ -663,9 +708,10 @@ export default function FollowUpPage() {
             </div>
             <Button
               onClick={handleCreateReceipt}
+              disabled={isSubmitting}
               className="w-full bg-emerald-600 hover:bg-emerald-700 h-9 text-xs font-bold text-white"
             >
-              Confirmar Recebimento
+              {isSubmitting ? 'Confirmando...' : 'Confirmar Recebimento'}
             </Button>
           </div>
         </DialogContent>
