@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type {
   FollowUpSolicitation,
+  FollowUpReceipt,
   FollowUpStatus,
   SolicitationFormData,
   PurchaseOrderFormData,
@@ -121,16 +122,54 @@ export default function FollowUpPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'solicitation' | 'purchase_order'; id: string } | null>(null);
 
   const refreshSolicitations = useCallback(async () => {
-    const { data, error } = await supabase
+    // Step 1: Fetch solicitations with purchase orders (single-level embed)
+    const { data: solsData, error: solsError } = await supabase
       .from('follow_up_solicitations')
-      .select('*, purchase_orders:follow_up_purchase_orders(*, receipt:follow_up_receipts(*))')
+      .select('*, purchase_orders:follow_up_purchase_orders(*)')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error(error);
+    if (solsError) {
+      console.error(solsError);
       return;
     }
-    setSolicitations(data || []);
+
+    const sols = solsData || [];
+
+    // Step 2: Collect all PO IDs and fetch their receipts separately
+    const allPoIds: string[] = [];
+    for (const sol of sols) {
+      for (const po of (sol.purchase_orders || [])) {
+        allPoIds.push(po.id);
+      }
+    }
+
+    const receiptsMap: Record<string, FollowUpReceipt[]> = {};
+    if (allPoIds.length > 0) {
+      const { data: receiptsData, error: receiptsError } = await supabase
+        .from('follow_up_receipts')
+        .select('*')
+        .in('purchase_order_id', allPoIds);
+
+      if (!receiptsError && receiptsData) {
+        for (const r of receiptsData) {
+          if (!receiptsMap[r.purchase_order_id]) {
+            receiptsMap[r.purchase_order_id] = [];
+          }
+          receiptsMap[r.purchase_order_id].push(r as FollowUpReceipt);
+        }
+      }
+    }
+
+    // Step 3: Merge receipts into purchase orders
+    const merged: FollowUpSolicitation[] = sols.map((sol: any) => ({
+      ...sol,
+      purchase_orders: (sol.purchase_orders || []).map((po: any) => ({
+        ...po,
+        receipt: receiptsMap[po.id] || [],
+      })),
+    }));
+
+    setSolicitations(merged);
   }, []);
 
   const fetchSolicitations = useCallback(async () => {
@@ -146,22 +185,38 @@ export default function FollowUpPage() {
   // Status sync helper
   const syncStatus = async (solicitationId: string) => {
     try {
-      const { data, error } = await supabase
+      // Fetch solicitation with POs (single-level)
+      const { data: solData, error: solError } = await supabase
         .from('follow_up_solicitations')
-        .select('*, purchase_orders:follow_up_purchase_orders(*, receipt:follow_up_receipts(*))')
+        .select('*, purchase_orders:follow_up_purchase_orders(*)')
         .eq('id', solicitationId)
         .single();
 
-      if (error) {
-        console.error('syncStatus fetch error:', error);
-      } else if (data) {
-        const newStatus = computeStatus(data);
-        if (data.status !== newStatus) {
-          await supabase
-            .from('follow_up_solicitations')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', solicitationId);
-        }
+      if (solError || !solData) {
+        console.error('syncStatus fetch error:', solError);
+        await refreshSolicitations();
+        return;
+      }
+
+      // Compute status by checking receipts separately
+      const poIds: string[] = (solData.purchase_orders || []).map((po: any) => po.id);
+      let newStatus: FollowUpStatus = 'pendente';
+
+      if (poIds.length > 0) {
+        const { data: receiptsData } = await supabase
+          .from('follow_up_receipts')
+          .select('purchase_order_id')
+          .in('purchase_order_id', poIds);
+
+        const receivedCount = receiptsData?.length || 0;
+        newStatus = receivedCount >= poIds.length ? 'recebido' : 'em_andamento';
+      }
+
+      if (solData.status !== newStatus) {
+        await supabase
+          .from('follow_up_solicitations')
+          .update({ status: newStatus, updated_at: new Date().toISOString() })
+          .eq('id', solicitationId);
       }
     } catch (err) {
       console.error('syncStatus error:', err);
