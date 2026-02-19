@@ -57,14 +57,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#387146] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-brand-primary p-4">
       <Card className="w-full max-w-md shadow-2xl bg-white/95 backdrop-blur">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden bg-slate-50">
             <Image src="/logo.png" alt="Silcon Logo" width={64} height={64} className="object-contain" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-[#387146] font-inter">
+            <CardTitle className="text-2xl font-bold text-brand-primary font-inter">
               Silcon Ambiental
             </CardTitle>
             <CardDescription className="text-slate-500 font-inter">
@@ -93,7 +93,7 @@ export default function LoginPage() {
                   placeholder="Digite a senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 font-inter focus-visible:ring-[#387146]"
+                  className="pl-10 font-inter focus-visible:ring-brand-primary"
                   autoFocus
                   required
                 />
@@ -102,7 +102,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-[#387146] hover:bg-[#2d5c38] font-inter"
+              className="w-full bg-brand-primary hover:bg-brand-primary-hover font-inter"
               disabled={isLoading}
             >
               {isLoading ? 'Verificando...' : 'Entrar'}

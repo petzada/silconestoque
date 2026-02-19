@@ -1,147 +1,287 @@
-'use client';
+﻿'use client';
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { PageContainer } from '@/components/layout/page-container';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Sector } from '@/lib/types';
+
+const sectorSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Informe o nome do setor com pelo menos 2 caracteres.'),
+});
+
+type SectorFormValues = z.infer<typeof sectorSchema>;
 
 export default function SectorsPage() {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSector, setEditingSector] = useState<Sector | null>(null);
-  const [sectorName, setSectorName] = useState('');
+  const [sectorToDelete, setSectorToDelete] = useState<Sector | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const form = useForm<SectorFormValues>({
+    resolver: zodResolver(sectorSchema),
+    defaultValues: {
+      name: '',
+    },
+  });
 
   useEffect(() => {
-    fetchSectors();
+    void fetchSectors();
   }, []);
 
   const fetchSectors = async () => {
     setIsLoading(true);
     try {
-      const { data } = await supabase.from('sectors').select('*').order('name');
+      const { data, error } = await supabase.from('sectors').select('*').order('name');
+      if (error) throw error;
       setSectors(data || []);
-    } catch (e) {
+    } catch {
       toast.error('Erro ao carregar setores');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOpenDialog = (sector?: Sector) => {
+  const openFormDialog = (sector?: Sector) => {
     if (sector) {
       setEditingSector(sector);
-      setSectorName(sector.name);
+      form.reset({ name: sector.name });
     } else {
       setEditingSector(null);
-      setSectorName('');
+      form.reset({ name: '' });
     }
     setIsDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!sectorName.trim()) return;
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open && form.formState.isDirty) {
+      const shouldClose = window.confirm('Descartar alteracoes nao salvas?');
+      if (!shouldClose) return;
+    }
+
+    if (!open) {
+      setEditingSector(null);
+      form.reset({ name: '' });
+    }
+
+    setIsDialogOpen(open);
+  };
+
+  const handleSave = form.handleSubmit(async (values) => {
     setIsSaving(true);
     try {
       if (editingSector) {
-        await supabase.from('sectors').update({ name: sectorName.trim() }).eq('id', editingSector.id);
+        const { error } = await supabase
+          .from('sectors')
+          .update({ name: values.name.trim() })
+          .eq('id', editingSector.id);
+        if (error) throw error;
       } else {
-        await supabase.from('sectors').insert({ name: sectorName.trim() });
+        const { error } = await supabase.from('sectors').insert({ name: values.name.trim() });
+        if (error) throw error;
       }
+
       toast.success('Salvo com sucesso');
       setIsDialogOpen(false);
-      fetchSectors();
-    } catch (e) {
-      toast.error('Erro ao salvar');
+      setEditingSector(null);
+      form.reset({ name: '' });
+      await fetchSectors();
+    } catch {
+      toast.error('Erro ao salvar setor');
     } finally {
       setIsSaving(false);
     }
+  });
+
+  const openDeleteDialog = (sector: Sector) => {
+    setSectorToDelete(sector);
+    setIsDeleteDialogOpen(true);
   };
 
-  const handleDelete = async (sector: Sector) => {
-    if (!confirm(`Excluir setor "${sector.name}"?`)) return;
+  const handleDelete = async () => {
+    if (!sectorToDelete) return;
+
+    setIsDeleting(true);
     try {
-      const { error } = await supabase.from('sectors').delete().eq('id', sector.id);
+      const { error } = await supabase.from('sectors').delete().eq('id', sectorToDelete.id);
       if (error) throw error;
-      toast.success('Excluído');
-      fetchSectors();
-    } catch (e: any) {
-      toast.error(e.message.includes('foreign') ? 'Existem produtos vinculados' : 'Erro ao excluir');
+
+      toast.success('Setor excluido com sucesso');
+      setIsDeleteDialogOpen(false);
+      setSectorToDelete(null);
+      await fetchSectors();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(message.includes('foreign') ? 'Existem produtos vinculados ao setor.' : 'Erro ao excluir setor');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  if (isLoading) return <div className="text-center py-20 text-slate-400 font-bold">Carregando setores...</div>;
+  const columns = useMemo<DataTableColumn<Sector>[]>(
+    () => [
+      {
+        key: 'name',
+        header: 'Setor',
+        sortable: true,
+        accessor: (sector) => sector.name,
+        cell: (sector) => <span className="font-bold text-slate-800">{sector.name}</span>,
+      },
+      {
+        key: 'actions',
+        header: 'Acoes',
+        align: 'right',
+        cell: (sector) => (
+          <div className="group flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Editar setor"
+              aria-label="Editar setor"
+              className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100"
+              onClick={() => openFormDialog(sector)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Excluir setor"
+              aria-label="Excluir setor"
+              className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50"
+              onClick={() => openDeleteDialog(sector)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
+  if (isLoading) {
+    return <div className="py-20 text-center font-bold text-slate-400">Carregando setores...</div>;
+  }
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-4 px-4 md:px-6 pt-2 pb-10">
+    <PageContainer variant="form-centric">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Setores</h1>
-        <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
-          <Plus className="h-3.5 w-3.5 mr-2" /> Novo Setor
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">Setores</h1>
+        <Button
+          type="button"
+          className="h-9 bg-brand-primary px-4 text-xs font-bold hover:bg-brand-primary-hover"
+          onClick={() => openFormDialog()}
+        >
+          <Plus className="mr-2 h-3.5 w-3.5" /> Novo Setor
         </Button>
       </div>
 
-      <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
-        <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow className="border-slate-100 hover:bg-transparent">
-              <TableHead className="py-3 px-8 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Identificação do Setor</TableHead>
-              <TableHead className="py-3 px-8 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sectors.map((s) => (
-              <TableRow key={s.id} className="group hover:bg-slate-50/50 transition-all border-slate-100">
-                <TableCell className="py-3 px-8"><span className="font-bold text-slate-800 text-sm tracking-tight">{s.name}</span></TableCell>
-                <TableCell className="py-3 px-8 text-right">
-                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => handleOpenDialog(s)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-red-50 rounded-lg" onClick={() => handleDelete(s)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <DataTable
+        data={sectors}
+        columns={columns}
+        rowKey={(sector) => sector.id}
+        emptyMessage="Nenhum setor cadastrado."
+        defaultSort={{ key: 'name', direction: 'asc' }}
+        initialPageSize={10}
+      />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-sm rounded-2xl p-6 shadow-2xl border-none">
-          <DialogHeader><DialogTitle className="text-lg font-bold">Setor</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-1.5 uppercase text-[10px] font-bold text-slate-500 tracking-widest px-1">
-              <Label htmlFor="name">Nome do Setor</Label>
-              <Input id="name" className="h-10 bg-slate-50 border-slate-200 rounded-lg font-bold" value={sectorName} onChange={(e) => setSectorName(e.target.value)} placeholder="Ex: Produção, EPIs..." autoFocus />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Sair</Button>
-              <Button className="bg-[#387146] hover:bg-[#2b5836] h-10 px-8 text-xs font-bold rounded-lg shadow-sm" onClick={handleSave} disabled={isSaving}>Salvar</Button>
-            </div>
-          </div>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-w-sm rounded-2xl border-none p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              {editingSector ? 'Editar Setor' : 'Novo Setor'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form className="space-y-4 pt-2" onSubmit={(event) => void handleSave(event)}>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="px-1 text-xs font-bold uppercase tracking-widest text-slate-500">
+                      Nome do Setor
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        autoFocus
+                        placeholder="Ex: Producao, EPIs..."
+                        className="h-10 rounded-lg border-slate-200 bg-slate-50 font-medium"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-10 text-xs font-bold"
+                  onClick={() => handleDialogOpenChange(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="h-10 rounded-lg bg-brand-primary px-8 text-xs font-bold hover:bg-brand-primary-hover"
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
-    </div>
+
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Confirmar Exclusao"
+        description={`Deseja excluir o setor \"${sectorToDelete?.name || ''}\"?`}
+        onConfirm={handleDelete}
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        isLoading={isDeleting}
+      />
+    </PageContainer>
   );
 }

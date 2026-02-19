@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { PageContainer } from '@/components/layout/page-container';
 import {
   Dialog,
   DialogContent,
@@ -396,7 +397,7 @@ export default function FollowUpPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <PageContainer className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Follow-up</h1>
@@ -406,7 +407,7 @@ export default function FollowUpPage() {
             setDateDisplay('');
             setSolicitationModalOpen(true);
           }}
-          className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold"
+          className="bg-brand-primary hover:bg-brand-primary-hover h-9 text-xs font-bold"
         >
           <Plus className="h-4 w-4 mr-1" />
           Inserir Solicitação
@@ -487,6 +488,8 @@ export default function FollowUpPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title="Excluir solicitacao"
+                          aria-label="Excluir solicitacao"
                           className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
                           onClick={() => {
                             setDeleteTarget({ type: 'solicitation', id: sol.id });
@@ -556,7 +559,9 @@ export default function FollowUpPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50"
+                                  title={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
+                                  aria-label={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
+                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50"
                                   onClick={() => {
                                     if (hasReceipt && receipt) {
                                       handleDeleteReceipt(receipt.id, sol.id);
@@ -630,7 +635,7 @@ export default function FollowUpPage() {
         <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-800">
-              <FileText className="h-5 w-5 text-[#387146]" />
+              <FileText className="h-5 w-5 text-brand-primary" />
               Nova Solicitação
             </DialogTitle>
           </DialogHeader>
@@ -666,9 +671,9 @@ export default function FollowUpPage() {
             <Button
               onClick={handleCreateSolicitation}
               disabled={isSubmitting}
-              className="w-full bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold"
+              className="w-full bg-brand-primary hover:bg-brand-primary-hover h-9 text-xs font-bold"
             >
-              {isSubmitting ? 'Criando...' : 'Criar Solicitação'}
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </DialogContent>
@@ -717,7 +722,7 @@ export default function FollowUpPage() {
               disabled={isSubmitting}
               className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-xs font-bold text-white"
             >
-              {isSubmitting ? 'Adicionando...' : 'Adicionar Pedido'}
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </DialogContent>
@@ -758,7 +763,7 @@ export default function FollowUpPage() {
               disabled={isSubmitting}
               className="w-full bg-emerald-600 hover:bg-emerald-700 h-9 text-xs font-bold text-white"
             >
-              {isSubmitting ? 'Confirmando...' : 'Confirmar Recebimento'}
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </DialogContent>
@@ -792,6 +797,6 @@ export default function FollowUpPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

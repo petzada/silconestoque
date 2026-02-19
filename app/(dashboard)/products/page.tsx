@@ -1,13 +1,14 @@
-'use client';
+﻿'use client';
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -16,6 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +40,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
+import { PageContainer } from '@/components/layout/page-container';
 import {
   Plus,
   Pencil,
@@ -41,7 +53,6 @@ import {
   TrendingUp,
   TrendingDown,
   Trash2,
-  AlertTriangle,
   FileDown,
   CheckCircle2,
   XCircle,
@@ -51,7 +62,7 @@ import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Product, Sector, ProductFormData, PriceHistory } from '@/lib/types';
+import type { Product, Sector, PriceHistory } from '@/lib/types';
 
 const UNIT_OPTIONS = [
   { value: 'unidade', label: 'Unidade' },
@@ -67,16 +78,16 @@ function formatCurrency(value: number | null): string {
   }).format(value);
 }
 
-const initialFormData: ProductFormData = {
-  name: '',
-  sku_code: '',
-  unit: 'unidade',
-  sector_id: '',
-  current_qty: 0,
-  min_stock: 0,
-  max_stock: 0,
-  cost_price: undefined,
-};
+const productFormSchema = z.object({
+  name: z.string().trim().min(2, 'Informe o nome do produto com pelo menos 2 caracteres.'),
+  sku_code: z.string().optional(),
+  unit: z.enum(['unidade', 'caixa', 'pacote']),
+  sector_id: z.string().min(1, 'Selecione um setor.'),
+  min_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
+  max_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
+});
+
+type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface CSVValidRow {
   row: Record<string, string>;
@@ -110,8 +121,8 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedProductForHistory, setSelectedProductForHistory] = useState<Product | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
-  const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSector, setFilterSector] = useState<string>('all');
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -119,6 +130,18 @@ export default function ProductsPage() {
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      name: '',
+      sku_code: '',
+      unit: 'unidade',
+      sector_id: '',
+      min_stock: 0,
+      max_stock: 0,
+    },
+  });
 
   useEffect(() => {
     fetchData();
@@ -148,19 +171,24 @@ export default function ProductsPage() {
   const handleOpenDialog = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
-      setFormData({
+      form.reset({
         name: product.name,
         sku_code: product.sku_code || '',
         unit: product.unit,
         sector_id: product.sector_id,
-        current_qty: product.current_qty,
         min_stock: product.min_stock,
         max_stock: product.max_stock,
-        cost_price: product.cost_price || undefined,
       });
     } else {
       setEditingProduct(null);
-      setFormData(initialFormData);
+      form.reset({
+        name: '',
+        sku_code: '',
+        unit: 'unidade',
+        sector_id: '',
+        min_stock: 0,
+        max_stock: 0,
+      });
     }
     setIsDialogOpen(true);
   };
@@ -190,6 +218,7 @@ export default function ProductsPage() {
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
 
+    setIsDeleting(true);
     try {
       await supabase.from('price_history').delete().eq('product_id', productToDelete.id);
       await supabase.from('movements').delete().eq('product_id', productToDelete.id);
@@ -203,57 +232,68 @@ export default function ProductsPage() {
       fetchData();
     } catch {
       toast.error('Erro ao excluir produto');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingProduct(null);
-    setFormData(initialFormData);
-  };
-
-  const handleSave = async () => {
-    if (!formData.name.trim() || !formData.sector_id) {
-      toast.error('Preencha os campos obrigatórios');
-      return;
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open && form.formState.isDirty) {
+      const shouldClose = window.confirm('Descartar alteracoes nao salvas?');
+      if (!shouldClose) return;
     }
 
+    if (!open) {
+      setEditingProduct(null);
+      form.reset({
+        name: '',
+        sku_code: '',
+        unit: 'unidade',
+        sector_id: '',
+        min_stock: 0,
+        max_stock: 0,
+      });
+    }
+
+    setIsDialogOpen(open);
+  };
+
+  const handleSave = form.handleSubmit(async (values) => {
     setIsSaving(true);
     try {
       const productData = {
-        name: formData.name.trim(),
-        sku_code: formData.sku_code?.trim() || null,
-        unit: formData.unit,
-        sector_id: formData.sector_id,
-        min_stock: formData.min_stock || 0,
-        max_stock: formData.max_stock || 0,
-        cost_price: formData.cost_price || null,
+        name: values.name.trim(),
+        sku_code: values.sku_code?.trim() || null,
+        unit: values.unit,
+        sector_id: values.sector_id,
+        min_stock: values.min_stock || 0,
+        max_stock: values.max_stock || 0,
       };
 
       if (editingProduct) {
         await supabase.from('products').update(productData).eq('id', editingProduct.id);
       } else {
-        const { data: newP } = await supabase.from('products').insert({ ...productData, current_qty: 0 }).select().single();
-        if (formData.current_qty > 0 && newP) {
-          await supabase.from('movements').insert({
-            product_id: newP.id,
-            type: 'IN',
-            quantity: formData.current_qty,
-            entity_name: 'Estoque Inicial',
-            is_initial_import: true,
-          });
-        }
+        await supabase.from('products').insert({ ...productData, current_qty: 0 });
       }
 
       toast.success(editingProduct ? 'Atualizado' : 'Criado');
-      handleCloseDialog();
+      setIsDialogOpen(false);
+      setEditingProduct(null);
+      form.reset({
+        name: '',
+        sku_code: '',
+        unit: 'unidade',
+        sector_id: '',
+        min_stock: 0,
+        max_stock: 0,
+      });
       fetchData();
     } catch {
       toast.error('Erro ao salvar');
     } finally {
       setIsSaving(false);
     }
-  };
+  });
 
   const validateCSV = useCallback(async (file: File) => {
     setIsValidating(true);
@@ -435,21 +475,134 @@ export default function ProductsPage() {
 
   const getStatus = (p: Product) => {
     if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-red-500' };
-    if (p.current_qty <= p.min_stock) return { label: 'CRÍTICO', color: 'bg-amber-600' };
-    return { label: 'ESTÁVEL', color: 'bg-[#387146]' };
+    if (p.current_qty <= p.min_stock) return { label: 'CRITICO', color: 'bg-amber-600' };
+    return { label: 'ESTAVEL', color: 'bg-brand-primary' };
   };
+
+  const columns = useMemo<DataTableColumn<Product>[]>(
+    () => [
+      {
+        key: 'sku',
+        header: 'SKU',
+        sortable: true,
+        accessor: (product) => product.sku_code || '',
+        cell: (product) => (
+          <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs font-bold text-slate-600">
+            {product.sku_code || '---'}
+          </span>
+        ),
+      },
+      {
+        key: 'name',
+        header: 'Nome',
+        sortable: true,
+        accessor: (product) => product.name,
+        cell: (product) => (
+          <TruncatedCell value={product.name} className="max-w-[300px] font-bold text-slate-800" />
+        ),
+      },
+      {
+        key: 'sector',
+        header: 'Setor',
+        sortable: true,
+        accessor: (product) => product.sector?.name || '',
+        cell: (product) => (
+          <TruncatedCell value={product.sector?.name || '-'} className="max-w-[240px] text-xs font-semibold text-slate-500" />
+        ),
+      },
+      {
+        key: 'current_qty',
+        header: 'Saldo',
+        sortable: true,
+        accessor: (product) => product.current_qty,
+        align: 'center',
+        cell: (product) => (
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-bold text-slate-900 leading-none">{product.current_qty}</span>
+            <span className="mt-0.5 text-xs font-bold uppercase text-slate-400">{product.unit}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'cost_price',
+        header: 'Custo Unit',
+        sortable: true,
+        accessor: (product) => product.cost_price || 0,
+        align: 'right',
+        cell: (product) => <span className="font-bold text-slate-700 text-sm">{formatCurrency(product.cost_price)}</span>,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        sortable: true,
+        accessor: (product) => getStatus(product).label,
+        align: 'center',
+        cell: (product) => {
+          const status = getStatus(product);
+          return (
+            <Badge className={cn('border-none px-2 py-0.5 text-xs font-black uppercase tracking-wider', status.color)}>
+              {status.label}
+            </Badge>
+          );
+        },
+      },
+      {
+        key: 'actions',
+        header: 'Acoes',
+        align: 'right',
+        cell: (product) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Ver historico de precos"
+              aria-label="Ver historico de precos"
+              className="h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100"
+              onClick={() => handleOpenHistory(product)}
+            >
+              <History className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Editar produto"
+              aria-label="Editar produto"
+              className="h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100"
+              onClick={() => handleOpenDialog(product)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Excluir produto"
+              aria-label="Excluir produto"
+              className="h-8 w-8 rounded-lg text-red-400 hover:bg-red-50"
+              onClick={() => handleOpenDeleteDialog(product)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [filteredProducts]
+  );
 
   if (isLoading) return <div className="text-center py-20 text-slate-400 font-bold">Carregando catálogo...</div>;
 
   return (
-    <div className="max-w-[1700px] mx-auto space-y-4 px-4 md:px-6 pt-2 pb-10">
+    <PageContainer>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Produtos</h1>
         <div className="flex gap-2">
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV
           </Button>
-          <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
+          <Button className="bg-brand-primary hover:bg-brand-primary-hover h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
             <Plus className="h-3.5 w-3.5 mr-2" /> Novo Produto
           </Button>
         </div>
@@ -476,131 +629,144 @@ export default function ProductsPage() {
         </Select>
       </div>
 
-      <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow className="hover:bg-transparent border-slate-100">
-                <TableHead className="py-3 px-6 font-bold text-slate-500 uppercase text-[10px] tracking-wider w-[120px]">SKU</TableHead>
-                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Nome</TableHead>
-                <TableHead className="py-3 px-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Setor</TableHead>
-                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">Saldo</TableHead>
-                <TableHead className="py-3 px-4 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Custo Unit.</TableHead>
-                <TableHead className="py-3 px-4 text-center font-bold text-slate-500 uppercase text-[10px] tracking-wider">Status</TableHead>
-                <TableHead className="py-3 px-6 text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Gerir</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map((p) => {
-                const s = getStatus(p);
-                return (
-                  <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
-                    <TableCell className="px-6 py-2.5">
-                      <span className="font-mono text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">{p.sku_code || '---'}</span>
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5 max-w-[300px]">
-                      <span className="font-bold text-slate-800 text-sm block truncate" title={p.name}>{p.name}</span>
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5 text-xs font-semibold text-slate-500">{p.sector?.name}</TableCell>
-                    <TableCell className="px-4 py-2.5 text-center">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900 leading-none">{p.current_qty}</span>
-                        <span className="text-[9px] uppercase font-bold text-slate-400 mt-0.5">{p.unit}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5 text-right">
-                      <span className="font-bold text-slate-700 text-sm">{formatCurrency(p.cost_price)}</span>
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5 text-center">
-                      <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border-none", s.color)}>{s.label}</Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-2.5">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => handleOpenHistory(p)}>
-                          <History className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:bg-slate-100 rounded-lg" onClick={() => handleOpenDialog(p)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-red-50 rounded-lg" onClick={() => handleOpenDeleteDialog(p)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+      <DataTable
+        data={filteredProducts}
+        columns={columns}
+        rowKey={(product) => product.id}
+        emptyMessage={searchTerm || filterSector !== 'all' ? 'Nenhum produto encontrado para este filtro.' : 'Nenhum produto cadastrado.'}
+        defaultSort={{ key: 'name', direction: 'asc' }}
+        initialPageSize={25}
+      />
 
       {/* Dialog: Novo/Editar Produto */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
           <DialogHeader><DialogTitle className="text-lg font-bold flex items-center gap-2">
-            {editingProduct ? <><Pencil className="h-4 w-4 text-slate-600" /> Editar Material</> : <><Plus className="h-4 w-4 text-emerald-600" /> Novo Material</>}
+            {editingProduct ? <><Pencil className="h-4 w-4 text-slate-600" /> Editar Material</> : <><Plus className="h-4 w-4 text-brand-primary" /> Novo Material</>}
           </DialogTitle></DialogHeader>
-          <div className="grid gap-4 pt-4 text-sm font-semibold text-slate-600 uppercase text-[10px] tracking-widest">
-            <div className="space-y-1.5">
-              <Label className="pl-1">Nome do Produto</Label>
-              <Input className="h-10 bg-slate-50 rounded-lg" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="pl-1">SKU</Label>
-                <Input className="h-10 bg-slate-50 rounded-lg" value={formData.sku_code} onChange={(e) => setFormData({ ...formData, sku_code: e.target.value })} />
+          <Form {...form}>
+            <form className="grid gap-4 pt-4" onSubmit={(event) => void handleSave(event)}>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Nome do Produto</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="h-10 bg-slate-50 rounded-lg" autoFocus />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="sku_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">SKU</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-10 bg-slate-50 rounded-lg" />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Unid. Medida</FormLabel>
+                      <FormControl>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="h-10 border-slate-200 rounded-lg bg-slate-50"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
               </div>
-              <div className="space-y-1.5">
-                <Label className="pl-1">Unid. Medida</Label>
-                <Select value={formData.unit} onValueChange={(v: 'unidade' | 'caixa' | 'pacote') => setFormData({ ...formData, unit: v })}>
-                  <SelectTrigger className="h-10 border-slate-200 rounded-lg bg-slate-50"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-xl">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
+              <FormField
+                control={form.control}
+                name="sector_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Setor Alocado</FormLabel>
+                    <FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="h-10 border-slate-200 rounded-lg bg-slate-50"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent className="rounded-xl">{sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="min_stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Minimo</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          className="h-10 bg-slate-50 rounded-lg"
+                          value={field.value ?? ''}
+                          onChange={(event) => field.onChange(Number(event.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="max_stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Maximo</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          className="h-10 bg-slate-50 rounded-lg"
+                          value={field.value ?? ''}
+                          onChange={(event) => field.onChange(Number(event.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="pl-1">Setor Alocado</Label>
-              <Select value={formData.sector_id} onValueChange={(v) => setFormData({ ...formData, sector_id: v })}>
-                <SelectTrigger className="h-10 border-slate-200 rounded-lg bg-slate-50"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent className="rounded-xl">{sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="pl-1">Mínimo</Label>
-                <Input type="number" className="h-10 bg-slate-50 rounded-lg" value={formData.min_stock} onChange={(e) => setFormData({ ...formData, min_stock: parseInt(e.target.value) || 0 })} />
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
+                <Button type="submit" className="bg-brand-primary hover:bg-brand-primary-hover h-10 px-8 rounded-lg font-bold" disabled={isSaving}>Salvar</Button>
               </div>
-              <div className="space-y-1.5">
-                <Label className="pl-1">Máximo</Label>
-                <Input type="number" className="h-10 bg-slate-50 rounded-lg" value={formData.max_stock} onChange={(e) => setFormData({ ...formData, max_stock: parseInt(e.target.value) || 0 })} />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={handleCloseDialog}>Cancelar</Button>
-              <Button className="bg-[#387146] hover:bg-[#2b5836] h-10 px-8 rounded-lg font-bold" onClick={handleSave} disabled={isSaving}>Finalizar</Button>
-            </div>
-          </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Confirmar Exclusão */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-sm rounded-2xl p-6 shadow-2xl border-none">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" /> Confirmar Exclusão
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-500 pt-2">
-              Esta ação irá excluir permanentemente o produto <strong className="text-slate-700">{productToDelete?.name}</strong> e todas as suas movimentações associadas.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button>
-            <Button className="bg-red-600 hover:bg-red-700 h-10 px-8 rounded-lg font-bold text-white" onClick={handleDeleteProduct}>Excluir</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Confirmar Exclusao"
+        description={`Esta acao ira excluir o produto "${productToDelete?.name || ''}" e todas as suas movimentacoes associadas.`}
+        onConfirm={handleDeleteProduct}
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        isLoading={isDeleting}
+      />
 
       {/* Dialog: Importar CSV com Validação */}
       <Dialog open={isImportDialogOpen} onOpenChange={handleCloseImportDialog}>
@@ -696,7 +862,7 @@ export default function ProductsPage() {
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
               <Button
-                className="bg-[#387146] hover:bg-[#2b5836] h-10 px-8 text-xs font-bold rounded-lg"
+                className="bg-brand-primary hover:bg-brand-primary-hover h-10 px-8 text-xs font-bold rounded-lg"
                 onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
@@ -755,6 +921,6 @@ export default function ProductsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

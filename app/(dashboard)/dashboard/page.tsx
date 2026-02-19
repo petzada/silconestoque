@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PageContainer } from '@/components/layout/page-container';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -213,7 +214,7 @@ export default function DashboardPage() {
       sub: `${financeStats.countIns} entradas realizadas`,
       icon: TrendingUp,
       color: 'text-[#86efac]',
-      bg: 'bg-[#387146]',
+      bg: 'bg-brand-primary',
     },
     {
       title: 'Saídas (R$)',
@@ -250,7 +251,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-[1700px] mx-auto space-y-4 pb-10 px-4 md:px-6">
+    <PageContainer className="space-y-4">
       {/* Header com Filtros */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
@@ -510,6 +511,6 @@ export default function DashboardPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

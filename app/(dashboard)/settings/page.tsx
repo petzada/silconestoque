@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { RotateCcw, ShieldCheck, Database, CheckCircle2 } from 'lucide-react';
+import { PageContainer } from '@/components/layout/page-container';
 
 export default function SettingsPage() {
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -108,7 +109,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-[1000px] mx-auto space-y-6 px-4 md:px-6 pt-6 pb-10">
+    <PageContainer variant="form-centric" className="space-y-6 pt-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Configurações</h1>
       </div>
@@ -172,6 +173,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }

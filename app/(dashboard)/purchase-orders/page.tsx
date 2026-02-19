@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { PageContainer } from '@/components/layout/page-container';
 import {
   AlertTriangle,
   Calendar,
@@ -130,7 +131,7 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <div className="max-w-[1700px] mx-auto space-y-6 px-4 md:px-6 pt-2 pb-10">
+    <PageContainer className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Pedidos</h1>
         <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-100 shadow-sm">
@@ -207,7 +208,7 @@ export default function PurchaseOrdersPage() {
             </Table>
           </div>
           <div className="p-4 bg-slate-50 flex justify-end gap-2 border-t">
-            <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Fechar</Button>
+            <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             {orderItems.length > 0 && (
               <Button className="bg-slate-900 hover:bg-black h-10 px-8 text-xs font-bold rounded-lg" onClick={generatePDF}>
                 <FileDown className="h-3.5 w-3.5 mr-2" /> Exportar PDF
@@ -216,6 +217,6 @@ export default function PurchaseOrdersPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

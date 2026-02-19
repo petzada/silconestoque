@@ -88,6 +88,8 @@ export function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
+        title={mobileOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
+        aria-label={mobileOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
         className="fixed top-4 left-4 z-50 lg:hidden bg-slate-900 text-white rounded-lg shadow-lg"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
@@ -105,7 +107,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen w-64 bg-[#387146] text-white transition-all duration-300 lg:translate-x-0 border-r border-emerald-800/30 flex flex-col',
+          'fixed left-0 top-0 z-40 h-screen w-64 bg-brand-primary text-white transition-all duration-300 lg:translate-x-0 border-r border-emerald-800/30 flex flex-col',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -141,14 +143,14 @@ export function Sidebar() {
                       className={cn(
                         'group flex items-center gap-2.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200 font-inter',
                         isActive
-                          ? 'bg-white text-[#387146] shadow-md'
+                          ? 'bg-white text-brand-primary shadow-md'
                           : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
                       )}
                     >
                       <item.icon
                         className={cn(
                           'h-3.5 w-3.5 transition-colors',
-                          isActive ? 'text-[#387146]' : 'text-emerald-100/70 group-hover:text-white'
+                          isActive ? 'text-brand-primary' : 'text-emerald-100/70 group-hover:text-white'
                         )}
                       />
                       <span>{item.title}</span>
@@ -168,14 +170,14 @@ export function Sidebar() {
             className={cn(
               'group flex items-center gap-2.5 px-4 py-2 rounded-lg text-[11px] font-bold transition-all duration-200 font-inter',
               pathname === '/settings'
-                ? 'bg-white text-[#387146] shadow-md'
+                ? 'bg-white text-brand-primary shadow-md'
                 : 'text-emerald-100 hover:text-white hover:bg-white/10'
             )}
           >
             <Settings
               className={cn(
                 'h-3.5 w-3.5 transition-colors',
-                pathname === '/settings' ? 'text-[#387146]' : 'text-emerald-100 group-hover:text-white'
+                pathname === '/settings' ? 'text-brand-primary' : 'text-emerald-100 group-hover:text-white'
               )}
             />
             <span>Configurações</span>
