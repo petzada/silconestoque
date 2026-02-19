@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { useAuth } from '@/components/auth-provider';
@@ -14,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const { isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
@@ -35,8 +36,8 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <Sidebar />
-      <main className="lg:ml-64 min-h-screen">
+      <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed((prev) => !prev)} />
+      <main className={`min-h-screen transition-all duration-300 ${collapsed ? 'ml-0' : 'lg:ml-64'}`}>
         <div className="py-6">
           {children}
         </div>

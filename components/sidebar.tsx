@@ -16,6 +16,8 @@ import {
   Menu,
   X,
   Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -89,7 +91,12 @@ const navSections = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+}
+
+export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -119,8 +126,9 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen w-64 bg-brand-primary text-white transition-all duration-300 lg:translate-x-0 border-r border-emerald-800/30 flex flex-col',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed left-0 top-0 z-40 h-screen bg-brand-primary text-white transition-all duration-300 border-r border-emerald-800/30 flex flex-col',
+          collapsed ? 'w-0 -translate-x-full lg:-translate-x-full overflow-hidden' : 'w-64',
+          !collapsed && (mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
         )}
       >
         {/* Logo Section */}
@@ -135,7 +143,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
           <div className="space-y-3">
             {navSections.map((section, sectionIndex) => (
               <div key={section.label ?? `section-${sectionIndex}`} className="space-y-1">
@@ -153,7 +161,7 @@ export function Sidebar() {
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        'group flex items-center gap-2.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200 font-inter',
+                        'group flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200 font-inter',
                         isActive
                           ? 'bg-white text-brand-primary shadow-md'
                           : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
@@ -174,37 +182,64 @@ export function Sidebar() {
           </div>
         </nav>
 
-        {/* Bottom Section: Settings & Logout */}
-        <div className="p-3 border-t border-white/10 space-y-1.5">
-          <Link
-            href="/settings"
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              'group flex items-center gap-2.5 px-4 py-2 rounded-lg text-[11px] font-bold transition-all duration-200 font-inter',
-              pathname === '/settings'
-                ? 'bg-white text-brand-primary shadow-md'
-                : 'text-emerald-100 hover:text-white hover:bg-white/10'
-            )}
-          >
-            <Settings
+        {/* Bottom Section: Settings, Logout and Collapse */}
+        <div className="p-3 border-t border-white/10 flex items-center">
+          <div className="flex flex-row gap-2">
+            <Link
+              href="/settings"
+              onClick={() => setMobileOpen(false)}
               className={cn(
-                'h-3.5 w-3.5 transition-colors',
-                pathname === '/settings' ? 'text-brand-primary' : 'text-emerald-100 group-hover:text-white'
+                'group flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200',
+                pathname === '/settings'
+                  ? 'bg-white text-brand-primary shadow-md'
+                  : 'text-emerald-100 hover:text-white hover:bg-white/10'
               )}
-            />
-            <span>Configurações</span>
-          </Link>
+              title="Configurações"
+              aria-label="Configurações"
+            >
+              <Settings
+                className={cn(
+                  'h-3.5 w-3.5 transition-colors',
+                  pathname === '/settings' ? 'text-brand-primary' : 'text-emerald-100 group-hover:text-white'
+                )}
+              />
+            </Link>
+
+            <Button
+              variant="ghost"
+              className="h-9 w-9 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-300 transition-all p-0"
+              onClick={logout}
+              title="Sair"
+              aria-label="Sair"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
 
           <Button
             variant="ghost"
-            className="w-full justify-start h-9 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-all text-[11px] font-bold font-inter px-4"
-            onClick={logout}
+            className="ml-auto h-9 w-9 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-all p-0"
+            onClick={onToggleCollapse}
+            title="Recolher sidebar"
+            aria-label="Recolher sidebar"
           >
-            <LogOut className="h-3.5 w-3.5 mr-2.5" />
-            Sair
+            <PanelLeftClose className="h-3.5 w-3.5" />
           </Button>
         </div>
       </aside>
+
+      {collapsed && (
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Expandir sidebar"
+          aria-label="Expandir sidebar"
+          className="hidden lg:flex fixed top-4 left-4 z-50 bg-slate-900 text-white rounded-lg shadow-lg"
+          onClick={onToggleCollapse}
+        >
+          <PanelLeftOpen className="h-5 w-5" />
+        </Button>
+      )}
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
