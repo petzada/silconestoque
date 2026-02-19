@@ -132,10 +132,7 @@ export default function PurchaseOrdersPage() {
   return (
     <div className="max-w-[1700px] mx-auto space-y-6 px-4 md:px-6 pt-2 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Gestão de Resuprimento</h1>
-          <p className="text-xs text-slate-500 font-medium">Geração de ordens de compra baseadas nos níveis de estoque.</p>
-        </div>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Pedidos</h1>
         <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-100 shadow-sm">
           <Filter className="h-3.5 w-3.5 text-slate-400 ml-2" />
           <Select value={selectedSector} onValueChange={setSelectedSector}>

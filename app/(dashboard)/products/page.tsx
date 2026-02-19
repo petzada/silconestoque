@@ -444,10 +444,7 @@ export default function ProductsPage() {
   return (
     <div className="max-w-[1700px] mx-auto space-y-4 px-4 md:px-6 pt-2 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Catálogo de Produtos</h1>
-          <p className="text-xs text-slate-500 font-medium">Gestão de materiais e insumos operacionais.</p>
-        </div>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Produtos</h1>
         <div className="flex gap-2">
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV

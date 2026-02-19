@@ -110,8 +110,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-[1000px] mx-auto space-y-6 px-4 md:px-6 pt-6 pb-10">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Configurações e Ajustes</h1>
-        <p className="text-slate-500 font-medium">Ferramentas administrativas do sistema.</p>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Configurações</h1>
       </div>
 
       <div className="grid gap-6">

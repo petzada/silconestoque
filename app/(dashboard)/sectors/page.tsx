@@ -97,10 +97,7 @@ export default function SectorsPage() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-4 px-4 md:px-6 pt-2 pb-10">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Estrutura de Setores</h1>
-          <p className="text-xs text-slate-500 font-medium">Organização dos departamentos e centros de custo.</p>
-        </div>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Setores</h1>
         <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
           <Plus className="h-3.5 w-3.5 mr-2" /> Novo Setor
         </Button>

@@ -198,10 +198,7 @@ export default function MovementsPage() {
   return (
     <div className="max-w-[1700px] mx-auto space-y-4 px-4 md:px-6 pt-2 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Movimentações de Estoque</h1>
-          <p className="text-xs text-slate-500 font-medium">Histórico auditável de entradas e saídas.</p>
-        </div>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Movimentações</h1>
         <div className="flex gap-2">
           <Button className="bg-[#387146] hover:bg-[#2b5836] h-9 text-xs font-bold px-4" onClick={() => handleOpenDialog('IN')}>
             <ArrowDownCircle className="h-3.5 w-3.5 mr-2" /> Registrar Entrada
