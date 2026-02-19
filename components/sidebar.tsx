@@ -9,6 +9,7 @@ import {
   FolderOpen,
   ArrowLeftRight,
   ShoppingCart,
+  ClipboardList,
   LogOut,
   Menu,
   X,
@@ -44,6 +45,11 @@ const navItems = [
     title: 'Pedidos de Compra',
     href: '/purchase-orders',
     icon: ShoppingCart,
+  },
+  {
+    title: 'Follow-up',
+    href: '/follow-up',
+    icon: ClipboardList,
   },
 ];
 

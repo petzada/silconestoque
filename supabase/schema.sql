@@ -235,6 +235,62 @@ CREATE POLICY "Allow all" ON price_history FOR ALL USING (true);
 -- =====================
 -- VIEWS
 -- =====================
+-- =====================
+-- FOLLOW-UP TABLES
+-- =====================
+
+-- Solicitações de compra
+CREATE TABLE IF NOT EXISTS follow_up_solicitations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  request_number TEXT NOT NULL,
+  request_date DATE NOT NULL,
+  description TEXT NOT NULL,
+  status TEXT DEFAULT 'pendente' CHECK (status IN ('pendente', 'em_andamento', 'recebido')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Pedidos de compra vinculados a solicitações
+CREATE TABLE IF NOT EXISTS follow_up_purchase_orders (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  solicitation_id UUID NOT NULL REFERENCES follow_up_solicitations(id) ON DELETE CASCADE,
+  po_number TEXT NOT NULL,
+  supplier_name TEXT NOT NULL,
+  estimated_delivery DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_follow_up_po_solicitation ON follow_up_purchase_orders(solicitation_id);
+
+-- Recebimentos vinculados a pedidos de compra (0 ou 1 por pedido)
+CREATE TABLE IF NOT EXISTS follow_up_receipts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  purchase_order_id UUID NOT NULL UNIQUE REFERENCES follow_up_purchase_orders(id) ON DELETE CASCADE,
+  supplier_name TEXT NOT NULL,
+  invoice_value DECIMAL(12, 2),
+  received_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_follow_up_receipts_po ON follow_up_receipts(purchase_order_id);
+
+-- RLS for follow-up tables
+ALTER TABLE follow_up_solicitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follow_up_purchase_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follow_up_receipts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow all" ON follow_up_solicitations;
+CREATE POLICY "Allow all" ON follow_up_solicitations FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all" ON follow_up_purchase_orders;
+CREATE POLICY "Allow all" ON follow_up_purchase_orders FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all" ON follow_up_receipts;
+CREATE POLICY "Allow all" ON follow_up_receipts FOR ALL USING (true);
+
+-- =====================
+-- VIEWS
+-- =====================
 DROP VIEW IF EXISTS dashboard_stats;
 CREATE OR REPLACE VIEW dashboard_stats AS
 SELECT

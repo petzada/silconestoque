@@ -82,3 +82,53 @@ export type PurchaseOrderItem = {
   cost_price: number | null;
   total_cost: number | null;
 };
+
+// Follow-up types
+export type FollowUpStatus = 'pendente' | 'em_andamento' | 'recebido';
+
+export type FollowUpReceipt = {
+  id: string;
+  purchase_order_id: string;
+  supplier_name: string;
+  invoice_value: number | null;
+  received_at: string;
+  created_at: string;
+};
+
+export type FollowUpPurchaseOrder = {
+  id: string;
+  solicitation_id: string;
+  po_number: string;
+  supplier_name: string;
+  estimated_delivery: string | null;
+  created_at: string;
+  receipt?: FollowUpReceipt[];
+};
+
+export type FollowUpSolicitation = {
+  id: string;
+  request_number: string;
+  request_date: string;
+  description: string;
+  status: FollowUpStatus;
+  created_at: string;
+  updated_at: string;
+  purchase_orders?: FollowUpPurchaseOrder[];
+};
+
+export type SolicitationFormData = {
+  request_number: string;
+  request_date: string;
+  description: string;
+};
+
+export type PurchaseOrderFormData = {
+  po_number: string;
+  supplier_name: string;
+  estimated_delivery?: string;
+};
+
+export type ReceiptFormData = {
+  supplier_name: string;
+  invoice_value?: number;
+};
