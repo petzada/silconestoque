@@ -20,36 +20,60 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useState } from 'react';
 
-const navItems = [
+const navSections = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
+    items: [
+      {
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutDashboard,
+      },
+    ],
   },
   {
-    title: 'Produtos',
-    href: '/products',
-    icon: Package,
+    label: 'Estoque',
+    items: [
+      {
+        title: 'Movimentações',
+        href: '/movements',
+        icon: ArrowLeftRight,
+      },
+    ],
   },
   {
-    title: 'Movimentações',
-    href: '/movements',
-    icon: ArrowLeftRight,
+    label: 'Cadastro',
+    items: [
+      {
+        title: 'Setores',
+        href: '/sectors',
+        icon: FolderOpen,
+      },
+      {
+        title: 'Produtos',
+        href: '/products',
+        icon: Package,
+      },
+    ],
   },
   {
-    title: 'Setores',
-    href: '/sectors',
-    icon: FolderOpen,
+    label: 'Controle',
+    items: [
+      {
+        title: 'Follow-up',
+        href: '/follow-up',
+        icon: ClipboardList,
+      },
+    ],
   },
   {
-    title: 'Pedidos de Compra',
-    href: '/purchase-orders',
-    icon: ShoppingCart,
-  },
-  {
-    title: 'Follow-up',
-    href: '/follow-up',
-    icon: ClipboardList,
+    label: 'Relatórios',
+    items: [
+      {
+        title: 'Pedidos',
+        href: '/purchase-orders',
+        icon: ShoppingCart,
+      },
+    ],
   },
 ];
 
@@ -97,32 +121,43 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-          {/* Label Controle */}
-          <p className="text-[9px] uppercase font-bold tracking-widest text-emerald-100/50 px-4 pb-2 font-inter">Controle</p>
-
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'group flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-200 font-inter',
-                  isActive
-                    ? 'bg-white text-[#387146] shadow-md'
-                    : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
+        <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
+          <div className="space-y-4">
+            {navSections.map((section, sectionIndex) => (
+              <div key={section.label ?? `section-${sectionIndex}`} className="space-y-1">
+                {section.label && (
+                  <p className="text-[9px] uppercase font-bold tracking-widest text-emerald-100/50 px-4 pb-2 font-inter">
+                    {section.label}
+                  </p>
                 )}
-              >
-                <item.icon className={cn(
-                  "h-4 w-4 transition-colors",
-                  isActive ? "text-[#387146]" : "text-emerald-100/70 group-hover:text-white"
-                )} />
-                <span>{item.title}</span>
-              </Link>
-            );
-          })}
+
+                {section.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        'group flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-200 font-inter',
+                        isActive
+                          ? 'bg-white text-[#387146] shadow-md'
+                          : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          'h-4 w-4 transition-colors',
+                          isActive ? 'text-[#387146]' : 'text-emerald-100/70 group-hover:text-white'
+                        )}
+                      />
+                      <span>{item.title}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </nav>
 
         {/* Bottom Section: Settings & Logout */}
@@ -137,11 +172,13 @@ export function Sidebar() {
                 : 'text-emerald-100 hover:text-white hover:bg-white/10'
             )}
           >
-            <Settings className={cn(
-              "h-4 w-4 transition-colors",
-              pathname === '/settings' ? "text-[#387146]" : "text-emerald-100 group-hover:text-white"
-            )} />
-            <span>AJUSTES</span>
+            <Settings
+              className={cn(
+                'h-4 w-4 transition-colors',
+                pathname === '/settings' ? 'text-[#387146]' : 'text-emerald-100 group-hover:text-white'
+              )}
+            />
+            <span>Configurações</span>
           </Link>
 
           <Button
@@ -150,7 +187,7 @@ export function Sidebar() {
             onClick={logout}
           >
             <LogOut className="h-4 w-4 mr-3" />
-            FINALIZAR SESSÃO
+            Sair
           </Button>
         </div>
       </aside>
