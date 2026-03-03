@@ -122,7 +122,9 @@ type ProductPdfRow = {
   name: string;
   currentQty: number;
   costPrice: number | null;
-  monthlyAvgOut: number;
+  month1Out: number;
+  month2Out: number;
+  month3Out: number;
 };
 
 function getMonthKey(date: Date): string {
@@ -464,6 +466,8 @@ export default function ProductsPage() {
         new Date(now.getFullYear(), now.getMonth() - 1, 1),
       ];
       const monthKeys = monthStarts.map((monthDate) => getMonthKey(monthDate));
+      const monthLabels = monthStarts.map((monthDate) => format(monthDate, 'MM/yyyy'));
+      const [month1Key, month2Key, month3Key] = monthKeys;
       const validMonthKeys = new Set(monthKeys);
 
       const createEmptyBuckets = (): MonthlyBucketMap =>
@@ -499,19 +503,22 @@ export default function ProductsPage() {
       const pdfRows: ProductPdfRow[] = selectedProducts
         .map((product) => {
           const productBuckets = bucketsByProduct.get(product.id) || createEmptyBuckets();
-          const totalOut = monthKeys.reduce((sum, key) => sum + (productBuckets[key] || 0), 0);
 
           return {
             productId: product.id,
             name: product.name,
             currentQty: product.current_qty,
             costPrice: product.cost_price,
-            monthlyAvgOut: totalOut / 3,
+            month1Out: productBuckets[month1Key] || 0,
+            month2Out: productBuckets[month2Key] || 0,
+            month3Out: productBuckets[month3Key] || 0,
           };
         })
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
-      const totalMonthlyAvg = pdfRows.reduce((sum, row) => sum + row.monthlyAvgOut, 0);
+      const totalMonth1Out = pdfRows.reduce((sum, row) => sum + row.month1Out, 0);
+      const totalMonth2Out = pdfRows.reduce((sum, row) => sum + row.month2Out, 0);
+      const totalMonth3Out = pdfRows.reduce((sum, row) => sum + row.month3Out, 0);
       const totalInventoryValue = pdfRows.reduce(
         (sum, row) => sum + row.currentQty * (row.costPrice || 0),
         0
@@ -531,19 +538,21 @@ export default function ProductsPage() {
       doc.text(`Setor: ${selectedSector?.name || 'Setor'}`, 14, 32);
       doc.text(`Gerado em: ${format(now, 'dd/MM/yyyy HH:mm')}`, 14, 38);
       doc.text(
-        `Média de saída mensal (3 meses fechados): ${format(monthStarts[0], 'MM/yyyy')} a ${format(monthStarts[2], 'MM/yyyy')}`,
+        `Consumo mensal (3 meses fechados): ${monthLabels[0]} a ${monthLabels[2]}`,
         14,
         44
       );
 
       autoTable(doc, {
         startY: 50,
-        head: [['Nome', 'Saldo Atual', 'Custo Unitário', 'Saída Média Mensal']],
+        head: [['Nome', 'Saldo Atual', 'Custo Unitário', monthLabels[0], monthLabels[1], monthLabels[2]]],
         body: pdfRows.map((row) => [
           row.name,
           String(row.currentQty),
           formatCurrency(row.costPrice),
-          row.monthlyAvgOut.toFixed(2),
+          String(row.month1Out),
+          String(row.month2Out),
+          String(row.month3Out),
         ]),
         styles: { fontSize: 9 },
         headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
@@ -553,6 +562,8 @@ export default function ProductsPage() {
           1: { halign: 'right' },
           2: { halign: 'right' },
           3: { halign: 'right' },
+          4: { halign: 'right' },
+          5: { halign: 'right' },
         },
       });
 
@@ -562,8 +573,10 @@ export default function ProductsPage() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text(`Total de produtos: ${pdfRows.length}`, 14, summaryY);
-      doc.text(`Soma da saída média mensal: ${totalMonthlyAvg.toFixed(2)}`, 14, summaryY + 6);
-      doc.text(`Valor total em estoque: ${formatCurrency(totalInventoryValue)}`, 14, summaryY + 12);
+      doc.text(`Saída total ${monthLabels[0]}: ${totalMonth1Out}`, 14, summaryY + 6);
+      doc.text(`Saída total ${monthLabels[1]}: ${totalMonth2Out}`, 14, summaryY + 12);
+      doc.text(`Saída total ${monthLabels[2]}: ${totalMonth3Out}`, 14, summaryY + 18);
+      doc.text(`Valor total em estoque: ${formatCurrency(totalInventoryValue)}`, 14, summaryY + 24);
 
       const fileName = `produtos_${slugifySectorName(selectedSector?.name || 'setor')}_${format(now, 'yyyyMMdd_HHmm')}.pdf`;
       doc.save(fileName);
