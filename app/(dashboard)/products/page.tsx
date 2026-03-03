@@ -109,6 +109,37 @@ interface CSVValidationResult {
   errors: CSVErrorRow[];
 }
 
+type MovementOutRow = {
+  product_id: string;
+  quantity: number;
+  created_at: string;
+};
+
+type MonthlyBucketMap = Record<string, number>;
+
+type ProductPdfRow = {
+  productId: string;
+  name: string;
+  currentQty: number;
+  costPrice: number | null;
+  monthlyAvgOut: number;
+};
+
+function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function slugifySectorName(value: string): string {
+  return (
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'setor'
+  );
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
@@ -129,6 +160,7 @@ export default function ProductsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProductFormValues>({
@@ -406,6 +438,143 @@ export default function ProductsPage() {
     toast.success('PDF de erros exportado');
   };
 
+  const exportSectorProductsPDF = async () => {
+    if (filterSector === 'all') {
+      toast.error('Selecione um setor para extrair o PDF');
+      return;
+    }
+
+    const selectedSector = sectors.find((sector) => sector.id === filterSector);
+    const selectedProducts = products.filter(
+      (product) => product.is_active && product.sector_id === filterSector
+    );
+
+    if (selectedProducts.length === 0) {
+      toast.error('Nenhum produto ativo encontrado para este setor');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const now = new Date();
+      const periodEndExclusive = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthStarts = [
+        new Date(now.getFullYear(), now.getMonth() - 3, 1),
+        new Date(now.getFullYear(), now.getMonth() - 2, 1),
+        new Date(now.getFullYear(), now.getMonth() - 1, 1),
+      ];
+      const monthKeys = monthStarts.map((monthDate) => getMonthKey(monthDate));
+      const validMonthKeys = new Set(monthKeys);
+
+      const createEmptyBuckets = (): MonthlyBucketMap =>
+        monthKeys.reduce<MonthlyBucketMap>((acc, key) => {
+          acc[key] = 0;
+          return acc;
+        }, {});
+
+      const bucketsByProduct = new Map<string, MonthlyBucketMap>();
+      selectedProducts.forEach((product) => {
+        bucketsByProduct.set(product.id, createEmptyBuckets());
+      });
+
+      const { data: outMovements, error } = await supabase
+        .from('movements')
+        .select('product_id, quantity, created_at')
+        .eq('type', 'OUT')
+        .in('product_id', selectedProducts.map((product) => product.id))
+        .gte('created_at', monthStarts[0].toISOString())
+        .lt('created_at', periodEndExclusive.toISOString());
+
+      if (error) throw error;
+
+      ((outMovements || []) as MovementOutRow[]).forEach((movement) => {
+        const movementMonthKey = getMonthKey(new Date(movement.created_at));
+        if (!validMonthKeys.has(movementMonthKey)) return;
+
+        const productBuckets = bucketsByProduct.get(movement.product_id);
+        if (!productBuckets) return;
+        productBuckets[movementMonthKey] = (productBuckets[movementMonthKey] || 0) + movement.quantity;
+      });
+
+      const pdfRows: ProductPdfRow[] = selectedProducts
+        .map((product) => {
+          const productBuckets = bucketsByProduct.get(product.id) || createEmptyBuckets();
+          const totalOut = monthKeys.reduce((sum, key) => sum + (productBuckets[key] || 0), 0);
+
+          return {
+            productId: product.id,
+            name: product.name,
+            currentQty: product.current_qty,
+            costPrice: product.cost_price,
+            monthlyAvgOut: totalOut / 3,
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+
+      const totalMonthlyAvg = pdfRows.reduce((sum, row) => sum + row.monthlyAvgOut, 0);
+      const totalInventoryValue = pdfRows.reduce(
+        (sum, row) => sum + row.currentQty * (row.costPrice || 0),
+        0
+      );
+
+      const doc = new jsPDF();
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, 210, 24, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('Relatório de Produtos por Setor', 14, 15);
+
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Setor: ${selectedSector?.name || 'Setor'}`, 14, 32);
+      doc.text(`Gerado em: ${format(now, 'dd/MM/yyyy HH:mm')}`, 14, 38);
+      doc.text(
+        `Média de saída mensal (3 meses fechados): ${format(monthStarts[0], 'MM/yyyy')} a ${format(monthStarts[2], 'MM/yyyy')}`,
+        14,
+        44
+      );
+
+      autoTable(doc, {
+        startY: 50,
+        head: [['Nome', 'Saldo Atual', 'Custo Unitário', 'Saída Média Mensal']],
+        body: pdfRows.map((row) => [
+          row.name,
+          String(row.currentQty),
+          formatCurrency(row.costPrice),
+          row.monthlyAvgOut.toFixed(2),
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+        },
+      });
+
+      const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 50;
+      const summaryY = tableEndY + 10;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(`Total de produtos: ${pdfRows.length}`, 14, summaryY);
+      doc.text(`Soma da saída média mensal: ${totalMonthlyAvg.toFixed(2)}`, 14, summaryY + 6);
+      doc.text(`Valor total em estoque: ${formatCurrency(totalInventoryValue)}`, 14, summaryY + 12);
+
+      const fileName = `produtos_${slugifySectorName(selectedSector?.name || 'setor')}_${format(now, 'yyyyMMdd_HHmm')}.pdf`;
+      doc.save(fileName);
+      toast.success('PDF exportado com sucesso');
+    } catch {
+      toast.error('Erro ao gerar PDF');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleImportValidRows = async () => {
     if (!validationResult || validationResult.valid.length === 0) {
       toast.error('Nenhum item válido para importar');
@@ -589,7 +758,7 @@ export default function ProductsPage() {
         ),
       },
     ],
-    [filteredProducts]
+    [getStatus, handleOpenDeleteDialog, handleOpenDialog, handleOpenHistory]
   );
 
   if (isLoading) return <div className="text-center py-20 text-slate-400 font-bold">Carregando catálogo...</div>;
@@ -601,6 +770,9 @@ export default function ProductsPage() {
         <div className="flex gap-2">
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV
+          </Button>
+          <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => void exportSectorProductsPDF()} disabled={isExportingPdf}>
+            <FileDown className="h-3.5 w-3.5 mr-2" /> {isExportingPdf ? 'Extraindo...' : 'Extrair PDF'}
           </Button>
           <Button className="bg-brand-primary hover:bg-brand-primary-hover h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
             <Plus className="h-3.5 w-3.5 mr-2" /> Novo Produto
