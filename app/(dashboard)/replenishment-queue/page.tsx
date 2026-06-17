@@ -171,8 +171,8 @@ export default function ReplenishmentQueuePage() {
         accessor: (item) => item.name,
         cell: (item) => (
           <div className="flex flex-col">
-            <TruncatedCell value={item.name} className="max-w-[260px] font-bold text-slate-800" />
-            <span className="font-mono text-xs font-bold text-slate-400">
+            <TruncatedCell value={item.name} className="max-w-[260px] font-bold text-foreground" />
+            <span className="font-mono text-xs font-bold text-muted-foreground">
               {item.sku_code || '---'}
             </span>
           </div>
@@ -186,7 +186,7 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <TruncatedCell
             value={item.sector?.name || '-'}
-            className="max-w-[220px] text-xs font-semibold text-slate-500"
+            className="max-w-[220px] text-xs font-semibold text-muted-foreground"
           />
         ),
       },
@@ -199,8 +199,8 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-xs font-black',
-              item.current_qty === 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+              'border-none px-2 py-0.5 text-xs font-bold',
+              item.current_qty === 0 ? 'bg-destructive/15 text-destructive' : 'bg-warning-muted text-warning-foreground'
             )}
           >
             {item.current_qty}
@@ -213,7 +213,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.min_stock,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-slate-700">{item.min_stock}</span>,
+        cell: (item) => <span className="text-sm font-bold text-foreground">{item.min_stock}</span>,
       },
       {
         key: 'max_stock',
@@ -221,7 +221,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.max_stock,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-slate-700">{item.max_stock}</span>,
+        cell: (item) => <span className="text-sm font-bold text-foreground">{item.max_stock}</span>,
       },
       {
         key: 'deficit',
@@ -229,7 +229,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.deficit,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-red-600">{item.deficit}</span>,
+        cell: (item) => <span className="text-sm font-bold text-destructive">{item.deficit}</span>,
       },
       {
         key: 'targetDeficit',
@@ -237,7 +237,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.targetDeficit,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-slate-800">{item.targetDeficit}</span>,
+        cell: (item) => <span className="text-sm font-bold text-foreground">{item.targetDeficit}</span>,
       },
       {
         key: 'unit',
@@ -258,8 +258,8 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-[10px] font-black uppercase tracking-wider',
-              item.urgencyLevel === 'zerado' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'
+              'border-none px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+              item.urgencyLevel === 'zerado' ? 'bg-destructive text-white' : 'bg-warning text-warning-foreground'
             )}
           >
             {item.urgencyLevel === 'zerado' ? 'ZERADO' : 'CRITICO'}
@@ -271,16 +271,16 @@ export default function ReplenishmentQueuePage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-slate-400">Carregando fila de reposicao...</div>;
+    return <div className="py-20 text-center font-bold text-muted-foreground">Carregando fila de reposicao...</div>;
   }
 
   return (
     <PageContainer className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">Fila de Reposicao</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Fila de Reposicao</h1>
         <Button
           type="button"
-          className="h-9 bg-slate-900 px-4 text-xs font-bold hover:bg-black"
+          className="h-9 bg-foreground px-4 text-xs font-bold hover:bg-foreground"
           onClick={exportPDF}
         >
           <FileDown className="mr-2 h-3.5 w-3.5" />
@@ -289,57 +289,57 @@ export default function ReplenishmentQueuePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="border-none shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900">
-              <PackageSearch className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
+              <PackageSearch className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total na fila</p>
-              <p className="text-xl font-black text-slate-900">{kpis.total}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total na fila</p>
+              <p className="text-xl font-bold text-foreground">{kpis.total}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50">
-              <Inbox className="h-5 w-5 text-red-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+              <Inbox className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Estoque zerado</p>
-              <p className="text-xl font-black text-red-600">{kpis.zeroed}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Estoque zerado</p>
+              <p className="text-xl font-bold text-destructive">{kpis.zeroed}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-              <ShieldAlert className="h-5 w-5 text-amber-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-muted">
+              <ShieldAlert className="h-5 w-5 text-warning-foreground" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Estoque critico</p>
-              <p className="text-xl font-black text-amber-600">{kpis.critical}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Estoque critico</p>
+              <p className="text-xl font-bold text-warning-foreground">{kpis.critical}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por produto ou SKU..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 rounded-lg border-slate-200 pl-9 text-sm"
+              className="h-10 rounded-lg border-border pl-9 text-sm"
             />
           </div>
 
           <Select value={selectedSector} onValueChange={setSelectedSector}>
-            <SelectTrigger className="h-10 w-full rounded-lg border-slate-200 text-xs font-bold lg:w-[220px]">
+            <SelectTrigger className="h-10 w-full rounded-lg border-border text-xs font-bold lg:w-[220px]">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -353,7 +353,7 @@ export default function ReplenishmentQueuePage() {
           </Select>
 
           <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
-            <SelectTrigger className="h-10 w-full rounded-lg border-slate-200 text-xs font-bold lg:w-[180px]">
+            <SelectTrigger className="h-10 w-full rounded-lg border-border text-xs font-bold lg:w-[180px]">
               <SelectValue placeholder="Urgencia" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">

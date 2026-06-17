@@ -288,7 +288,7 @@ export default function MovementsPage() {
         sortable: true,
         accessor: (movement) => new Date(movement.created_at),
         cell: (movement) => (
-          <span className="whitespace-nowrap text-xs font-bold text-slate-400">
+          <span className="whitespace-nowrap text-xs font-bold text-muted-foreground">
             {format(new Date(movement.created_at), 'dd/MM/yy HH:mm')}
           </span>
         ),
@@ -300,10 +300,10 @@ export default function MovementsPage() {
         accessor: (movement) => movement.product?.name || '',
         cell: (movement) => (
           <div className="flex flex-col">
-            <TruncatedCell value={movement.product?.name || '-'} className="max-w-[260px] font-bold text-slate-800" />
+            <TruncatedCell value={movement.product?.name || '-'} className="max-w-[260px] font-bold text-foreground" />
             <TruncatedCell
               value={movement.product?.sector?.name || '-'}
-              className="max-w-[260px] text-xs font-bold uppercase tracking-wide text-slate-400"
+              className="max-w-[260px] text-xs font-bold uppercase tracking-wide text-muted-foreground"
             />
           </div>
         ),
@@ -318,8 +318,8 @@ export default function MovementsPage() {
           <Badge
             variant="outline"
             className={cn(
-              'rounded-md border-none px-2 py-0 text-xs font-black',
-              movement.type === 'IN' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+              'rounded-md border-none px-2 py-0 text-xs font-bold',
+              movement.type === 'IN' ? 'bg-success-muted text-success' : 'bg-destructive/10 text-destructive'
             )}
           >
             {movement.type === 'IN' ? '+' : '-'}
@@ -333,7 +333,7 @@ export default function MovementsPage() {
         sortable: true,
         accessor: (movement) => movement.entity_name || '',
         cell: (movement) => (
-          <TruncatedCell value={movement.entity_name || '---'} className="max-w-[200px] text-xs font-semibold text-slate-500" />
+          <TruncatedCell value={movement.entity_name || '---'} className="max-w-[200px] text-xs font-semibold text-muted-foreground" />
         ),
       },
       {
@@ -343,7 +343,7 @@ export default function MovementsPage() {
         accessor: (movement) => movement.unit_value || 0,
         align: 'right',
         cell: (movement) => (
-          <span className="text-xs font-bold text-slate-700">{formatCurrency(movement.unit_value)}</span>
+          <span className="text-xs font-bold text-foreground">{formatCurrency(movement.unit_value)}</span>
         ),
       },
       {
@@ -353,7 +353,7 @@ export default function MovementsPage() {
         accessor: (movement) => (movement.unit_value || movement.product?.cost_price || 0) * movement.quantity,
         align: 'right',
         cell: (movement) => (
-          <span className={cn('text-sm font-bold', movement.type === 'IN' ? 'text-emerald-700' : 'text-slate-400')}>
+          <span className={cn('text-sm font-bold', movement.type === 'IN' ? 'text-success' : 'text-muted-foreground')}>
             {formatCurrency((movement.unit_value || movement.product?.cost_price || 0) * movement.quantity)}
           </span>
         ),
@@ -365,7 +365,7 @@ export default function MovementsPage() {
         accessor: (movement) => movement.invoice_number || '',
         align: 'center',
         cell: (movement) => (
-          <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-500">
+          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs font-bold text-muted-foreground">
             {movement.invoice_number || '---'}
           </span>
         ),
@@ -381,7 +381,7 @@ export default function MovementsPage() {
             size="icon"
             title="Excluir movimentacao"
             aria-label="Excluir movimentacao"
-            className="h-8 w-8 rounded-lg text-red-400 hover:bg-red-50"
+            className="h-8 w-8 rounded-lg text-destructive/70 hover:bg-destructive/10"
             onClick={() => openDeleteDialog(movement)}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -393,17 +393,17 @@ export default function MovementsPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-slate-400">Carregando movimentacoes...</div>;
+    return <div className="py-20 text-center font-bold text-muted-foreground">Carregando movimentacoes...</div>;
   }
 
   return (
     <PageContainer>
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">Movimentacoes</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Movimentacoes</h1>
         <div className="flex gap-2">
           <Button
             type="button"
-            className="h-9 bg-brand-primary px-4 text-xs font-bold hover:bg-brand-primary-hover"
+            className="h-9 bg-primary px-4 text-xs font-bold hover:bg-primary/90"
             onClick={() => openDialog('IN')}
           >
             <ArrowDownCircle className="mr-2 h-3.5 w-3.5" /> Registrar Entrada
@@ -411,7 +411,7 @@ export default function MovementsPage() {
           <Button
             type="button"
             variant="outline"
-            className="h-9 border-red-200 px-4 text-xs font-bold text-red-600 hover:bg-red-50"
+            className="h-9 border-destructive/30 px-4 text-xs font-bold text-destructive hover:bg-destructive/10"
             onClick={() => openDialog('OUT')}
           >
             <ArrowUpCircle className="mr-2 h-3.5 w-3.5" /> Registrar Saida
@@ -419,15 +419,15 @@ export default function MovementsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm">
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div className="flex flex-col items-center gap-2 sm:flex-row">
           <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Produto, fornecedor ou NF..."
               value={filters.searchTerm}
               onChange={(event) => setFilters((prev) => ({ ...prev, searchTerm: event.target.value }))}
-              className="h-10 rounded-lg border-slate-200 pl-9 text-sm"
+              className="h-10 rounded-lg border-border pl-9 text-sm"
             />
           </div>
           <Tabs
@@ -440,14 +440,14 @@ export default function MovementsPage() {
             }
             className="shrink-0"
           >
-            <TabsList className="h-10 rounded-lg bg-slate-100 p-1">
+            <TabsList className="h-10 rounded-lg bg-muted p-1">
               <TabsTrigger value="all" className="h-8 rounded-md px-4 text-xs font-bold">
                 TODAS
               </TabsTrigger>
-              <TabsTrigger value="IN" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-brand-primary data-[state=active]:text-white">
+              <TabsTrigger value="IN" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 ENTRADAS
               </TabsTrigger>
-              <TabsTrigger value="OUT" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-red-600 data-[state=active]:text-white">
+              <TabsTrigger value="OUT" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
                 SAIDAS
               </TabsTrigger>
             </TabsList>
@@ -459,7 +459,7 @@ export default function MovementsPage() {
             value={filters.month}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, month: value }))}
           >
-            <SelectTrigger className="h-10 w-[150px] rounded-lg border-slate-200 text-xs font-bold">
+            <SelectTrigger className="h-10 w-[150px] rounded-lg border-border text-xs font-bold">
               <SelectValue placeholder="Mes" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -476,7 +476,7 @@ export default function MovementsPage() {
             value={filters.year}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, year: value }))}
           >
-            <SelectTrigger className="h-10 w-[130px] rounded-lg border-slate-200 text-xs font-bold">
+            <SelectTrigger className="h-10 w-[130px] rounded-lg border-border text-xs font-bold">
               <SelectValue placeholder="Ano" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -493,7 +493,7 @@ export default function MovementsPage() {
             value={filters.sectorId}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, sectorId: value }))}
           >
-            <SelectTrigger className="h-10 w-[220px] rounded-lg border-slate-200 text-xs font-bold">
+            <SelectTrigger className="h-10 w-[220px] rounded-lg border-border text-xs font-bold">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -541,9 +541,9 @@ export default function MovementsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {movementType === 'IN' ? (
-                <ArrowDownCircle className="h-4 w-4 text-emerald-600" />
+                <ArrowDownCircle className="h-4 w-4 text-success" />
               ) : (
-                <ArrowUpCircle className="h-4 w-4 text-red-600" />
+                <ArrowUpCircle className="h-4 w-4 text-destructive" />
               )}
               {movementType === 'IN' ? 'Lancar Entrada' : 'Lancar Saida'}
             </DialogTitle>
@@ -555,7 +555,7 @@ export default function MovementsPage() {
                 name="product_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Produto</FormLabel>
+                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Produto</FormLabel>
                     <FormControl>
                       <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
                         <PopoverTrigger asChild>
@@ -563,7 +563,7 @@ export default function MovementsPage() {
                             type="button"
                             variant="outline"
                             role="combobox"
-                            className="h-10 w-full justify-between rounded-lg border-slate-200 bg-slate-50 px-3 text-[12px] font-bold"
+                            className="h-10 w-full justify-between rounded-lg border-border bg-muted px-3 text-[12px] font-bold"
                           >
                             {field.value ? products.find((product) => product.id === field.value)?.name : 'Pesquisar produto...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
@@ -585,9 +585,9 @@ export default function MovementsPage() {
                                     }}
                                     className="cursor-pointer px-4 py-2 text-xs font-bold"
                                   >
-                                    <Check className={cn('mr-2 h-3.5 w-3.5 text-emerald-600', field.value === product.id ? 'opacity-100' : 'opacity-0')} />
+                                    <Check className={cn('mr-2 h-3.5 w-3.5 text-success', field.value === product.id ? 'opacity-100' : 'opacity-0')} />
                                     <span className="flex-1">{product.name}</span>
-                                    <span className="text-xs text-slate-400">ESTOQUE: {product.current_qty}</span>
+                                    <span className="text-xs text-muted-foreground">ESTOQUE: {product.current_qty}</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -607,13 +607,13 @@ export default function MovementsPage() {
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Quantidade</FormLabel>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Quantidade</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={1}
                           step={1}
-                          className="h-10 rounded-lg bg-slate-50"
+                          className="h-10 rounded-lg bg-muted"
                           value={field.value ?? ''}
                           onChange={(event) => field.onChange(Number(event.target.value))}
                         />
@@ -627,11 +627,11 @@ export default function MovementsPage() {
                   name="entity_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         {movementType === 'IN' ? 'Fornecedor' : 'Solicitante'}
                       </FormLabel>
                       <FormControl>
-                        <Input {...field} className="h-10 rounded-lg bg-slate-50" />
+                        <Input {...field} className="h-10 rounded-lg bg-muted" />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -640,18 +640,18 @@ export default function MovementsPage() {
               </div>
 
               {movementType === 'IN' && (
-                <div className="space-y-4 border-t border-slate-100 pt-2">
+                <div className="space-y-4 border-t border-border pt-2">
                   <FormField
                     control={form.control}
                     name="invoice_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Numero da NF</FormLabel>
+                        <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Numero da NF</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             placeholder="Opcional. Ativa o campo de preco."
-                            className="h-10 rounded-lg bg-slate-50"
+                            className="h-10 rounded-lg bg-muted"
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -665,13 +665,13 @@ export default function MovementsPage() {
                       name="unit_value"
                       render={({ field }) => (
                         <FormItem className="animate-in fade-in slide-in-from-top-1">
-                          <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-emerald-700">Preco Pago (Unitario R$)</FormLabel>
+                          <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-success">Preco Pago (Unitario R$)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               min={0.01}
                               step="0.01"
-                              className="h-10 rounded-lg border-emerald-100 bg-emerald-50 font-bold"
+                              className="h-10 rounded-lg border-success/30 bg-success-muted font-bold"
                               value={field.value ?? ''}
                               onChange={(event) =>
                                 field.onChange(
@@ -701,7 +701,7 @@ export default function MovementsPage() {
                   type="submit"
                   className={cn(
                     'h-10 rounded-lg px-8 font-bold text-white',
-                    movementType === 'IN' ? 'bg-brand-primary hover:bg-brand-primary-hover' : 'bg-red-600 hover:bg-red-700'
+                    movementType === 'IN' ? 'bg-primary hover:bg-primary/90' : 'bg-destructive hover:bg-destructive/90'
                   )}
                   disabled={isSaving}
                 >

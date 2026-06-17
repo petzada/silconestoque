@@ -21,73 +21,36 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/components/auth-provider';
 import { useState } from 'react';
 
 const navSections = [
   {
-    items: [
-      {
-        title: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-      },
-    ],
+    items: [{ title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
   },
   {
     label: 'Estoque',
-    items: [
-      {
-        title: 'Movimentações',
-        href: '/movements',
-        icon: ArrowLeftRight,
-      },
-    ],
+    items: [{ title: 'Movimentações', href: '/movements', icon: ArrowLeftRight }],
   },
   {
     label: 'Cadastro',
     items: [
-      {
-        title: 'Setores',
-        href: '/sectors',
-        icon: FolderOpen,
-      },
-      {
-        title: 'Produtos',
-        href: '/products',
-        icon: Package,
-      },
+      { title: 'Setores', href: '/sectors', icon: FolderOpen },
+      { title: 'Produtos', href: '/products', icon: Package },
     ],
   },
   {
     label: 'Controle',
     items: [
-      {
-        title: 'Follow-up',
-        href: '/follow-up',
-        icon: ClipboardList,
-      },
-      {
-        title: 'Fila de Reposição',
-        href: '/replenishment-queue',
-        icon: AlertTriangle,
-      },
-      {
-        title: 'Variação de Preço',
-        href: '/price-variation',
-        icon: TrendingUp,
-      },
+      { title: 'Follow-up', href: '/follow-up', icon: ClipboardList },
+      { title: 'Fila de Reposição', href: '/replenishment-queue', icon: AlertTriangle },
+      { title: 'Variação de Preço', href: '/price-variation', icon: TrendingUp },
     ],
   },
   {
     label: 'Relatórios',
-    items: [
-      {
-        title: 'Pedidos',
-        href: '/purchase-orders',
-        icon: ShoppingCart,
-      },
-    ],
+    items: [{ title: 'Pedidos', href: '/purchase-orders', icon: ShoppingCart }],
   },
 ];
 
@@ -105,11 +68,11 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     <>
       {/* Mobile menu button */}
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
         title={mobileOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
         aria-label={mobileOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-slate-900 text-white rounded-lg shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-card shadow-sm"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -118,7 +81,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -126,29 +89,33 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen bg-brand-primary text-white transition-all duration-300 border-r border-emerald-800/30 flex flex-col',
+          'fixed left-0 top-0 z-40 h-screen bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border flex flex-col',
           collapsed ? 'w-0 -translate-x-full lg:-translate-x-full overflow-hidden' : 'w-64',
           !collapsed && (mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
         )}
       >
-        {/* Logo Section */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm">
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden bg-muted shrink-0">
             <Image src="/logo.png" alt="Silcon Logo" width={36} height={36} className="object-contain" />
           </div>
-          <div>
-            <h1 className="font-bold text-lg leading-none tracking-tight font-inter text-white">Silcon Ambiental</h1>
-            <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-100/70 mt-1 font-inter">Almoxarifado</p>
+          <div className="min-w-0">
+            <h1 className="font-semibold text-sm leading-tight tracking-tight text-foreground truncate">
+              Silcon Ambiental
+            </h1>
+            <p className="text-[11px] font-medium tracking-wide text-muted-foreground truncate">
+              Almoxarifado
+            </p>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
-          <div className="space-y-3">
+          <div className="space-y-5">
             {navSections.map((section, sectionIndex) => (
               <div key={section.label ?? `section-${sectionIndex}`} className="space-y-1">
                 {section.label && (
-                  <p className="text-[8px] uppercase font-bold tracking-widest text-emerald-100/50 px-4 pb-1 font-inter">
+                  <p className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground/70 px-3 pb-1">
                     {section.label}
                   </p>
                 )}
@@ -160,20 +127,26 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
+                      aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'group flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-200 font-inter',
+                        'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                         isActive
-                          ? 'bg-white text-brand-primary shadow-md'
-                          : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
                       )}
                     >
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                      )}
                       <item.icon
                         className={cn(
-                          'h-3.5 w-3.5 transition-colors',
-                          isActive ? 'text-brand-primary' : 'text-emerald-100/70 group-hover:text-white'
+                          'h-4 w-4 shrink-0 transition-colors',
+                          isActive
+                            ? 'text-sidebar-primary'
+                            : 'text-muted-foreground group-hover:text-sidebar-accent-foreground'
                         )}
                       />
-                      <span>{item.title}</span>
+                      <span className="truncate">{item.title}</span>
                     </Link>
                   );
                 })}
@@ -182,70 +155,59 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           </div>
         </nav>
 
-        {/* Bottom Section: Settings, Logout and Collapse */}
-        <div className="p-3 border-t border-white/10 flex items-center">
-          <div className="flex flex-row gap-2">
-            <Link
-              href="/settings"
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                'group flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200',
-                pathname === '/settings'
-                  ? 'bg-white text-brand-primary shadow-md'
-                  : 'text-emerald-100 hover:text-white hover:bg-white/10'
-              )}
-              title="Configurações"
-              aria-label="Configurações"
-            >
-              <Settings
-                className={cn(
-                  'h-3.5 w-3.5 transition-colors',
-                  pathname === '/settings' ? 'text-brand-primary' : 'text-emerald-100 group-hover:text-white'
-                )}
-              />
-            </Link>
-
-            <Button
-              variant="ghost"
-              className="h-9 w-9 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-300 transition-all p-0"
-              onClick={logout}
-              title="Sair"
-              aria-label="Sair"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-
-          <Button
-            variant="ghost"
-            className="ml-auto h-9 w-9 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-all p-0"
-            onClick={onToggleCollapse}
-            title="Recolher sidebar"
-            aria-label="Recolher sidebar"
+        {/* Footer: Settings, theme, logout + collapse */}
+        <div className="flex items-center gap-1 border-t border-sidebar-border p-3 shrink-0">
+          <Link
+            href="/settings"
+            onClick={() => setMobileOpen(false)}
+            title="Configurações"
+            aria-label="Configurações"
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+              pathname === '/settings'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+            )}
           >
-            <PanelLeftClose className="h-3.5 w-3.5" />
-          </Button>
+            <Settings className="h-4 w-4" />
+          </Link>
+
+          <ThemeToggle />
+
+          <button
+            type="button"
+            onClick={logout}
+            title="Sair"
+            aria-label="Sair"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            title="Recolher menu"
+            aria-label="Recolher menu"
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
         </div>
       </aside>
 
       {collapsed && (
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          title="Expandir sidebar"
-          aria-label="Expandir sidebar"
-          className="hidden lg:flex fixed top-4 left-4 z-50 bg-slate-900 text-white rounded-lg shadow-lg"
+          title="Expandir menu"
+          aria-label="Expandir menu"
+          className="hidden lg:flex fixed top-4 left-4 z-50 bg-card shadow-sm"
           onClick={onToggleCollapse}
         >
           <PanelLeftOpen className="h-5 w-5" />
         </Button>
       )}
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-      `}</style>
     </>
   );
 }

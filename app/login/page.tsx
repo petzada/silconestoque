@@ -57,17 +57,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-primary p-4">
-      <Card className="w-full max-w-md shadow-2xl bg-white/95 backdrop-blur">
+    <div className="relative min-h-screen flex items-center justify-center bg-background p-4">
+      {/* Ambient brand wash */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,var(--accent),transparent)]"
+      />
+      <Card className="relative w-full max-w-md border-border shadow-lg">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden bg-slate-50">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden border border-border bg-muted">
             <Image src="/logo.png" alt="Silcon Logo" width={64} height={64} className="object-contain" />
           </div>
-          <div>
-            <CardTitle className="text-2xl font-bold text-brand-primary font-inter">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
               Silcon Ambiental
             </CardTitle>
-            <CardDescription className="text-slate-500 font-inter">
+            <CardDescription className="text-muted-foreground">
               Sistema de Gestão de Estoque
             </CardDescription>
           </div>
@@ -77,34 +82,28 @@ export default function LoginPage() {
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="font-inter">{error}</AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700 font-inter">
-                Senha de Acesso
-              </Label>
+              <Label htmlFor="password">Senha de acesso</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
                   placeholder="Digite a senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 font-inter focus-visible:ring-brand-primary"
+                  className="pl-10"
                   autoFocus
                   required
                 />
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-brand-primary hover:bg-brand-primary-hover font-inter"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Verificando...' : 'Entrar'}
             </Button>
           </form>

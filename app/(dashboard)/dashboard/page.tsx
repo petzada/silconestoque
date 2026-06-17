@@ -44,7 +44,16 @@ function formatCurrency(value: number | null): string {
   }).format(value);
 }
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+const COLORS = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+  'var(--brand)',
+  'var(--warning)',
+  'var(--destructive)',
+];
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -195,39 +204,39 @@ export default function DashboardPage() {
       value: formatCurrency(financeStats.totalInValue),
       sub: `${financeStats.countIns} entradas realizadas`,
       icon: TrendingUp,
-      color: 'text-[#86efac]',
-      bg: 'bg-brand-primary',
+      color: 'text-success',
+      bg: 'bg-success-muted',
     },
     {
       title: 'Saídas (R$)',
       value: formatCurrency(financeStats.totalOutValue),
       sub: `${financeStats.countOuts} baixas de estoque`,
       icon: TrendingDown,
-      color: 'text-red-100',
-      bg: 'bg-red-600',
+      color: 'text-danger',
+      bg: 'bg-danger-muted',
     },
     {
       title: 'Itens Críticos',
       value: filteredProducts.filter(p => p.current_qty <= p.min_stock && p.current_qty > 0).length,
       sub: 'Abaixo do saldo mínimo',
       icon: AlertTriangle,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      color: 'text-warning-foreground',
+      bg: 'bg-warning-muted',
     },
     {
       title: 'Estoque Zerado',
       value: filteredProducts.filter(p => p.current_qty === 0).length,
       sub: 'Necessita reposição',
       icon: Inbox,
-      color: 'text-red-600',
-      bg: 'bg-red-50',
+      color: 'text-danger',
+      bg: 'bg-danger-muted',
     },
   ];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-slate-400 font-medium">Analisando dados do estoque...</div>
+        <div className="animate-pulse text-muted-foreground font-medium">Analisando dados do estoque...</div>
       </div>
     );
   }
@@ -236,33 +245,36 @@ export default function DashboardPage() {
     <PageContainer className="space-y-4">
       {/* Header com Filtros */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Visão geral do estoque e consumo por setor</p>
+        </div>
 
-        <div className="flex items-center gap-2 bg-white p-2 rounded-xl shadow-sm border border-slate-100">
-          <Filter className="h-4 w-4 text-slate-400 ml-2" />
+        <div className="flex items-center gap-1 bg-card p-1.5 rounded-xl shadow-sm border border-border">
+          <Filter className="h-4 w-4 text-muted-foreground ml-2" />
           <Select value={filterMonth} onValueChange={setFilterMonth}>
-            <SelectTrigger className="w-[130px] border-none shadow-none text-xs font-bold h-8">
+            <SelectTrigger className="w-[130px] border-none shadow-none bg-transparent text-xs font-semibold h-8">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent>
               {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterYear} onValueChange={setFilterYear}>
-            <SelectTrigger className="w-[90px] border-none shadow-none text-xs font-bold h-8">
+            <SelectTrigger className="w-[90px] border-none shadow-none bg-transparent text-xs font-semibold h-8">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent>
               {availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="w-px h-6 bg-slate-200" />
+          <div className="w-px h-6 bg-border" />
           <Select value={filterSector} onValueChange={setFilterSector}>
-            <SelectTrigger className="w-[160px] border-none shadow-none text-xs font-bold h-8">
+            <SelectTrigger className="w-[160px] border-none shadow-none bg-transparent text-xs font-semibold h-8">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="all" className="font-bold">Todos os Setores</SelectItem>
+            <SelectContent>
+              <SelectItem value="all" className="font-semibold">Todos os Setores</SelectItem>
               {data.sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -272,17 +284,17 @@ export default function DashboardPage() {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => (
-          <Card key={idx} className="border-none shadow-sm rounded-xl bg-white overflow-hidden">
+          <Card key={idx} className="rounded-xl shadow-sm gap-0 py-0 overflow-hidden transition-shadow hover:shadow-md">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", kpi.bg)}>
+              <div className={cn("w-11 h-11 rounded-lg flex items-center justify-center shrink-0", kpi.bg)}>
                 <kpi.icon className={cn("h-5 w-5", kpi.color)} />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{kpi.title}</p>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{kpi.title}</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold text-slate-900 truncate">{kpi.value}</span>
+                  <span className="text-xl font-semibold text-foreground truncate">{kpi.value}</span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium truncate">{kpi.sub}</p>
+                <p className="text-xs text-muted-foreground truncate">{kpi.sub}</p>
               </div>
             </CardContent>
           </Card>
@@ -291,16 +303,16 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Gráfico de Barras: Gasto por Setor */}
-        <Card className="border-none shadow-sm rounded-xl bg-white">
+        <Card className="rounded-xl shadow-sm py-0 gap-0">
           <CardHeader className="p-4 pb-0">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">Gasto por Setor</CardTitle>
-            <CardDescription className="text-[10px]">Valor financeiro consumido por departamento</CardDescription>
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">Gasto por Setor</CardTitle>
+            <CardDescription className="text-xs">Valor financeiro consumido por departamento</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-4">
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={financeStats.barData} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} stroke="#f1f5f9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} stroke="var(--border)" vertical={false} />
                   <XAxis type="number" hide />
                   <YAxis
                     dataKey="name"
@@ -308,24 +320,31 @@ export default function DashboardPage() {
                     width={100}
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fontWeight: 500, fill: 'var(--muted-foreground)' }}
                   />
                   <Tooltip
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
+                    cursor={{ fill: 'var(--muted)' }}
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--popover)',
+                      color: 'var(--popover-foreground)',
+                      boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.12)',
+                      fontSize: '12px',
+                    }}
                     formatter={(value: unknown) => [formatCurrency(Number(value) || 0), 'Total']}
                   />
                   <Bar
                     dataKey="value"
-                    fill="#10b981"
+                    fill="var(--brand)"
                     radius={[0, 4, 4, 0]}
                     barSize={18}
                     label={{
                       position: 'right',
                       formatter: (v: unknown) => (Number(v) || 0) > 0 ? formatCurrency(Number(v)) : '',
-                      fontSize: 9,
-                      fontWeight: 700,
-                      fill: '#334155',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      fill: 'var(--muted-foreground)',
                       offset: 5
                     }}
                   />
@@ -336,34 +355,34 @@ export default function DashboardPage() {
         </Card>
 
         {/* Lista de Consumo por Produto (substitui Pie Chart) */}
-        <Card className="xl:col-span-2 border-none shadow-sm rounded-xl bg-white overflow-hidden">
+        <Card className="xl:col-span-2 rounded-xl shadow-sm py-0 gap-0 overflow-hidden">
           <CardHeader className="p-4 pb-0">
-            <CardTitle className="text-sm font-bold">Consumo por Produto</CardTitle>
-            <CardDescription className="text-[10px]">Top 8 produtos mais consumidos no período</CardDescription>
+            <CardTitle className="text-sm font-semibold">Consumo por Produto</CardTitle>
+            <CardDescription className="text-xs">Top 8 produtos mais consumidos no período</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
             {filterSector === 'all' ? (
               // Aviso para selecionar setor
-              <div className="h-[280px] flex flex-col items-center justify-center text-slate-300 gap-3">
+              <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <Package className="h-12 w-12 opacity-30" />
                 <div className="text-center">
-                  <p className="text-sm font-bold text-slate-400">Selecione um setor</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Para visualizar o consumo detalhado por produto</p>
+                  <p className="text-sm font-semibold text-foreground">Selecione um setor</p>
+                  <p className="text-xs text-muted-foreground mt-1">Para visualizar o consumo detalhado por produto</p>
                 </div>
               </div>
             ) : financeStats.productListData.length === 0 ? (
-              <div className="h-[280px] flex flex-col items-center justify-center text-slate-300 gap-3">
+              <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <CheckCircle2 className="h-12 w-12 opacity-30" />
-                <p className="text-sm font-bold text-slate-400">Nenhum consumo registrado</p>
+                <p className="text-sm font-semibold text-foreground">Nenhum consumo registrado</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {financeStats.productListData.map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
-                    <span className="text-[11px] font-bold text-slate-600 w-[140px] truncate" title={item.name}>
+                    <span className="text-xs font-medium text-muted-foreground w-[140px] truncate" title={item.name}>
                       {item.name.length > 18 ? `${item.name.substring(0, 18)}...` : item.name}
                     </span>
-                    <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -372,7 +391,7 @@ export default function DashboardPage() {
                         }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-slate-700 w-[50px] text-right">{item.value}</span>
+                    <span className="text-xs font-semibold text-foreground w-[50px] text-right tabular-nums">{item.value}</span>
                   </div>
                 ))}
               </div>

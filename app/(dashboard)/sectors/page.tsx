@@ -156,21 +156,21 @@ export default function SectorsPage() {
         header: 'Setor',
         sortable: true,
         accessor: (sector) => sector.name,
-        cell: (sector) => <span className="font-bold text-slate-800">{sector.name}</span>,
+        cell: (sector) => <span className="font-medium text-foreground">{sector.name}</span>,
       },
       {
         key: 'actions',
         header: 'Acoes',
         align: 'right',
         cell: (sector) => (
-          <div className="group flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <Button
               type="button"
               variant="ghost"
               size="icon"
               title="Editar setor"
               aria-label="Editar setor"
-              className="h-8 w-8 rounded-lg text-slate-500 hover:bg-slate-100"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={() => openFormDialog(sector)}
             >
               <Pencil className="h-4 w-4" />
@@ -181,7 +181,7 @@ export default function SectorsPage() {
               size="icon"
               title="Excluir setor"
               aria-label="Excluir setor"
-              className="h-8 w-8 rounded-lg text-red-500 hover:bg-red-50"
+              className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               onClick={() => openDeleteDialog(sector)}
             >
               <Trash2 className="h-4 w-4" />
@@ -194,19 +194,18 @@ export default function SectorsPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-slate-400">Carregando setores...</div>;
+    return <div className="py-20 text-center font-medium text-muted-foreground">Carregando setores...</div>;
   }
 
   return (
     <PageContainer variant="form-centric">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">Setores</h1>
-        <Button
-          type="button"
-          className="h-9 bg-brand-primary px-4 text-xs font-bold hover:bg-brand-primary-hover"
-          onClick={() => openFormDialog()}
-        >
-          <Plus className="mr-2 h-3.5 w-3.5" /> Novo Setor
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Setores</h1>
+          <p className="text-sm text-muted-foreground">Departamentos que consomem itens do almoxarifado</p>
+        </div>
+        <Button type="button" size="sm" onClick={() => openFormDialog()}>
+          <Plus className="h-4 w-4" /> Novo setor
         </Button>
       </div>
 
@@ -220,11 +219,9 @@ export default function SectorsPage() {
       />
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-sm rounded-2xl border-none p-6 shadow-2xl">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">
-              {editingSector ? 'Editar Setor' : 'Novo Setor'}
-            </DialogTitle>
+            <DialogTitle>{editingSector ? 'Editar setor' : 'Novo setor'}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -234,18 +231,15 @@ export default function SectorsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="px-1 text-xs font-bold uppercase tracking-widest text-slate-500">
-                      Nome do Setor
-                    </FormLabel>
+                    <FormLabel>Nome do setor</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         autoFocus
-                        placeholder="Ex: Producao, EPIs..."
-                        className="h-10 rounded-lg border-slate-200 bg-slate-50 font-medium"
+                        placeholder="Ex: Produção, EPIs..."
                       />
                     </FormControl>
-                    <FormMessage className="text-xs" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -254,16 +248,11 @@ export default function SectorsPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-10 text-xs font-bold"
                   onClick={() => handleDialogOpenChange(false)}
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  className="h-10 rounded-lg bg-brand-primary px-8 text-xs font-bold hover:bg-brand-primary-hover"
-                  disabled={isSaving}
-                >
+                <Button type="submit" disabled={isSaving}>
                   {isSaving ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>

@@ -191,7 +191,7 @@ export default function PriceVariationPage() {
         sortable: true,
         accessor: (item) => new Date(item.created_at),
         cell: (item) => (
-          <span className="whitespace-nowrap text-xs font-bold text-slate-500">
+          <span className="whitespace-nowrap text-xs font-bold text-muted-foreground">
             {format(new Date(item.created_at), 'dd/MM/yy HH:mm')}
           </span>
         ),
@@ -203,10 +203,10 @@ export default function PriceVariationPage() {
         accessor: (item) => item.product?.name || '',
         cell: (item) => (
           <div className="flex flex-col">
-            <TruncatedCell value={item.product?.name || '-'} className="max-w-[280px] font-bold text-slate-800" />
+            <TruncatedCell value={item.product?.name || '-'} className="max-w-[280px] font-bold text-foreground" />
             <TruncatedCell
               value={item.product?.sector?.name || '-'}
-              className="max-w-[280px] text-xs font-bold uppercase tracking-wide text-slate-400"
+              className="max-w-[280px] text-xs font-bold uppercase tracking-wide text-muted-foreground"
             />
           </div>
         ),
@@ -218,7 +218,7 @@ export default function PriceVariationPage() {
         accessor: (item) => item.invoice_number || '',
         align: 'center',
         cell: (item) => (
-          <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-500">
+          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs font-bold text-muted-foreground">
             {item.invoice_number || '---'}
           </span>
         ),
@@ -230,7 +230,7 @@ export default function PriceVariationPage() {
         accessor: (item) => item.old_price || 0,
         align: 'right',
         cell: (item) => (
-          <span className="text-xs font-bold text-slate-500 line-through">
+          <span className="text-xs font-bold text-muted-foreground line-through">
             {formatCurrency(item.old_price)}
           </span>
         ),
@@ -242,7 +242,7 @@ export default function PriceVariationPage() {
         accessor: (item) => item.new_price,
         align: 'right',
         cell: (item) => (
-          <span className="text-sm font-black text-slate-900">
+          <span className="text-sm font-bold text-foreground">
             {formatCurrency(item.new_price)}
           </span>
         ),
@@ -258,8 +258,8 @@ export default function PriceVariationPage() {
           return (
             <Badge
               className={cn(
-                'border-none px-2 py-0.5 text-[10px] font-black uppercase',
-                isIncrease ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                'border-none px-2 py-0.5 text-[10px] font-bold uppercase',
+                isIncrease ? 'bg-destructive/15 text-destructive' : 'bg-success-muted text-success'
               )}
             >
               {isIncrease ? (
@@ -296,67 +296,67 @@ export default function PriceVariationPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-slate-400">Carregando variacao de preco...</div>;
+    return <div className="py-20 text-center font-bold text-muted-foreground">Carregando variacao de preco...</div>;
   }
 
   return (
     <PageContainer className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">Variacao de Preco</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Variacao de Preco</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="border-none shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900">
-              <AlertTriangle className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
+              <AlertTriangle className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total de alertas</p>
-              <p className="text-xl font-black text-slate-900">{filteredHistory.length}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total de alertas</p>
+              <p className="text-xl font-bold text-foreground">{filteredHistory.length}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-              <TrendingUp className="h-5 w-5 text-amber-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-muted">
+              <TrendingUp className="h-5 w-5 text-warning-foreground" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Variacao media</p>
-              <p className="text-xl font-black text-amber-600">{averageVariation.toFixed(1)}%</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Variacao media</p>
+              <p className="text-xl font-bold text-warning-foreground">{averageVariation.toFixed(1)}%</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
-              <CalendarRange className="h-5 w-5 text-emerald-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success-muted">
+              <CalendarRange className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Setor mais afetado</p>
-              <p className="text-base font-black text-emerald-700">{mostAffectedSector}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Setor mais afetado</p>
+              <p className="text-base font-bold text-success">{mostAffectedSector}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div className="grid grid-cols-1 gap-2 xl:grid-cols-5">
           <div className="relative xl:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por produto ou NF..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 rounded-lg border-slate-200 pl-9 text-sm"
+              className="h-10 rounded-lg border-border pl-9 text-sm"
             />
           </div>
 
           <Select value={selectedSector} onValueChange={setSelectedSector}>
-            <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs font-bold">
+            <SelectTrigger className="h-10 rounded-lg border-border text-xs font-bold">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -373,7 +373,7 @@ export default function PriceVariationPage() {
             value={selectedDirection}
             onValueChange={(value) => setSelectedDirection(value as DirectionFilter)}
           >
-            <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs font-bold">
+            <SelectTrigger className="h-10 rounded-lg border-border text-xs font-bold">
               <SelectValue placeholder="Direcao" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -384,7 +384,7 @@ export default function PriceVariationPage() {
           </Select>
 
           <Select value={minThreshold} onValueChange={setMinThreshold}>
-            <SelectTrigger className="h-10 rounded-lg border-slate-200 text-xs font-bold">
+            <SelectTrigger className="h-10 rounded-lg border-border text-xs font-bold">
               <SelectValue placeholder="Limite minimo" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
@@ -402,13 +402,13 @@ export default function PriceVariationPage() {
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="h-10 rounded-lg border-slate-200 text-sm"
+            className="h-10 rounded-lg border-border text-sm"
           />
           <Input
             type="date"
             value={dateTo}
             onChange={(event) => setDateTo(event.target.value)}
-            className="h-10 rounded-lg border-slate-200 text-sm"
+            className="h-10 rounded-lg border-border text-sm"
           />
         </div>
       </div>
@@ -435,16 +435,16 @@ export default function PriceVariationPage() {
         <DialogContent className="max-w-4xl rounded-2xl border-none p-6 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Evolucao de Preco</DialogTitle>
-            <p className="text-sm font-medium text-slate-500">{selectedProductName}</p>
+            <p className="text-sm font-medium text-muted-foreground">{selectedProductName}</p>
           </DialogHeader>
 
           {selectedProductHistory.length === 0 ? (
-            <div className="py-8 text-center text-sm font-semibold text-slate-400">
+            <div className="py-8 text-center text-sm font-semibold text-muted-foreground">
               Nenhum historico encontrado para este produto.
             </div>
           ) : (
             <div className="space-y-4 pt-2">
-              <div className="h-[260px] rounded-xl border border-slate-100 bg-white p-3">
+              <div className="h-[260px] rounded-xl border border-border bg-card p-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -484,30 +484,30 @@ export default function PriceVariationPage() {
                   return (
                     <div
                       key={history.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3"
+                      className="flex items-center justify-between rounded-lg border border-border bg-muted p-3"
                     >
                       <div>
-                        <p className="text-[10px] font-bold uppercase text-slate-500">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">
                           {format(new Date(history.created_at), 'dd/MM/yy HH:mm')}
                         </p>
-                        <p className="text-xs text-slate-500">NF: {history.invoice_number || '---'}</p>
+                        <p className="text-xs text-muted-foreground">NF: {history.invoice_number || '---'}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           {hasOldPrice && (
-                            <p className="text-[10px] font-bold text-slate-400 line-through">
+                            <p className="text-[10px] font-bold text-muted-foreground line-through">
                               {formatCurrency(history.old_price)}
                             </p>
                           )}
-                          <p className="text-sm font-black text-slate-900">
+                          <p className="text-sm font-bold text-foreground">
                             {formatCurrency(history.new_price)}
                           </p>
                         </div>
                         {hasOldPrice && (
                           <Badge
                             className={cn(
-                              'border-none px-2 py-0.5 text-[10px] font-black',
-                              isIncrease ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                              'border-none px-2 py-0.5 text-[10px] font-bold',
+                              isIncrease ? 'bg-destructive/15 text-destructive' : 'bg-success-muted text-success'
                             )}
                           >
                             {isIncrease ? (

@@ -585,9 +585,9 @@ export default function ProductsPage() {
   });
 
   const getStatus = (p: Product) => {
-    if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-red-500' };
-    if (p.current_qty <= p.min_stock) return { label: 'CRITICO', color: 'bg-amber-600' };
-    return { label: 'ESTAVEL', color: 'bg-brand-primary' };
+    if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-destructive text-destructive-foreground' };
+    if (p.current_qty <= p.min_stock) return { label: 'CRITICO', color: 'bg-warning text-warning-foreground' };
+    return { label: 'ESTAVEL', color: 'bg-primary text-primary-foreground' };
   };
 
   const columns = useMemo<DataTableColumn<Product>[]>(
@@ -598,7 +598,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.sku_code || '',
         cell: (product) => (
-          <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-xs font-bold text-slate-600">
+          <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-bold text-muted-foreground">
             {product.sku_code || '---'}
           </span>
         ),
@@ -609,7 +609,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.name,
         cell: (product) => (
-          <TruncatedCell value={product.name} className="max-w-[300px] font-bold text-slate-800" />
+          <TruncatedCell value={product.name} className="max-w-[300px] font-bold text-foreground" />
         ),
       },
       {
@@ -618,7 +618,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.sector?.name || '',
         cell: (product) => (
-          <TruncatedCell value={product.sector?.name || '-'} className="max-w-[240px] text-xs font-semibold text-slate-500" />
+          <TruncatedCell value={product.sector?.name || '-'} className="max-w-[240px] text-xs font-semibold text-muted-foreground" />
         ),
       },
       {
@@ -629,8 +629,8 @@ export default function ProductsPage() {
         align: 'center',
         cell: (product) => (
           <div className="flex flex-col items-center">
-            <span className="text-sm font-bold text-slate-900 leading-none">{product.current_qty}</span>
-            <span className="mt-0.5 text-xs font-bold uppercase text-slate-400">{product.unit}</span>
+            <span className="text-sm font-bold text-foreground leading-none">{product.current_qty}</span>
+            <span className="mt-0.5 text-xs font-bold uppercase text-muted-foreground">{product.unit}</span>
           </div>
         ),
       },
@@ -640,7 +640,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.cost_price || 0,
         align: 'right',
-        cell: (product) => <span className="font-bold text-slate-700 text-sm">{formatCurrency(product.cost_price)}</span>,
+        cell: (product) => <span className="font-bold text-foreground text-sm">{formatCurrency(product.cost_price)}</span>,
       },
       {
         key: 'status',
@@ -651,7 +651,7 @@ export default function ProductsPage() {
         cell: (product) => {
           const status = getStatus(product);
           return (
-            <Badge className={cn('border-none px-2 py-0.5 text-xs font-black uppercase tracking-wider', status.color)}>
+            <Badge className={cn('border-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider', status.color)}>
               {status.label}
             </Badge>
           );
@@ -669,7 +669,7 @@ export default function ProductsPage() {
               size="icon"
               title="Ver historico de precos"
               aria-label="Ver historico de precos"
-              className="h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted"
               onClick={() => handleOpenHistory(product)}
             >
               <History className="h-3.5 w-3.5" />
@@ -680,7 +680,7 @@ export default function ProductsPage() {
               size="icon"
               title="Editar produto"
               aria-label="Editar produto"
-              className="h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted"
               onClick={() => handleOpenDialog(product)}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -691,7 +691,7 @@ export default function ProductsPage() {
               size="icon"
               title="Excluir produto"
               aria-label="Excluir produto"
-              className="h-8 w-8 rounded-lg text-red-400 hover:bg-red-50"
+              className="h-8 w-8 rounded-lg text-destructive/70 hover:bg-destructive/10"
               onClick={() => handleOpenDeleteDialog(product)}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -703,12 +703,12 @@ export default function ProductsPage() {
     [getStatus, handleOpenDeleteDialog, handleOpenDialog, handleOpenHistory]
   );
 
-  if (isLoading) return <div className="text-center py-20 text-slate-400 font-bold">Carregando catálogo...</div>;
+  if (isLoading) return <div className="text-center py-20 text-muted-foreground font-bold">Carregando catálogo...</div>;
 
   return (
     <PageContainer>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Produtos</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Produtos</h1>
         <div className="flex gap-2">
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV
@@ -716,24 +716,24 @@ export default function ProductsPage() {
           <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => void exportSectorProductsPDF()} disabled={isExportingPdf}>
             <FileDown className="h-3.5 w-3.5 mr-2" /> {isExportingPdf ? 'Extraindo...' : 'Extrair PDF'}
           </Button>
-          <Button className="bg-brand-primary hover:bg-brand-primary-hover h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
+          <Button className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
             <Plus className="h-3.5 w-3.5 mr-2" /> Novo Produto
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2 items-center bg-white p-2.5 rounded-xl shadow-sm border border-slate-100">
+      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 rounded-xl shadow-sm border border-border">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome ou SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 border-slate-200 rounded-lg font-medium text-sm"
+            className="pl-9 h-10 border-border rounded-lg font-medium text-sm"
           />
         </div>
         <Select value={filterSector} onValueChange={setFilterSector}>
-          <SelectTrigger className="w-full sm:w-[220px] h-10 border-slate-200 rounded-lg text-sm font-semibold">
+          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border rounded-lg text-sm font-semibold">
             <SelectValue placeholder="Setor" />
           </SelectTrigger>
           <SelectContent className="rounded-xl">
@@ -756,7 +756,7 @@ export default function ProductsPage() {
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
           <DialogHeader><DialogTitle className="text-lg font-bold flex items-center gap-2">
-            {editingProduct ? <><Pencil className="h-4 w-4 text-slate-600" /> Editar Material</> : <><Plus className="h-4 w-4 text-brand-primary" /> Novo Material</>}
+            {editingProduct ? <><Pencil className="h-4 w-4 text-muted-foreground" /> Editar Material</> : <><Plus className="h-4 w-4 text-primary" /> Novo Material</>}
           </DialogTitle></DialogHeader>
           <Form {...form}>
             <form className="grid gap-4 pt-4" onSubmit={(event) => void handleSave(event)}>
@@ -765,9 +765,9 @@ export default function ProductsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Nome do Produto</FormLabel>
+                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nome do Produto</FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-10 bg-slate-50 rounded-lg" autoFocus />
+                      <Input {...field} className="h-10 bg-muted rounded-lg" autoFocus />
                     </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
@@ -779,9 +779,9 @@ export default function ProductsPage() {
                   name="sku_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">SKU</FormLabel>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">SKU</FormLabel>
                       <FormControl>
-                        <Input {...field} className="h-10 bg-slate-50 rounded-lg" />
+                        <Input {...field} className="h-10 bg-muted rounded-lg" />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -792,10 +792,10 @@ export default function ProductsPage() {
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Unid. Medida</FormLabel>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Unid. Medida</FormLabel>
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger className="h-10 border-slate-200 rounded-lg bg-slate-50"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-10 border-border rounded-lg bg-muted"><SelectValue /></SelectTrigger>
                           <SelectContent className="rounded-xl">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </FormControl>
@@ -809,10 +809,10 @@ export default function ProductsPage() {
                 name="sector_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Setor Alocado</FormLabel>
+                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Setor Alocado</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="h-10 border-slate-200 rounded-lg bg-slate-50"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectTrigger className="h-10 border-border rounded-lg bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent className="rounded-xl">{sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </FormControl>
@@ -826,13 +826,13 @@ export default function ProductsPage() {
                   name="min_stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Minimo</FormLabel>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Minimo</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={0}
                           step={1}
-                          className="h-10 bg-slate-50 rounded-lg"
+                          className="h-10 bg-muted rounded-lg"
                           value={field.value ?? ''}
                           onChange={(event) => field.onChange(Number(event.target.value))}
                         />
@@ -846,13 +846,13 @@ export default function ProductsPage() {
                   name="max_stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Maximo</FormLabel>
+                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Maximo</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min={0}
                           step={1}
-                          className="h-10 bg-slate-50 rounded-lg"
+                          className="h-10 bg-muted rounded-lg"
                           value={field.value ?? ''}
                           onChange={(event) => field.onChange(Number(event.target.value))}
                         />
@@ -864,7 +864,7 @@ export default function ProductsPage() {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" className="bg-brand-primary hover:bg-brand-primary-hover h-10 px-8 rounded-lg font-bold" disabled={isSaving}>Salvar</Button>
+                <Button type="submit" className="bg-primary hover:bg-primary/90 h-10 px-8 rounded-lg font-bold" disabled={isSaving}>Salvar</Button>
               </div>
             </form>
           </Form>
@@ -887,14 +887,14 @@ export default function ProductsPage() {
         <DialogContent className={cn("rounded-2xl p-6 shadow-2xl border-none", validationResult ? "max-w-2xl" : "max-w-md")}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Upload className="h-4 w-4 text-blue-600" /> Importar Produtos via CSV
+              <Upload className="h-4 w-4 text-primary" /> Importar Produtos via CSV
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-muted-foreground">
               Colunas: Nome, Setor, Unidade (obrigatórias) | SKU, Minimo, Maximo, Custo, Estoque (opcionais)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div className="p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center">
+            <div className="p-4 border-2 border-dashed border-border rounded-xl bg-muted text-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -904,49 +904,49 @@ export default function ProductsPage() {
                 id="csv-upload"
               />
               <label htmlFor="csv-upload" className="cursor-pointer">
-                <Package className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-bold text-slate-600">{importFile ? importFile.name : 'Clique para selecionar arquivo'}</p>
-                <p className="text-[10px] text-slate-400 mt-1">Formato CSV separado por ponto e vírgula (;)</p>
+                <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm font-bold text-muted-foreground">{importFile ? importFile.name : 'Clique para selecionar arquivo'}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Formato CSV separado por ponto e vírgula (;)</p>
               </label>
             </div>
 
             {isValidating && (
               <div className="text-center py-4">
-                <p className="text-sm font-bold text-slate-500 animate-pulse">Validando arquivo...</p>
+                <p className="text-sm font-bold text-muted-foreground animate-pulse">Validando arquivo...</p>
               </div>
             )}
 
             {validationResult && (
               <div className="space-y-3">
                 <div className="flex gap-3">
-                  <div className="flex-1 p-3 bg-emerald-50 rounded-lg flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <div className="flex-1 p-3 bg-success-muted rounded-lg flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
-                      <p className="text-sm font-bold text-emerald-700">{validationResult.valid.length} válidos</p>
-                      <p className="text-[10px] text-emerald-600">Prontos para importar</p>
+                      <p className="text-sm font-bold text-success">{validationResult.valid.length} válidos</p>
+                      <p className="text-[10px] text-success">Prontos para importar</p>
                     </div>
                   </div>
-                  <div className="flex-1 p-3 bg-red-50 rounded-lg flex items-center gap-2">
-                    <XCircle className="h-5 w-5 text-red-600" />
+                  <div className="flex-1 p-3 bg-destructive/10 rounded-lg flex items-center gap-2">
+                    <XCircle className="h-5 w-5 text-destructive" />
                     <div>
-                      <p className="text-sm font-bold text-red-700">{validationResult.errors.length} com erro</p>
-                      <p className="text-[10px] text-red-600">Verifique abaixo</p>
+                      <p className="text-sm font-bold text-destructive">{validationResult.errors.length} com erro</p>
+                      <p className="text-[10px] text-destructive">Verifique abaixo</p>
                     </div>
                   </div>
                 </div>
 
                 {validationResult.errors.length > 0 && (
                   <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-red-50 px-3 py-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-red-700">Linhas com Erro</span>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-red-700 hover:bg-red-100" onClick={exportErrorsPDF}>
+                    <div className="bg-destructive/10 px-3 py-2 flex items-center justify-between">
+                      <span className="text-xs font-bold text-destructive">Linhas com Erro</span>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-destructive hover:bg-destructive/15" onClick={exportErrorsPDF}>
                         <FileDown className="h-3 w-3 mr-1" /> Exportar PDF
                       </Button>
                     </div>
                     <div className="max-h-[200px] overflow-y-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-slate-50">
+                          <TableRow className="bg-muted">
                             <TableHead className="py-2 px-3 text-[10px] font-bold w-[60px]">Linha</TableHead>
                             <TableHead className="py-2 px-3 text-[10px] font-bold">Produto</TableHead>
                             <TableHead className="py-2 px-3 text-[10px] font-bold">Setor</TableHead>
@@ -955,17 +955,17 @@ export default function ProductsPage() {
                         </TableHeader>
                         <TableBody>
                           {validationResult.errors.slice(0, 20).map((e, i) => (
-                            <TableRow key={i} className="border-slate-100">
+                            <TableRow key={i} className="border-border">
                               <TableCell className="py-1.5 px-3 text-xs font-mono">{e.line}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs font-medium truncate max-w-[120px]">{e.name}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs text-slate-500">{e.sector}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs text-red-600 font-medium">{e.reason}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{e.sector}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-destructive font-medium">{e.reason}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                       {validationResult.errors.length > 20 && (
-                        <p className="text-center text-[10px] text-slate-400 py-2">... e mais {validationResult.errors.length - 20} erros. Exporte o PDF para ver todos.</p>
+                        <p className="text-center text-[10px] text-muted-foreground py-2">... e mais {validationResult.errors.length - 20} erros. Exporte o PDF para ver todos.</p>
                       )}
                     </div>
                   </div>
@@ -976,7 +976,7 @@ export default function ProductsPage() {
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
               <Button
-                className="bg-brand-primary hover:bg-brand-primary-hover h-10 px-8 text-xs font-bold rounded-lg"
+                className="bg-primary hover:bg-primary/90 h-10 px-8 text-xs font-bold rounded-lg"
                 onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
@@ -992,15 +992,15 @@ export default function ProductsPage() {
         <DialogContent className="max-w-lg rounded-2xl p-6 shadow-2xl border-none">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <History className="h-4 w-4 text-emerald-600" /> Histórico de Preços
+              <History className="h-4 w-4 text-success" /> Histórico de Preços
             </DialogTitle>
             {selectedProductForHistory && (
-              <p className="text-sm text-slate-500 font-medium">{selectedProductForHistory.name}</p>
+              <p className="text-sm text-muted-foreground font-medium">{selectedProductForHistory.name}</p>
             )}
           </DialogHeader>
           <div className="pt-4">
             {priceHistory.length === 0 ? (
-              <div className="text-center py-8 text-slate-300">
+              <div className="text-center py-8 text-muted-foreground">
                 <History className="h-12 w-12 mx-auto opacity-30 mb-2" />
                 <p className="text-xs font-bold">Nenhuma variação de preço registrada</p>
               </div>
@@ -1010,18 +1010,18 @@ export default function ProductsPage() {
                   const variation = h.old_price ? ((h.new_price - h.old_price) / h.old_price) * 100 : 0;
                   const isIncrease = variation > 0;
                   return (
-                    <div key={h.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div key={h.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">NF: {h.invoice_number || '---'}</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">NF: {h.invoice_number || '---'}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
-                          {h.old_price && <p className="text-[10px] text-slate-400 line-through">{formatCurrency(h.old_price)}</p>}
-                          <p className="text-sm font-bold text-slate-900">{formatCurrency(h.new_price)}</p>
+                          {h.old_price && <p className="text-[10px] text-muted-foreground line-through">{formatCurrency(h.old_price)}</p>}
+                          <p className="text-sm font-bold text-foreground">{formatCurrency(h.new_price)}</p>
                         </div>
                         {h.old_price && (
-                          <Badge className={cn("font-bold text-[10px] h-6 px-2 border-none", isIncrease ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700")}>
+                          <Badge className={cn("font-bold text-[10px] h-6 px-2 border-none", isIncrease ? "bg-destructive/15 text-destructive" : "bg-success-muted text-success")}>
                             {isIncrease ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                             {Math.abs(variation).toFixed(0)}%
                           </Badge>

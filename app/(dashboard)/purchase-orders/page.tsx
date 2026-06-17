@@ -133,9 +133,9 @@ export default function PurchaseOrdersPage() {
   return (
     <PageContainer className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Pedidos</h1>
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-100 shadow-sm">
-          <Filter className="h-3.5 w-3.5 text-slate-400 ml-2" />
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Pedidos</h1>
+        <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border shadow-sm">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground ml-2" />
           <Select value={selectedSector} onValueChange={setSelectedSector}>
             <SelectTrigger className="w-[200px] border-none shadow-none text-xs font-bold h-8">
               <SelectValue placeholder="Filtrar Setor" />
@@ -150,28 +150,28 @@ export default function PurchaseOrdersPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Emergencial */}
-        <Card className="border-none shadow-sm rounded-xl overflow-hidden bg-white hover:shadow-md transition-all">
+        <Card className="shadow-sm rounded-xl overflow-hidden bg-card hover:shadow-md transition-all">
           <div className="p-6 border-l-4 border-l-red-500 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center text-red-600"><AlertTriangle className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-slate-900">Pedido Emergencial</h2>
+              <div className="w-9 h-9 bg-destructive/10 rounded-lg flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+              <h2 className="text-lg font-bold text-foreground">Pedido Emergencial</h2>
             </div>
-            <p className="text-xs text-slate-500 font-medium mb-6 flex-1">Itens abaixo do estoque mínimo de segurança.</p>
-            <Button className="w-full bg-red-600 hover:bg-red-700 h-10 text-xs font-bold rounded-lg shadow-sm" onClick={() => generateOrder('emergency')} disabled={isLoading}>
+            <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Itens abaixo do estoque mínimo de segurança.</p>
+            <Button className="w-full bg-destructive hover:bg-destructive/90 h-10 text-xs font-bold rounded-lg shadow-sm" onClick={() => generateOrder('emergency')} disabled={isLoading}>
               Gerar Lista de Críticos <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
         </Card>
 
         {/* Mensal */}
-        <Card className="border-none shadow-sm rounded-xl overflow-hidden bg-white hover:shadow-md transition-all">
+        <Card className="shadow-sm rounded-xl overflow-hidden bg-card hover:shadow-md transition-all">
           <div className="p-6 border-l-4 border-l-blue-600 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600"><Calendar className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-slate-900">Pedido Mensal</h2>
+              <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
+              <h2 className="text-lg font-bold text-foreground">Pedido Mensal</h2>
             </div>
-            <p className="text-xs text-slate-500 font-medium mb-6 flex-1">Reposição programada para atingir o estoque máximo.</p>
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 h-10 text-xs font-bold rounded-lg shadow-sm" onClick={() => generateOrder('monthly')} disabled={isLoading}>
+            <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Reposição programada para atingir o estoque máximo.</p>
+            <Button className="w-full bg-primary hover:bg-primary/90 h-10 text-xs font-bold rounded-lg shadow-sm" onClick={() => generateOrder('monthly')} disabled={isLoading}>
               Gerar Reposição Total <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -181,14 +181,14 @@ export default function PurchaseOrdersPage() {
       {/* Preview Dialog: Compact */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl h-[85vh] rounded-2xl p-0 shadow-2xl border-none flex flex-col overflow-hidden">
-          <DialogHeader className={cn("px-8 py-6 text-white", orderType === 'emergency' ? 'bg-red-600' : 'bg-blue-600')}>
+          <DialogHeader className={cn("px-8 py-6 text-white", orderType === 'emergency' ? 'bg-destructive' : 'bg-primary')}>
             <DialogTitle className="text-xl font-bold mb-1">Prévia do Pedido</DialogTitle>
             <p className="text-xs font-medium opacity-90">{orderItems.length} itens identificados para compra.</p>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-100 italic">
+                <TableRow className="border-border italic">
                   <TableHead className="font-bold text-[10px] uppercase">Material</TableHead>
                   <TableHead className="text-center font-bold text-[10px] uppercase">Saldo</TableHead>
                   <TableHead className="text-center font-bold text-[10px] uppercase">Comprar</TableHead>
@@ -197,20 +197,20 @@ export default function PurchaseOrdersPage() {
               </TableHeader>
               <TableBody>
                 {orderItems.map(i => (
-                  <TableRow key={i.product_id} className="border-slate-50">
-                    <TableCell className="py-2.5"><span className="font-bold text-slate-800 text-sm">{i.product_name}</span></TableCell>
-                    <TableCell className="text-center text-xs font-bold text-slate-400">{i.current_qty}</TableCell>
-                    <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-slate-900 text-white rounded-md text-xs font-bold">{i.order_qty}</span></TableCell>
-                    <TableCell className="text-right font-bold text-slate-900 text-sm">{formatCurrency(i.total_cost)}</TableCell>
+                  <TableRow key={i.product_id} className="border-border">
+                    <TableCell className="py-2.5"><span className="font-bold text-foreground text-sm">{i.product_name}</span></TableCell>
+                    <TableCell className="text-center text-xs font-bold text-muted-foreground">{i.current_qty}</TableCell>
+                    <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-foreground text-background rounded-md text-xs font-bold">{i.order_qty}</span></TableCell>
+                    <TableCell className="text-right font-bold text-foreground text-sm">{formatCurrency(i.total_cost)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-          <div className="p-4 bg-slate-50 flex justify-end gap-2 border-t">
+          <div className="p-4 bg-muted flex justify-end gap-2 border-t">
             <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             {orderItems.length > 0 && (
-              <Button className="bg-slate-900 hover:bg-black h-10 px-8 text-xs font-bold rounded-lg" onClick={generatePDF}>
+              <Button className="bg-foreground hover:bg-foreground h-10 px-8 text-xs font-bold rounded-lg" onClick={generatePDF}>
                 <FileDown className="h-3.5 w-3.5 mr-2" /> Exportar PDF
               </Button>
             )}

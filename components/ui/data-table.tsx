@@ -133,27 +133,27 @@ export function DataTable<T>({
 
   const renderSortIcon = (column: DataTableColumn<T>) => {
     if (!column.sortable) return null;
-    if (sortKey !== column.key) return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />;
+    if (sortKey !== column.key) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />;
     return sortDirection === 'asc' ? (
-      <ArrowUp className="h-3.5 w-3.5 text-slate-600" />
+      <ArrowUp className="h-3.5 w-3.5 text-foreground" />
     ) : (
-      <ArrowDown className="h-3.5 w-3.5 text-slate-600" />
+      <ArrowDown className="h-3.5 w-3.5 text-foreground" />
     );
   };
 
   return (
-    <div className={cn('overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm', className)}>
-      <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs font-semibold text-slate-500">
+    <div className={cn('overflow-hidden rounded-xl border border-border bg-card shadow-sm', className)}>
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-semibold text-muted-foreground">
           {sortedData.length} {sortedData.length === 1 ? 'registro' : 'registros'}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-xs font-semibold text-slate-500" htmlFor="table-page-size">
+          <label className="text-xs font-semibold text-muted-foreground" htmlFor="table-page-size">
             Linhas
           </label>
           <select
             id="table-page-size"
-            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+            className="h-8 rounded-md border border-border bg-card px-2 text-xs font-semibold text-foreground"
             value={pageSize}
             onChange={(event) => {
               setPage(1);
@@ -176,8 +176,8 @@ export function DataTable<T>({
           >
             Anterior
           </Button>
-          <span className="min-w-[90px] text-center text-xs font-semibold text-slate-600">
-            Pagina {page} de {totalPages}
+          <span className="min-w-[90px] text-center text-xs font-semibold text-muted-foreground">
+            Página {page} de {totalPages}
           </span>
           <Button
             type="button"
@@ -193,13 +193,13 @@ export function DataTable<T>({
       </div>
 
       <Table>
-        <TableHeader className={cn('bg-slate-50', stickyHeader && 'sticky top-0 z-10')}>
-          <TableRow className="border-slate-100 hover:bg-transparent">
+        <TableHeader className={cn('bg-muted', stickyHeader && 'sticky top-0 z-10')}>
+          <TableRow className="border-border hover:bg-transparent">
             {columns.map((column) => (
               <TableHead
                 key={column.key}
                 className={cn(
-                  'h-11 px-4 text-xs font-bold uppercase tracking-wider text-slate-500',
+                  'h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground',
                   getAlignmentClassName(column.align),
                   column.headerClassName
                 )}
@@ -208,7 +208,7 @@ export function DataTable<T>({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 rounded-sm',
+                      'inline-flex items-center gap-1.5 rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       column.align === 'right' && 'ml-auto'
                     )}
                     onClick={() => handleSort(column)}
@@ -226,9 +226,9 @@ export function DataTable<T>({
         </TableHeader>
         <TableBody>
           {paginatedData.length === 0 ? (
-            <TableRow className="border-slate-100">
+            <TableRow className="border-border">
               <TableCell
-                className="px-4 py-10 text-center text-sm font-medium text-slate-500"
+                className="px-4 py-10 text-center text-sm font-medium text-muted-foreground"
                 colSpan={columns.length}
               >
                 {emptyMessage}
@@ -236,12 +236,12 @@ export function DataTable<T>({
             </TableRow>
           ) : (
             paginatedData.map((row) => (
-              <TableRow key={rowKey(row)} className="group border-slate-100 hover:bg-slate-50/50">
+              <TableRow key={rowKey(row)} className="group border-border hover:bg-muted/40">
                 {columns.map((column) => (
                   <TableCell
                     key={`${rowKey(row)}-${column.key}`}
                     className={cn(
-                      'px-4 py-2.5 align-middle text-sm',
+                      'px-4 py-2.5 align-middle text-sm text-foreground',
                       getAlignmentClassName(column.align),
                       column.cellClassName
                     )}
