@@ -109,27 +109,14 @@ interface CSVValidationResult {
   errors: CSVErrorRow[];
 }
 
-type MovementOutRow = {
-  product_id: string;
-  quantity: number;
-  created_at: string;
-};
-
-type MonthlyBucketMap = Record<string, number>;
-
 type ProductPdfRow = {
   productId: string;
   name: string;
   currentQty: number;
   costPrice: number | null;
-  month1Out: number;
-  month2Out: number;
-  month3Out: number;
+  minStock: number;
+  maxStock: number;
 };
-
-function getMonthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
 
 function slugifySectorName(value: string): string {
   return (
@@ -459,66 +446,18 @@ export default function ProductsPage() {
     setIsExportingPdf(true);
     try {
       const now = new Date();
-      const periodEndExclusive = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthStarts = [
-        new Date(now.getFullYear(), now.getMonth() - 3, 1),
-        new Date(now.getFullYear(), now.getMonth() - 2, 1),
-        new Date(now.getFullYear(), now.getMonth() - 1, 1),
-      ];
-      const monthKeys = monthStarts.map((monthDate) => getMonthKey(monthDate));
-      const monthLabels = monthStarts.map((monthDate) => format(monthDate, 'MM/yyyy'));
-      const [month1Key, month2Key, month3Key] = monthKeys;
-      const validMonthKeys = new Set(monthKeys);
-
-      const createEmptyBuckets = (): MonthlyBucketMap =>
-        monthKeys.reduce<MonthlyBucketMap>((acc, key) => {
-          acc[key] = 0;
-          return acc;
-        }, {});
-
-      const bucketsByProduct = new Map<string, MonthlyBucketMap>();
-      selectedProducts.forEach((product) => {
-        bucketsByProduct.set(product.id, createEmptyBuckets());
-      });
-
-      const { data: outMovements, error } = await supabase
-        .from('movements')
-        .select('product_id, quantity, created_at')
-        .eq('type', 'OUT')
-        .in('product_id', selectedProducts.map((product) => product.id))
-        .gte('created_at', monthStarts[0].toISOString())
-        .lt('created_at', periodEndExclusive.toISOString());
-
-      if (error) throw error;
-
-      ((outMovements || []) as MovementOutRow[]).forEach((movement) => {
-        const movementMonthKey = getMonthKey(new Date(movement.created_at));
-        if (!validMonthKeys.has(movementMonthKey)) return;
-
-        const productBuckets = bucketsByProduct.get(movement.product_id);
-        if (!productBuckets) return;
-        productBuckets[movementMonthKey] = (productBuckets[movementMonthKey] || 0) + movement.quantity;
-      });
 
       const pdfRows: ProductPdfRow[] = selectedProducts
-        .map((product) => {
-          const productBuckets = bucketsByProduct.get(product.id) || createEmptyBuckets();
-
-          return {
-            productId: product.id,
-            name: product.name,
-            currentQty: product.current_qty,
-            costPrice: product.cost_price,
-            month1Out: productBuckets[month1Key] || 0,
-            month2Out: productBuckets[month2Key] || 0,
-            month3Out: productBuckets[month3Key] || 0,
-          };
-        })
+        .map((product) => ({
+          productId: product.id,
+          name: product.name,
+          currentQty: product.current_qty,
+          costPrice: product.cost_price,
+          minStock: product.min_stock,
+          maxStock: product.max_stock,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
-      const totalMonth1Out = pdfRows.reduce((sum, row) => sum + row.month1Out, 0);
-      const totalMonth2Out = pdfRows.reduce((sum, row) => sum + row.month2Out, 0);
-      const totalMonth3Out = pdfRows.reduce((sum, row) => sum + row.month3Out, 0);
       const totalInventoryValue = pdfRows.reduce(
         (sum, row) => sum + row.currentQty * (row.costPrice || 0),
         0
@@ -537,22 +476,16 @@ export default function ProductsPage() {
       doc.setFontSize(10);
       doc.text(`Setor: ${selectedSector?.name || 'Setor'}`, 14, 32);
       doc.text(`Gerado em: ${format(now, 'dd/MM/yyyy HH:mm')}`, 14, 38);
-      doc.text(
-        `Consumo mensal (3 meses fechados): ${monthLabels[0]} a ${monthLabels[2]}`,
-        14,
-        44
-      );
 
       autoTable(doc, {
-        startY: 50,
-        head: [['Nome', 'Saldo Atual', 'Custo Unitário', monthLabels[0], monthLabels[1], monthLabels[2]]],
+        startY: 44,
+        head: [['Nome', 'Saldo Atual', 'Custo Unitário', 'Mínimo', 'Máximo']],
         body: pdfRows.map((row) => [
           row.name,
           String(row.currentQty),
           formatCurrency(row.costPrice),
-          String(row.month1Out),
-          String(row.month2Out),
-          String(row.month3Out),
+          String(row.minStock),
+          String(row.maxStock),
         ]),
         styles: { fontSize: 9 },
         headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
@@ -563,20 +496,16 @@ export default function ProductsPage() {
           2: { halign: 'right' },
           3: { halign: 'right' },
           4: { halign: 'right' },
-          5: { halign: 'right' },
         },
       });
 
-      const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 50;
+      const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 44;
       const summaryY = tableEndY + 10;
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text(`Total de produtos: ${pdfRows.length}`, 14, summaryY);
-      doc.text(`Saída total ${monthLabels[0]}: ${totalMonth1Out}`, 14, summaryY + 6);
-      doc.text(`Saída total ${monthLabels[1]}: ${totalMonth2Out}`, 14, summaryY + 12);
-      doc.text(`Saída total ${monthLabels[2]}: ${totalMonth3Out}`, 14, summaryY + 18);
-      doc.text(`Valor total em estoque: ${formatCurrency(totalInventoryValue)}`, 14, summaryY + 24);
+      doc.text(`Valor total em estoque: ${formatCurrency(totalInventoryValue)}`, 14, summaryY + 6);
 
       const fileName = `produtos_${slugifySectorName(selectedSector?.name || 'setor')}_${format(now, 'yyyyMMdd_HHmm')}.pdf`;
       doc.save(fileName);
