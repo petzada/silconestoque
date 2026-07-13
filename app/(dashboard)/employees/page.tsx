@@ -65,7 +65,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Employee, Sector, Role, Locker } from '@/lib/types';
+import type { Employee, Sector, Role, Locker, LockerKind } from '@/lib/types';
 
 type ActiveAssignmentJoin = {
   id: string;
@@ -104,8 +104,26 @@ const roleSchema = z.object({
 
 type RoleFormValues = z.infer<typeof roleSchema>;
 
-function getActiveAssignment(employee: EmployeeRow): ActiveAssignmentJoin | null {
-  return employee.locker_assignments?.[0] ?? null;
+function getActiveAssignments(employee: EmployeeRow): ActiveAssignmentJoin[] {
+  return employee.locker_assignments ?? [];
+}
+
+function getAssignmentByKind(employee: EmployeeRow, kind: LockerKind): ActiveAssignmentJoin | null {
+  return getActiveAssignments(employee).find((assignment) => assignment.locker?.kind === kind) ?? null;
+}
+
+function describeLockerAssignment(assignment: ActiveAssignmentJoin): string {
+  if (!assignment.locker) return '';
+  if (assignment.locker.kind === 'uniforme') {
+    return `o armário nº ${String(assignment.locker.number).padStart(2, '0')} (${assignment.locker.size})`;
+  }
+  return `o armário de vestiário nº ${String(assignment.locker.number).padStart(2, '0')}`;
+}
+
+function joinWithAnd(items: string[]): string {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
 }
 
 function friendlyDbError(error: unknown, fallback: string): string {
@@ -269,14 +287,12 @@ export default function EmployeesPage() {
         .eq('id', employeeToOffboard.id);
       if (employeeError) throw employeeError;
 
-      const activeAssignment = getActiveAssignment(employeeToOffboard);
-      if (activeAssignment) {
-        const { error: assignmentError } = await supabase
-          .from('locker_assignments')
-          .update({ ended_at: new Date().toISOString() })
-          .eq('id', activeAssignment.id);
-        if (assignmentError) throw assignmentError;
-      }
+      const { error: assignmentError } = await supabase
+        .from('locker_assignments')
+        .update({ ended_at: new Date().toISOString() })
+        .eq('employee_id', employeeToOffboard.id)
+        .is('ended_at', null);
+      if (assignmentError) throw assignmentError;
 
       toast.success('Colaborador desligado com sucesso');
       setIsOffboardDialogOpen(false);
@@ -294,7 +310,7 @@ export default function EmployeesPage() {
     try {
       const { error } = await supabase.from('employees').update({ is_active: true }).eq('id', employee.id);
       if (error) throw error;
-      toast.success('Colaborador reativado. Ele está sem armário atribuído.');
+      toast.success('Colaborador reativado. Ele está sem armários atribuídos.');
       await fetchData();
     } catch {
       toast.error('Erro ao reativar colaborador');
@@ -482,14 +498,25 @@ export default function EmployeesPage() {
         key: 'locker',
         header: 'Chapa/Armário',
         cell: (employee) => {
-          const assignment = getActiveAssignment(employee);
-          if (!assignment?.locker) {
-            return <span className="text-xs text-muted-foreground">sem armário</span>;
-          }
+          const uniformAssignment = getAssignmentByKind(employee, 'uniforme');
+          const vestiarioAssignment = getAssignmentByKind(employee, 'vestiario');
           return (
-            <Badge variant="outline" className="font-mono text-xs font-semibold">
-              Nº {String(assignment.locker.number).padStart(2, '0')} · {assignment.locker.size}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-1">
+              {uniformAssignment?.locker ? (
+                <Badge variant="outline" className="font-mono text-xs font-semibold">
+                  Nº {String(uniformAssignment.locker.number).padStart(2, '0')} · {uniformAssignment.locker.size}
+                </Badge>
+              ) : (
+                <span className="text-xs text-muted-foreground">sem chapa</span>
+              )}
+              {vestiarioAssignment?.locker ? (
+                <Badge variant="outline" className="font-mono text-xs font-semibold">
+                  Vest. {String(vestiarioAssignment.locker.number).padStart(2, '0')}
+                </Badge>
+              ) : (
+                <span className="text-xs text-muted-foreground">sem vestiário</span>
+              )}
+            </div>
           );
         },
       },
@@ -573,10 +600,15 @@ export default function EmployeesPage() {
     return <div className="py-20 text-center font-medium text-muted-foreground">Carregando colaboradores...</div>;
   }
 
-  const offboardAssignment = employeeToOffboard ? getActiveAssignment(employeeToOffboard) : null;
+  const offboardAssignmentDescriptions = employeeToOffboard
+    ? getActiveAssignments(employeeToOffboard).map(describeLockerAssignment).filter(Boolean)
+    : [];
+  const offboardAssignmentsList = joinWithAnd(offboardAssignmentDescriptions);
   const offboardDescription = employeeToOffboard
-    ? offboardAssignment?.locker
-      ? `Deseja desligar "${employeeToOffboard.full_name}"? O armário nº ${String(offboardAssignment.locker.number).padStart(2, '0')} (${offboardAssignment.locker.size}) será liberado automaticamente.`
+    ? offboardAssignmentDescriptions.length > 0
+      ? `Deseja desligar "${employeeToOffboard.full_name}"? ${offboardAssignmentsList.charAt(0).toUpperCase()}${offboardAssignmentsList.slice(1)} ${
+          offboardAssignmentDescriptions.length > 1 ? 'serão liberados' : 'será liberado'
+        } automaticamente.`
       : `Deseja desligar "${employeeToOffboard.full_name}"? Ele não possui armário atribuído.`
     : '';
 
