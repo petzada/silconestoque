@@ -17,6 +17,13 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import {
   Form,
   FormControl,
   FormField,
@@ -31,6 +38,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -45,8 +60,10 @@ import {
   Trash2,
   X,
   Check,
+  History,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { Employee, Sector, Role, Locker } from '@/lib/types';
 
@@ -58,6 +75,13 @@ type ActiveAssignmentJoin = {
 
 type EmployeeRow = Employee & {
   locker_assignments?: ActiveAssignmentJoin[] | null;
+};
+
+type WithdrawalRow = {
+  id: string;
+  created_at: string;
+  quantity: number;
+  product: { name: string } | null;
 };
 
 const employeeSchema = z.object({
@@ -122,6 +146,11 @@ export default function EmployeesPage() {
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [isRoleDeleteDialogOpen, setIsRoleDeleteDialogOpen] = useState(false);
   const [isDeletingRole, setIsDeletingRole] = useState(false);
+
+  const [isWithdrawalsSheetOpen, setIsWithdrawalsSheetOpen] = useState(false);
+  const [employeeForWithdrawals, setEmployeeForWithdrawals] = useState<EmployeeRow | null>(null);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRow[]>([]);
+  const [isLoadingWithdrawals, setIsLoadingWithdrawals] = useState(false);
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -273,6 +302,42 @@ export default function EmployeesPage() {
       setReactivatingId(null);
     }
   }, []);
+
+  // Withdrawals (Retiradas) sheet
+  const fetchWithdrawals = useCallback(async (employeeId: string) => {
+    setIsLoadingWithdrawals(true);
+    try {
+      const { data, error } = await supabase
+        .from('movements')
+        .select('id, created_at, quantity, product:products(name)')
+        .eq('type', 'OUT')
+        .eq('employee_id', employeeId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setWithdrawals((data as unknown as WithdrawalRow[]) || []);
+    } catch {
+      toast.error('Erro ao carregar retiradas do colaborador');
+    } finally {
+      setIsLoadingWithdrawals(false);
+    }
+  }, []);
+
+  const openWithdrawalsSheet = useCallback(
+    (employee: EmployeeRow) => {
+      setEmployeeForWithdrawals(employee);
+      setIsWithdrawalsSheetOpen(true);
+      void fetchWithdrawals(employee.id);
+    },
+    [fetchWithdrawals]
+  );
+
+  const handleWithdrawalsSheetOpenChange = (open: boolean) => {
+    setIsWithdrawalsSheetOpen(open);
+    if (!open) {
+      setEmployeeForWithdrawals(null);
+      setWithdrawals([]);
+    }
+  };
 
   // Roles management
   const fetchRoles = async () => {
@@ -460,6 +525,17 @@ export default function EmployeesPage() {
             >
               <Pencil className="h-4 w-4" />
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Retiradas"
+              aria-label="Retiradas"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={() => openWithdrawalsSheet(employee)}
+            >
+              <History className="h-4 w-4" />
+            </Button>
             {employee.is_active ? (
               <Button
                 type="button"
@@ -490,7 +566,7 @@ export default function EmployeesPage() {
         ),
       },
     ],
-    [openOffboardDialog, handleReactivate, reactivatingId]
+    [openOffboardDialog, handleReactivate, reactivatingId, openWithdrawalsSheet]
   );
 
   if (isLoading) {
@@ -766,6 +842,54 @@ export default function EmployeesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Sheet: Retiradas do colaborador */}
+      <Sheet open={isWithdrawalsSheetOpen} onOpenChange={handleWithdrawalsSheetOpenChange}>
+        <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-md">
+          {employeeForWithdrawals && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  Retiradas de {employeeForWithdrawals.full_name}
+                </SheetTitle>
+                <SheetDescription>Histórico de saídas de material solicitadas por este colaborador.</SheetDescription>
+              </SheetHeader>
+
+              <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-4">
+                {isLoadingWithdrawals ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Carregando...</p>
+                ) : withdrawals.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma retirada registrada.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold">Data</TableHead>
+                        <TableHead className="text-xs font-semibold">Produto</TableHead>
+                        <TableHead className="text-right text-xs font-semibold">Qtd</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {withdrawals.map((withdrawal) => (
+                        <TableRow key={withdrawal.id}>
+                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                            {format(new Date(withdrawal.created_at), 'dd/MM/yyyy HH:mm')}
+                          </TableCell>
+                          <TableCell className="text-xs text-foreground">{withdrawal.product?.name || '-'}</TableCell>
+                          <TableCell className="text-right text-xs font-semibold text-foreground">
+                            {withdrawal.quantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={isOffboardDialogOpen}

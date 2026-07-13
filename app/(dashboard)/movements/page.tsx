@@ -55,11 +55,13 @@ import {
   Check,
   ChevronsUpDown,
   Trash2,
+  UserCheck,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Movement, MovementFilters, Product, Sector } from '@/lib/types';
+import type { Employee, Movement, MovementFilters, Product, Sector } from '@/lib/types';
 
 const movementSchema = z
   .object({
@@ -69,6 +71,7 @@ const movementSchema = z
     entity_name: z.string().optional(),
     invoice_number: z.string().optional(),
     unit_value: z.number().optional(),
+    employee_id: z.string().optional(),
   })
   .superRefine((values, ctx) => {
     if (values.type === 'IN' && values.invoice_number?.trim() && (!values.unit_value || values.unit_value <= 0)) {
@@ -89,6 +92,7 @@ const initialFormValues: MovementFormValues = {
   entity_name: '',
   invoice_number: '',
   unit_value: undefined,
+  employee_id: undefined,
 };
 
 const MONTHS = [
@@ -112,6 +116,7 @@ const initialMovementFilters: MovementFilters = {
   month: 'all',
   year: 'all',
   sectorId: 'all',
+  employeeId: 'all',
 };
 
 function formatCurrency(value: number | null): string {
@@ -126,6 +131,7 @@ export default function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -134,6 +140,8 @@ export default function MovementsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [filters, setFilters] = useState<MovementFilters>(initialMovementFilters);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+  const [isEntityComboboxOpen, setIsEntityComboboxOpen] = useState(false);
+  const [entitySearchValue, setEntitySearchValue] = useState('');
   const saveLockRef = useRef(false);
 
   const form = useForm<MovementFormValues>({
@@ -151,10 +159,10 @@ export default function MovementsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [movementsRes, productsRes, sectorsRes] = await Promise.all([
+      const [movementsRes, productsRes, sectorsRes, employeesRes] = await Promise.all([
         supabase
           .from('movements')
-          .select('*, product:products(*, sector:sectors(*))')
+          .select('*, product:products(*, sector:sectors(*)), employee:employees(id, full_name)')
           .order('created_at', { ascending: false }),
         supabase
           .from('products')
@@ -162,15 +170,18 @@ export default function MovementsPage() {
           .eq('is_active', true)
           .order('name'),
         supabase.from('sectors').select('*').order('name'),
+        supabase.from('employees').select('*, sector:sectors(*), role:roles(*)').order('full_name'),
       ]);
 
       if (movementsRes.error) throw movementsRes.error;
       if (productsRes.error) throw productsRes.error;
       if (sectorsRes.error) throw sectorsRes.error;
+      if (employeesRes.error) throw employeesRes.error;
 
       setMovements(movementsRes.data || []);
       setProducts(productsRes.data || []);
       setSectors(sectorsRes.data || []);
+      setEmployees(employeesRes.data || []);
     } catch {
       toast.error('Erro ao carregar dados');
     } finally {
@@ -192,6 +203,8 @@ export default function MovementsPage() {
     if (!open) {
       form.reset(initialFormValues);
       setIsComboboxOpen(false);
+      setIsEntityComboboxOpen(false);
+      setEntitySearchValue('');
     }
 
     setIsDialogOpen(open);
@@ -233,6 +246,7 @@ export default function MovementsPage() {
         entity_name: values.entity_name?.trim() || null,
         unit_value: values.type === 'IN' && values.invoice_number ? values.unit_value || null : null,
         invoice_number: values.type === 'IN' ? values.invoice_number?.trim() || null : null,
+        employee_id: values.type === 'OUT' ? values.employee_id || null : null,
       };
 
       const { error } = await supabase.from('movements').insert(movementData);
@@ -244,7 +258,14 @@ export default function MovementsPage() {
       await fetchData();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message.includes('stock') ? 'Estoque insuficiente' : 'Erro ao salvar');
+      if (message.includes('stock')) {
+        toast.error('Estoque insuficiente');
+      } else if (message.includes('foreign key') || message.includes('employee_id')) {
+        toast.error('Colaborador selecionado não é mais válido. A lista foi atualizada.');
+        await fetchData();
+      } else {
+        toast.error('Erro ao salvar');
+      }
     } finally {
       setIsSaving(false);
       saveLockRef.current = false;
@@ -258,6 +279,14 @@ export default function MovementsPage() {
       ),
     [movements]
   );
+
+  const activeEmployees = useMemo(() => employees.filter((employee) => employee.is_active), [employees]);
+
+  const employeeFilterOptions = useMemo(() => {
+    const active = employees.filter((employee) => employee.is_active);
+    const inactive = employees.filter((employee) => !employee.is_active);
+    return [...active, ...inactive];
+  }, [employees]);
 
   const filteredMovements = useMemo(
     () =>
@@ -274,8 +303,9 @@ export default function MovementsPage() {
         const matchesMonth = filters.month === 'all' || String(movementDate.getMonth()) === filters.month;
         const matchesYear = filters.year === 'all' || String(movementDate.getFullYear()) === filters.year;
         const matchesSector = filters.sectorId === 'all' || movement.product?.sector_id === filters.sectorId;
+        const matchesEmployee = filters.employeeId === 'all' || movement.employee_id === filters.employeeId;
 
-        return matchesSearch && matchesType && matchesMonth && matchesYear && matchesSector;
+        return matchesSearch && matchesType && matchesMonth && matchesYear && matchesSector && matchesEmployee;
       }),
     [movements, filters]
   );
@@ -333,7 +363,14 @@ export default function MovementsPage() {
         sortable: true,
         accessor: (movement) => movement.entity_name || '',
         cell: (movement) => (
-          <TruncatedCell value={movement.entity_name || '---'} className="max-w-[200px] text-xs font-semibold text-muted-foreground" />
+          <div className="flex max-w-[200px] items-center gap-1.5">
+            {movement.employee_id && (
+              <span title="Colaborador cadastrado" className="shrink-0 text-primary">
+                <UserCheck className="h-3.5 w-3.5" />
+              </span>
+            )}
+            <TruncatedCell value={movement.entity_name || '---'} className="min-w-0 flex-1 text-xs font-semibold text-muted-foreground" />
+          </div>
         ),
       },
       {
@@ -505,6 +542,24 @@ export default function MovementsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <Select
+            value={filters.employeeId}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, employeeId: value }))}
+          >
+            <SelectTrigger className="h-10 w-[220px] rounded-lg border-border text-xs font-bold">
+              <SelectValue placeholder="Colaborador" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="all">Todos os colaboradores</SelectItem>
+              {employeeFilterOptions.map((employee) => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.full_name}
+                  {!employee.is_active ? ' (desligado)' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -517,7 +572,8 @@ export default function MovementsPage() {
           filters.type !== 'all' ||
           filters.month !== 'all' ||
           filters.year !== 'all' ||
-          filters.sectorId !== 'all'
+          filters.sectorId !== 'all' ||
+          filters.employeeId !== 'all'
             ? 'Nenhuma movimentacao encontrada para este filtro.'
             : 'Nenhuma movimentacao cadastrada.'
         }
@@ -631,7 +687,99 @@ export default function MovementsPage() {
                         {movementType === 'IN' ? 'Fornecedor' : 'Solicitante'}
                       </FormLabel>
                       <FormControl>
-                        <Input {...field} className="h-10 rounded-lg bg-muted" />
+                        {movementType === 'IN' ? (
+                          <Input {...field} className="h-10 rounded-lg bg-muted" />
+                        ) : (
+                          <div className="flex gap-1">
+                            <Popover
+                              open={isEntityComboboxOpen}
+                              onOpenChange={(open) => {
+                                setIsEntityComboboxOpen(open);
+                                if (!open) setEntitySearchValue('');
+                              }}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  role="combobox"
+                                  className="h-10 min-w-0 flex-1 justify-between rounded-lg border-border bg-muted px-3 text-[12px] font-bold"
+                                >
+                                  <span className="truncate">{field.value || 'Selecionar colaborador...'}</span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[min(320px,90vw)] p-0 rounded-xl shadow-2xl overflow-hidden" align="start">
+                                <Command shouldFilter>
+                                  <CommandInput
+                                    placeholder="Buscar colaborador..."
+                                    className="h-10 text-sm"
+                                    value={entitySearchValue}
+                                    onValueChange={setEntitySearchValue}
+                                  />
+                                  <CommandList>
+                                    <CommandEmpty>Nenhum colaborador ativo encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                      {activeEmployees.map((employee) => (
+                                        <CommandItem
+                                          key={employee.id}
+                                          value={employee.full_name}
+                                          onSelect={() => {
+                                            form.setValue('employee_id', employee.id, { shouldDirty: true });
+                                            form.setValue('entity_name', employee.full_name, { shouldDirty: true });
+                                            setIsEntityComboboxOpen(false);
+                                            setEntitySearchValue('');
+                                          }}
+                                          className="cursor-pointer px-4 py-2 text-xs font-bold"
+                                        >
+                                          <Check
+                                            className={cn(
+                                              'mr-2 h-3.5 w-3.5 text-success',
+                                              form.watch('employee_id') === employee.id ? 'opacity-100' : 'opacity-0'
+                                            )}
+                                          />
+                                          {employee.full_name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                    {entitySearchValue.trim() && (
+                                      <CommandGroup>
+                                        <CommandItem
+                                          value={`usar-texto-livre-${entitySearchValue}`}
+                                          onSelect={() => {
+                                            form.setValue('entity_name', entitySearchValue.trim(), { shouldDirty: true });
+                                            form.setValue('employee_id', undefined, { shouldDirty: true });
+                                            setIsEntityComboboxOpen(false);
+                                            setEntitySearchValue('');
+                                          }}
+                                          className="cursor-pointer px-4 py-2 text-xs font-bold text-muted-foreground"
+                                        >
+                                          Usar &quot;{entitySearchValue.trim()}&quot;
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    )}
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            {field.value && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                title="Limpar solicitante"
+                                aria-label="Limpar solicitante"
+                                className="h-10 w-10 shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  form.setValue('entity_name', '', { shouldDirty: true });
+                                  form.setValue('employee_id', undefined, { shouldDirty: true });
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>

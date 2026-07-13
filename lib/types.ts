@@ -31,7 +31,9 @@ export type Movement = {
   invoice_number: string | null;
   created_at: string;
   is_initial_import: boolean;
+  employee_id: string | null;
   product?: Product;
+  employee?: Employee;
 };
 
 export type PriceHistory = {
@@ -64,6 +66,7 @@ export type MovementFormData = {
   unit_value?: number;
   invoice_number?: string;
   is_initial_import?: boolean;
+  employee_id?: string;
 };
 
 export type MovementFilters = {
@@ -72,6 +75,7 @@ export type MovementFilters = {
   month: string;
   year: string;
   sectorId: string;
+  employeeId: string;
 };
 
 // Purchase Order types
