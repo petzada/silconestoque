@@ -18,6 +18,8 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  Users,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +40,13 @@ const navSections = [
     items: [
       { title: 'Setores', href: '/sectors', icon: FolderOpen },
       { title: 'Produtos', href: '/products', icon: Package },
+    ],
+  },
+  {
+    label: 'Pessoal',
+    items: [
+      { title: 'Colaboradores', href: '/employees', icon: Users },
+      { title: 'Armários & Chapas', href: '/lockers', icon: Lock },
     ],
   },
   {

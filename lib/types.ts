@@ -140,3 +140,65 @@ export type ReceiptFormData = {
   supplier_name: string;
   invoice_value?: number;
 };
+
+// Chapas & Armários / Colaboradores types
+export type LockerKind = 'uniforme' | 'vestiario';
+
+export type LockerSize = 'P' | 'M' | 'G' | 'GG' | 'XG' | 'SSG';
+
+export const LOCKER_SIZES: LockerSize[] = ['P', 'M', 'G', 'GG', 'XG', 'SSG'];
+
+export type Role = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+export type Employee = {
+  id: string;
+  full_name: string;
+  sector_id: string;
+  role_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  sector?: Sector;
+  role?: Role;
+};
+
+export type Locker = {
+  id: string;
+  kind: LockerKind;
+  number: number;
+  size: LockerSize | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type LockerAssignment = {
+  id: string;
+  locker_id: string;
+  employee_id: string;
+  locker_kind: LockerKind;
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
+  employee?: Employee;
+  locker?: Locker;
+};
+
+// Form types
+export type EmployeeFormData = {
+  full_name: string;
+  sector_id: string;
+  role_id: string;
+};
+
+export type LockerFormData = {
+  number: number;
+  size: LockerSize;
+};
+
+export type RoleFormData = {
+  name: string;
+};
