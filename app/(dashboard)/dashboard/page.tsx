@@ -32,6 +32,8 @@ import {
   Package,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Product, Movement, Sector } from '@/lib/types';
@@ -234,52 +236,46 @@ export default function DashboardPage() {
   ];
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground font-medium">Analisando dados do estoque...</div>
-      </div>
-    );
+    return <PageLoading label="Analisando dados do estoque..." />;
   }
 
   return (
-    <PageContainer className="space-y-4">
-      {/* Header com Filtros */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Visão geral do estoque e consumo por setor</p>
-        </div>
-
-        <div className="flex items-center gap-1 bg-card p-1.5 rounded-xl shadow-sm border border-border">
-          <Filter className="h-4 w-4 text-muted-foreground ml-2" />
-          <Select value={filterMonth} onValueChange={setFilterMonth}>
-            <SelectTrigger className="w-[130px] border-none shadow-none bg-transparent text-xs font-semibold h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterYear} onValueChange={setFilterYear}>
-            <SelectTrigger className="w-[90px] border-none shadow-none bg-transparent text-xs font-semibold h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <div className="w-px h-6 bg-border" />
-          <Select value={filterSector} onValueChange={setFilterSector}>
-            <SelectTrigger className="w-[160px] border-none shadow-none bg-transparent text-xs font-semibold h-8">
-              <SelectValue placeholder="Setor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-semibold">Todos os Setores</SelectItem>
-              {data.sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Dashboard"
+        description="Visão geral do estoque e consumo por setor"
+        actions={
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+            <Filter className="ml-2 h-4 w-4 text-muted-foreground" />
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="h-8 w-[130px] border-none bg-transparent text-xs font-semibold shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterYear} onValueChange={setFilterYear}>
+              <SelectTrigger className="h-8 w-[90px] border-none bg-transparent text-xs font-semibold shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <div className="h-6 w-px bg-border" />
+            <Select value={filterSector} onValueChange={setFilterSector}>
+              <SelectTrigger className="h-8 w-[160px] border-none bg-transparent text-xs font-semibold shadow-none">
+                <SelectValue placeholder="Setor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="font-semibold">Todos os Setores</SelectItem>
+                {data.sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

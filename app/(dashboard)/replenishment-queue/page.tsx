@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select';
 import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -271,22 +273,20 @@ export default function ReplenishmentQueuePage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-muted-foreground">Carregando fila de reposicao...</div>;
+    return <PageLoading label="Carregando fila de reposição..." />;
   }
 
   return (
-    <PageContainer className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">Fila de Reposicao</h1>
-        <Button
-          type="button"
-          className="h-9 bg-foreground px-4 text-xs font-bold hover:bg-foreground"
-          onClick={exportPDF}
-        >
-          <FileDown className="mr-2 h-3.5 w-3.5" />
-          Exportar PDF
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Fila de Reposição"
+        description="Materiais abaixo do estoque mínimo"
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={exportPDF}>
+            <FileDown className="h-4 w-4" /> Exportar PDF
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="shadow-sm">

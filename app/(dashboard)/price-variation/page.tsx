@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dialog';
 import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { toast } from 'sonner';
 import {
   ResponsiveContainer,
@@ -296,14 +298,15 @@ export default function PriceVariationPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-muted-foreground">Carregando variacao de preco...</div>;
+    return <PageLoading label="Carregando variação de preço..." />;
   }
 
   return (
-    <PageContainer className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">Variacao de Preco</h1>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Variação de Preço"
+        description="Alertas de variação de custo entre compras"
+      />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="shadow-sm">

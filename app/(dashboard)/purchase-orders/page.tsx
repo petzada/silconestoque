@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
 import {
   AlertTriangle,
   Calendar,
@@ -131,22 +132,25 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <PageContainer className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-foreground tracking-tight">Pedidos</h1>
-        <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border shadow-sm">
-          <Filter className="h-3.5 w-3.5 text-muted-foreground ml-2" />
-          <Select value={selectedSector} onValueChange={setSelectedSector}>
-            <SelectTrigger className="w-[200px] border-none shadow-none text-xs font-bold h-8">
-              <SelectValue placeholder="Filtrar Setor" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="all" className="font-bold">Todos os produtos</SelectItem>
-              {sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Pedidos"
+        description="Sugestões de compra emergenciais e programadas"
+        actions={
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1 shadow-sm">
+            <Filter className="ml-2 h-3.5 w-3.5 text-muted-foreground" />
+            <Select value={selectedSector} onValueChange={setSelectedSector}>
+              <SelectTrigger className="h-8 w-[200px] border-none text-xs font-semibold shadow-none">
+                <SelectValue placeholder="Filtrar Setor" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all" className="font-semibold">Todos os produtos</SelectItem>
+                {sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Emergencial */}

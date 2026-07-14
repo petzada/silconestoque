@@ -5,13 +5,15 @@ export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldCheck, Database, CheckCircle2 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
 
 export default function SettingsPage() {
   return (
-    <PageContainer variant="form-centric" className="space-y-6 pt-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-foreground">Configuracoes</h1>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Configurações"
+        description="Preferências e integridade de dados do sistema"
+      />
 
       <div className="grid gap-6">
         <Card className="overflow-hidden rounded-xl bg-card shadow-sm">

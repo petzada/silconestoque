@@ -48,6 +48,8 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -430,31 +432,31 @@ export default function MovementsPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-bold text-muted-foreground">Carregando movimentacoes...</div>;
+    return <PageLoading label="Carregando movimentações..." />;
   }
 
   return (
     <PageContainer>
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">Movimentacoes</h1>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            className="h-9 bg-primary px-4 text-xs font-bold hover:bg-primary/90"
-            onClick={() => openDialog('IN')}
-          >
-            <ArrowDownCircle className="mr-2 h-3.5 w-3.5" /> Registrar Entrada
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-9 border-destructive/30 px-4 text-xs font-bold text-destructive hover:bg-destructive/10"
-            onClick={() => openDialog('OUT')}
-          >
-            <ArrowUpCircle className="mr-2 h-3.5 w-3.5" /> Registrar Saida
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Movimentações"
+        description="Entradas e saídas de materiais do almoxarifado"
+        actions={
+          <>
+            <Button type="button" size="sm" onClick={() => openDialog('IN')}>
+              <ArrowDownCircle className="h-4 w-4" /> Registrar Entrada
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => openDialog('OUT')}
+            >
+              <ArrowUpCircle className="h-4 w-4" /> Registrar Saida
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div className="flex flex-col items-center gap-2 sm:flex-row">

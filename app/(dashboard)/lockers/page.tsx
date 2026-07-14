@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Plus, Upload, CheckCircle2, XCircle, FolderInput } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -265,25 +267,25 @@ export default function LockersPage() {
   };
 
   if (isLoading) {
-    return <div className="py-20 text-center font-medium text-muted-foreground">Carregando armários...</div>;
+    return <PageLoading label="Carregando armários..." />;
   }
 
   return (
     <PageContainer>
-      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Armários &amp; Chapas</h1>
-          <p className="text-sm text-muted-foreground">Controle de armários de uniforme por chapa</p>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
-            <Upload className="h-4 w-4" /> Importar planilha
-          </Button>
-          <Button type="button" size="sm" onClick={openNewLockerDialog}>
-            <Plus className="h-4 w-4" /> Novo armário
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Armários & Chapas"
+        description="Controle de armários de uniforme por chapa"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="h-4 w-4" /> Importar planilha
+            </Button>
+            <Button type="button" size="sm" onClick={openNewLockerDialog}>
+              <Plus className="h-4 w-4" /> Novo armário
+            </Button>
+          </>
+        }
+      />
 
       <LockerGrid
         kind="uniforme"

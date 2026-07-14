@@ -49,6 +49,8 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { SimpleCrudDialog } from '@/components/employees/simple-crud-dialog';
 import { EmployeeImportDialog } from '@/components/employees/import-dialog';
 import {
@@ -501,7 +503,7 @@ export default function EmployeesPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-medium text-muted-foreground">Carregando colaboradores...</div>;
+    return <PageLoading label="Carregando colaboradores..." />;
   }
 
   const offboardAssignmentDescriptions = employeeToOffboard
@@ -518,26 +520,26 @@ export default function EmployeesPage() {
 
   return (
     <PageContainer>
-      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Colaboradores</h1>
-          <p className="text-sm text-muted-foreground">Cadastro global de colaboradores da empresa</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsDepartmentsDialogOpen(true)}>
-            <Building2 className="h-4 w-4" /> Setores
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsRolesDialogOpen(true)}>
-            <Settings2 className="h-4 w-4" /> Funções
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
-            <Upload className="h-4 w-4" /> Importar CSV
-          </Button>
-          <Button type="button" size="sm" onClick={() => openFormDialog()}>
-            <Plus className="h-4 w-4" /> Novo colaborador
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Colaboradores"
+        description="Cadastro global de colaboradores da empresa"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsDepartmentsDialogOpen(true)}>
+              <Building2 className="h-4 w-4" /> Setores
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsRolesDialogOpen(true)}>
+              <Settings2 className="h-4 w-4" /> Funções
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="h-4 w-4" /> Importar CSV
+            </Button>
+            <Button type="button" size="sm" onClick={() => openFormDialog()}>
+              <Plus className="h-4 w-4" /> Novo colaborador
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm sm:flex-row sm:items-center">
         <div className="relative w-full flex-1">

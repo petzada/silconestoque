@@ -43,6 +43,8 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import {
   Plus,
   Pencil,
@@ -703,24 +705,27 @@ export default function ProductsPage() {
     [getStatus, handleOpenDeleteDialog, handleOpenDialog, handleOpenHistory]
   );
 
-  if (isLoading) return <div className="text-center py-20 text-muted-foreground font-bold">Carregando catálogo...</div>;
+  if (isLoading) return <PageLoading label="Carregando catálogo..." />;
 
   return (
     <PageContainer>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-foreground tracking-tight">Produtos</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => setIsImportDialogOpen(true)}>
-            <Upload className="h-3.5 w-3.5 mr-2" /> Importar CSV
-          </Button>
-          <Button variant="outline" className="h-9 text-xs font-bold px-4" onClick={() => void exportSectorProductsPDF()} disabled={isExportingPdf}>
-            <FileDown className="h-3.5 w-3.5 mr-2" /> {isExportingPdf ? 'Extraindo...' : 'Extrair PDF'}
-          </Button>
-          <Button className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold px-4 shadow-sm" onClick={() => handleOpenDialog()}>
-            <Plus className="h-3.5 w-3.5 mr-2" /> Novo Produto
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Produtos"
+        description="Catálogo de materiais do almoxarifado"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="h-4 w-4" /> Importar CSV
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => void exportSectorProductsPDF()} disabled={isExportingPdf}>
+              <FileDown className="h-4 w-4" /> {isExportingPdf ? 'Extraindo...' : 'Extrair PDF'}
+            </Button>
+            <Button type="button" size="sm" onClick={() => handleOpenDialog()}>
+              <Plus className="h-4 w-4" /> Novo Produto
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 rounded-xl shadow-sm border border-border">
         <div className="relative flex-1 w-full">
@@ -737,7 +742,7 @@ export default function ProductsPage() {
             <SelectValue placeholder="Setor" />
           </SelectTrigger>
           <SelectContent className="rounded-xl">
-            <SelectItem value="all" className="font-bold">Todos os setores</SelectItem>
+            <SelectItem value="all" className="font-semibold">Todos os setores</SelectItem>
             {sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>

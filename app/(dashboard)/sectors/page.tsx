@@ -24,6 +24,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
@@ -194,20 +196,20 @@ export default function SectorsPage() {
   );
 
   if (isLoading) {
-    return <div className="py-20 text-center font-medium text-muted-foreground">Carregando setores...</div>;
+    return <PageLoading label="Carregando setores..." />;
   }
 
   return (
-    <PageContainer variant="form-centric">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Setores</h1>
-          <p className="text-sm text-muted-foreground">Departamentos que consomem itens do almoxarifado</p>
-        </div>
-        <Button type="button" size="sm" onClick={() => openFormDialog()}>
-          <Plus className="h-4 w-4" /> Novo setor
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Setores"
+        description="Departamentos que consomem itens do almoxarifado"
+        actions={
+          <Button type="button" size="sm" onClick={() => openFormDialog()}>
+            <Plus className="h-4 w-4" /> Novo setor
+          </Button>
+        }
+      />
 
       <DataTable
         data={sectors}

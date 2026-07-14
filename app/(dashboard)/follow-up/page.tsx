@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PageContainer } from '@/components/layout/page-container';
+import { PageHeader } from '@/components/layout/page-header';
 import {
   Dialog,
   DialogContent,
@@ -397,22 +398,24 @@ export default function FollowUpPage() {
   });
 
   return (
-    <PageContainer className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-xl font-bold text-foreground tracking-tight">Follow-up</h1>
-        <Button
-          onClick={() => {
-            setSolicitationForm({ request_number: '', request_date: '', description: '' });
-            setDateDisplay('');
-            setSolicitationModalOpen(true);
-          }}
-          className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Inserir Solicitação
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Follow-up"
+        description="Acompanhamento de solicitações e recebimentos"
+        actions={
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setSolicitationForm({ request_number: '', request_date: '', description: '' });
+              setDateDisplay('');
+              setSolicitationModalOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Inserir Solicitação
+          </Button>
+        }
+      />
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -427,7 +430,7 @@ export default function FollowUpPage() {
 
       {/* Solicitations List */}
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Carregando...</div>
+        <div className="text-center py-12 text-muted-foreground text-sm">Carregando solicitações...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
           <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
