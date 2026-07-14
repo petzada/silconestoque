@@ -1,11 +1,11 @@
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
-import type { Employee, Locker, LockerKind, Sector, Role } from '@/lib/types';
+import type { Employee, Locker, LockerKind, Department, Role } from '@/lib/types';
 
 // ---------- Types ----------
 
 export type AssignmentEmployee = Pick<Employee, 'id' | 'full_name'> & {
-  sector?: Pick<Sector, 'name'> | null;
+  department?: Pick<Department, 'name'> | null;
   role?: Pick<Role, 'name'> | null;
 };
 
@@ -18,7 +18,7 @@ export type ActiveAssignmentJoin = {
 export type LockerRow = Locker & { locker_assignments?: ActiveAssignmentJoin[] | null };
 
 export type EmployeeOption = Pick<Employee, 'id' | 'full_name'> & {
-  sector?: Pick<Sector, 'name'> | null;
+  department?: Pick<Department, 'name'> | null;
   role?: Pick<Role, 'name'> | null;
 };
 
@@ -69,14 +69,14 @@ export async function fetchLockersData(
     supabase
       .from('lockers')
       .select(
-        '*, locker_assignments!left(id, started_at, ended_at, employee:employees(id, full_name, sector:sectors(name), role:roles(name)))'
+        '*, locker_assignments!left(id, started_at, ended_at, employee:employees(id, full_name, department:departments(name), role:roles(name)))'
       )
       .eq('kind', kind)
       .is('locker_assignments.ended_at', null)
       .order('number'),
     supabase
       .from('employees')
-      .select('id, full_name, sector:sectors(name), role:roles(name)')
+      .select('id, full_name, department:departments(name), role:roles(name)')
       .eq('is_active', true)
       .order('full_name'),
   ]);

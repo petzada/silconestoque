@@ -14,7 +14,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -50,22 +49,23 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
+import { SimpleCrudDialog } from '@/components/employees/simple-crud-dialog';
+import { EmployeeImportDialog } from '@/components/employees/import-dialog';
 import {
   Plus,
   Pencil,
   Search,
   Settings2,
+  Building2,
+  Upload,
   UserX,
   UserCheck,
-  Trash2,
-  X,
-  Check,
   History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Employee, Sector, Role, Locker, LockerKind } from '@/lib/types';
+import type { Employee, Department, Role, Locker, LockerKind } from '@/lib/types';
 
 type ActiveAssignmentJoin = {
   id: string;
@@ -86,7 +86,7 @@ type WithdrawalRow = {
 
 const employeeSchema = z.object({
   full_name: z.string().trim().min(2, 'Informe o nome do colaborador com pelo menos 2 caracteres.'),
-  sector_id: z.string().min(1, 'Selecione um setor.'),
+  department_id: z.string().min(1, 'Selecione um setor.'),
   role_id: z.string().min(1, 'Selecione uma função.'),
 });
 
@@ -94,15 +94,9 @@ type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 const initialEmployeeValues: EmployeeFormValues = {
   full_name: '',
-  sector_id: '',
+  department_id: '',
   role_id: '',
 };
-
-const roleSchema = z.object({
-  name: z.string().trim().min(2, 'Informe o nome da função com pelo menos 2 caracteres.'),
-});
-
-type RoleFormValues = z.infer<typeof roleSchema>;
 
 function getActiveAssignments(employee: EmployeeRow): ActiveAssignmentJoin[] {
   return employee.locker_assignments ?? [];
@@ -128,6 +122,9 @@ function joinWithAnd(items: string[]): string {
 
 function friendlyDbError(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : '';
+  if (message.includes('uniq_employees_full_name')) {
+    return 'Já existe um colaborador com esse nome.';
+  }
   if (message.includes('duplicate key') || message.includes('unique constraint')) {
     return 'Já existe um registro com esses dados.';
   }
@@ -139,12 +136,12 @@ function friendlyDbError(error: unknown, fallback: string): string {
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSector, setFilterSector] = useState('all');
+  const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
@@ -158,12 +155,8 @@ export default function EmployeesPage() {
   const [reactivatingId, setReactivatingId] = useState<string | null>(null);
 
   const [isRolesDialogOpen, setIsRolesDialogOpen] = useState(false);
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
-  const [editingRoleName, setEditingRoleName] = useState('');
-  const [isSavingRole, setIsSavingRole] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-  const [isRoleDeleteDialogOpen, setIsRoleDeleteDialogOpen] = useState(false);
-  const [isDeletingRole, setIsDeletingRole] = useState(false);
+  const [isDepartmentsDialogOpen, setIsDepartmentsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const [isWithdrawalsSheetOpen, setIsWithdrawalsSheetOpen] = useState(false);
   const [employeeForWithdrawals, setEmployeeForWithdrawals] = useState<EmployeeRow | null>(null);
@@ -175,50 +168,45 @@ export default function EmployeesPage() {
     defaultValues: initialEmployeeValues,
   });
 
-  const roleForm = useForm<RoleFormValues>({
-    resolver: zodResolver(roleSchema),
-    defaultValues: { name: '' },
-  });
-
-  useEffect(() => {
-    void fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [employeesRes, sectorsRes, rolesRes] = await Promise.all([
+      const [employeesRes, departmentsRes, rolesRes] = await Promise.all([
         supabase
           .from('employees')
           .select(
-            '*, sector:sectors(*), role:roles(*), locker_assignments!left(id, started_at, ended_at, locker:lockers(id, kind, number, size))'
+            '*, department:departments(*), role:roles(*), locker_assignments!left(id, started_at, ended_at, locker:lockers(id, kind, number, size))'
           )
           .is('locker_assignments.ended_at', null)
           .order('full_name'),
-        supabase.from('sectors').select('*').order('name'),
+        supabase.from('departments').select('*').order('name'),
         supabase.from('roles').select('*').order('name'),
       ]);
 
       if (employeesRes.error) throw employeesRes.error;
-      if (sectorsRes.error) throw sectorsRes.error;
+      if (departmentsRes.error) throw departmentsRes.error;
       if (rolesRes.error) throw rolesRes.error;
 
       setEmployees(employeesRes.data || []);
-      setSectors(sectorsRes.data || []);
+      setDepartments(departmentsRes.data || []);
       setRoles(rolesRes.data || []);
     } catch {
       toast.error('Erro ao carregar dados');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const openFormDialog = (employee?: EmployeeRow) => {
     if (employee) {
       setEditingEmployee(employee);
       form.reset({
         full_name: employee.full_name,
-        sector_id: employee.sector_id,
+        department_id: employee.department_id,
         role_id: employee.role_id,
       });
     } else {
@@ -247,7 +235,7 @@ export default function EmployeesPage() {
     try {
       const payload = {
         full_name: values.full_name.trim(),
-        sector_id: values.sector_id,
+        department_id: values.department_id,
         role_id: values.role_id,
       };
 
@@ -317,7 +305,7 @@ export default function EmployeesPage() {
     } finally {
       setReactivatingId(null);
     }
-  }, []);
+  }, [fetchData]);
 
   // Withdrawals (Retiradas) sheet
   const fetchWithdrawals = useCallback(async (employeeId: string) => {
@@ -355,109 +343,23 @@ export default function EmployeesPage() {
     }
   };
 
-  // Roles management
-  const fetchRoles = async () => {
-    const { data, error } = await supabase.from('roles').select('*').order('name');
-    if (!error) setRoles(data || []);
-  };
-
-  const handleAddRole = roleForm.handleSubmit(async (values) => {
-    setIsSavingRole(true);
-    try {
-      const { error } = await supabase.from('roles').insert({ name: values.name.trim() });
-      if (error) throw error;
-      toast.success('Função criada');
-      roleForm.reset({ name: '' });
-      await fetchRoles();
-    } catch (error: unknown) {
-      toast.error(friendlyDbError(error, 'Erro ao criar função'));
-    } finally {
-      setIsSavingRole(false);
-    }
-  });
-
-  const startEditRole = (role: Role) => {
-    setEditingRoleId(role.id);
-    setEditingRoleName(role.name);
-  };
-
-  const cancelEditRole = () => {
-    setEditingRoleId(null);
-    setEditingRoleName('');
-  };
-
-  const saveEditRole = async () => {
-    if (!editingRoleId) return;
-    const trimmed = editingRoleName.trim();
-    if (trimmed.length < 2) {
-      toast.error('Informe o nome da função com pelo menos 2 caracteres.');
-      return;
-    }
-
-    setIsSavingRole(true);
-    try {
-      const { error } = await supabase.from('roles').update({ name: trimmed }).eq('id', editingRoleId);
-      if (error) throw error;
-      toast.success('Função atualizada');
-      cancelEditRole();
-      await fetchRoles();
-      await fetchData();
-    } catch (error: unknown) {
-      toast.error(friendlyDbError(error, 'Erro ao atualizar função'));
-    } finally {
-      setIsSavingRole(false);
-    }
-  };
-
-  const openRoleDeleteDialog = (role: Role) => {
-    setRoleToDelete(role);
-    setIsRoleDeleteDialogOpen(true);
-  };
-
-  const handleDeleteRole = async () => {
-    if (!roleToDelete) return;
-
-    setIsDeletingRole(true);
-    try {
-      const { error } = await supabase.from('roles').delete().eq('id', roleToDelete.id);
-      if (error) throw error;
-      toast.success('Função excluída');
-      setIsRoleDeleteDialogOpen(false);
-      setRoleToDelete(null);
-      await fetchRoles();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(
-        message.includes('foreign key')
-          ? 'Esta função está em uso por colaboradores. Reatribua-os antes de excluir.'
-          : 'Erro ao excluir função'
-      );
-    } finally {
-      setIsDeletingRole(false);
-    }
-  };
-
-  const handleRolesDialogOpenChange = (open: boolean) => {
-    if (!open) {
-      cancelEditRole();
-      roleForm.reset({ name: '' });
-    }
-    setIsRolesDialogOpen(open);
-  };
+  // Nomes já cadastrados: a importação usa para acusar "Já cadastrado" na prévia,
+  // antes de o insert bater no índice único do banco.
+  const existingNames = useMemo(() => employees.map((employee) => employee.full_name), [employees]);
 
   const filteredEmployees = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     return employees.filter((employee) => {
       const matchesSearch = !normalizedSearch || employee.full_name.toLowerCase().includes(normalizedSearch);
-      const matchesSector = filterSector === 'all' || employee.sector_id === filterSector;
+      const matchesDepartment = filterDepartment === 'all' || employee.department_id === filterDepartment;
       const matchesRole = filterRole === 'all' || employee.role_id === filterRole;
       const matchesStatus =
         filterStatus === 'all' ||
         (filterStatus === 'active' && employee.is_active) ||
         (filterStatus === 'inactive' && !employee.is_active);
-      return matchesSearch && matchesSector && matchesRole && matchesStatus;
+      return matchesSearch && matchesDepartment && matchesRole && matchesStatus;
     });
-  }, [employees, searchTerm, filterSector, filterRole, filterStatus]);
+  }, [employees, searchTerm, filterDepartment, filterRole, filterStatus]);
 
   const columns = useMemo<DataTableColumn<EmployeeRow>[]>(
     () => [
@@ -473,13 +375,13 @@ export default function EmployeesPage() {
         ),
       },
       {
-        key: 'sector',
+        key: 'department',
         header: 'Setor',
         sortable: true,
-        accessor: (employee) => employee.sector?.name || '',
+        accessor: (employee) => employee.department?.name || '',
         cell: (employee) => (
           <span className={cn('text-sm text-muted-foreground', !employee.is_active && 'opacity-50')}>
-            {employee.sector?.name || '-'}
+            {employee.department?.name || '-'}
           </span>
         ),
       },
@@ -619,9 +521,15 @@ export default function EmployeesPage() {
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Colaboradores</h1>
           <p className="text-sm text-muted-foreground">Cadastro global de colaboradores da empresa</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsDepartmentsDialogOpen(true)}>
+            <Building2 className="h-4 w-4" /> Setores
+          </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setIsRolesDialogOpen(true)}>
             <Settings2 className="h-4 w-4" /> Funções
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="h-4 w-4" /> Importar CSV
           </Button>
           <Button type="button" size="sm" onClick={() => openFormDialog()}>
             <Plus className="h-4 w-4" /> Novo colaborador
@@ -639,15 +547,15 @@ export default function EmployeesPage() {
             className="h-10 rounded-lg border-border pl-9 text-sm"
           />
         </div>
-        <Select value={filterSector} onValueChange={setFilterSector}>
+        <Select value={filterDepartment} onValueChange={setFilterDepartment}>
           <SelectTrigger className="h-10 w-full rounded-lg border-border text-sm sm:w-[200px]">
             <SelectValue placeholder="Setor" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os setores</SelectItem>
-            {sectors.map((sector) => (
-              <SelectItem key={sector.id} value={sector.id}>
-                {sector.name}
+            {departments.map((department) => (
+              <SelectItem key={department.id} value={department.id}>
+                {department.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -682,7 +590,7 @@ export default function EmployeesPage() {
         columns={columns}
         rowKey={(employee) => employee.id}
         emptyMessage={
-          searchTerm || filterSector !== 'all' || filterRole !== 'all' || filterStatus !== 'all'
+          searchTerm || filterDepartment !== 'all' || filterRole !== 'all' || filterStatus !== 'all'
             ? 'Nenhum colaborador encontrado para este filtro.'
             : 'Nenhum colaborador cadastrado.'
         }
@@ -713,7 +621,7 @@ export default function EmployeesPage() {
               />
               <FormField
                 control={form.control}
-                name="sector_id"
+                name="department_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Setor</FormLabel>
@@ -723,9 +631,9 @@ export default function EmployeesPage() {
                           <SelectValue placeholder="Selecione um setor" />
                         </SelectTrigger>
                         <SelectContent>
-                          {sectors.map((sector) => (
-                            <SelectItem key={sector.id} value={sector.id}>
-                              {sector.name}
+                          {departments.map((department) => (
+                            <SelectItem key={department.id} value={department.id}>
+                              {department.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -772,108 +680,42 @@ export default function EmployeesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Gestão de Funções */}
-      <Dialog open={isRolesDialogOpen} onOpenChange={handleRolesDialogOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Funções</DialogTitle>
-            <DialogDescription>Cadastre e gerencie as funções dos colaboradores.</DialogDescription>
-          </DialogHeader>
+      <SimpleCrudDialog
+        open={isDepartmentsDialogOpen}
+        onOpenChange={setIsDepartmentsDialogOpen}
+        table="departments"
+        title="Setores"
+        description="Cadastre e gerencie os setores dos colaboradores."
+        placeholder="Novo setor (ex: Produção)"
+        entityLabel="setor"
+        inUseMessage="Este setor está em uso por colaboradores. Reatribua-os antes de excluir."
+        items={departments}
+        onChanged={fetchData}
+      />
 
-          <Form {...roleForm}>
-            <form className="flex items-start gap-2" onSubmit={(event) => void handleAddRole(event)}>
-              <FormField
-                control={roleForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Input {...field} placeholder="Nova função (ex: Motorista)" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" size="icon" disabled={isSavingRole} title="Adicionar função" aria-label="Adicionar função">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </form>
-          </Form>
+      <SimpleCrudDialog
+        open={isRolesDialogOpen}
+        onOpenChange={setIsRolesDialogOpen}
+        table="roles"
+        title="Funções"
+        description="Cadastre e gerencie as funções dos colaboradores."
+        placeholder="Nova função (ex: Motorista)"
+        entityLabel="função"
+        inUseMessage="Esta função está em uso por colaboradores. Reatribua-os antes de excluir."
+        items={roles}
+        onChanged={fetchData}
+      />
 
-          <div className="max-h-[320px] space-y-1 overflow-y-auto">
-            {roles.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma função cadastrada.</p>
-            ) : (
-              roles.map((role) => (
-                <div
-                  key={role.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
-                >
-                  {editingRoleId === role.id ? (
-                    <>
-                      <Input
-                        value={editingRoleName}
-                        onChange={(event) => setEditingRoleName(event.target.value)}
-                        autoFocus
-                        className="h-8 flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-success"
-                        title="Salvar"
-                        aria-label="Salvar"
-                        onClick={() => void saveEditRole()}
-                        disabled={isSavingRole}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground"
-                        title="Cancelar"
-                        aria-label="Cancelar"
-                        onClick={cancelEditRole}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm font-medium text-foreground">{role.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Renomear função"
-                        aria-label="Renomear função"
-                        onClick={() => startEditRole(role)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        title="Excluir função"
-                        aria-label="Excluir função"
-                        onClick={() => openRoleDeleteDialog(role)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EmployeeImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        departments={departments}
+        roles={roles}
+        existingNames={existingNames}
+        onImported={fetchData}
+        onManageDepartments={() => setIsDepartmentsDialogOpen(true)}
+        onManageRoles={() => setIsRolesDialogOpen(true)}
+      />
 
       {/* Sheet: Retiradas do colaborador */}
       <Sheet open={isWithdrawalsSheetOpen} onOpenChange={handleWithdrawalsSheetOpenChange}>
@@ -932,17 +774,6 @@ export default function EmployeesPage() {
         confirmLabel="Desligar"
         cancelLabel="Cancelar"
         isLoading={isOffboarding}
-      />
-
-      <ConfirmDialog
-        open={isRoleDeleteDialogOpen}
-        onOpenChange={setIsRoleDeleteDialogOpen}
-        title="Excluir função"
-        description={`Deseja excluir a função "${roleToDelete?.name || ''}"?`}
-        onConfirm={handleDeleteRole}
-        confirmLabel="Excluir"
-        cancelLabel="Cancelar"
-        isLoading={isDeletingRole}
       />
     </PageContainer>
   );

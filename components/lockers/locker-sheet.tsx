@@ -85,7 +85,7 @@ function EmployeeCombobox({
                   <div className="flex flex-col">
                     <span className="text-sm">{employee.full_name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {employee.sector?.name} · {employee.role?.name}
+                      {employee.department?.name} · {employee.role?.name}
                     </span>
                   </div>
                 </CommandItem>
@@ -308,7 +308,7 @@ export function LockerSheet({
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ocupante atual</p>
                     <p className="text-base font-semibold text-foreground">{selectedAssignment.employee?.full_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedAssignment.employee?.sector?.name} · {selectedAssignment.employee?.role?.name}
+                      {selectedAssignment.employee?.department?.name} · {selectedAssignment.employee?.role?.name}
                     </p>
                     <p className="text-xs text-muted-foreground">Desde {formatDateTime(selectedAssignment.started_at)}</p>
 

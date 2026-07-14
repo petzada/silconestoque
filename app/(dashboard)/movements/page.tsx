@@ -170,7 +170,7 @@ export default function MovementsPage() {
           .eq('is_active', true)
           .order('name'),
         supabase.from('sectors').select('*').order('name'),
-        supabase.from('employees').select('*, sector:sectors(*), role:roles(*)').order('full_name'),
+        supabase.from('employees').select('*, role:roles(*)').order('full_name'),
       ]);
 
       if (movementsRes.error) throw movementsRes.error;

@@ -158,15 +158,22 @@ export type Role = {
   created_at: string;
 };
 
+// Setor do colaborador. Distinto de `Sector`, que é a categoria de material.
+export type Department = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
 export type Employee = {
   id: string;
   full_name: string;
-  sector_id: string;
+  department_id: string;
   role_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  sector?: Sector;
+  department?: Department;
   role?: Role;
 };
 
@@ -194,7 +201,7 @@ export type LockerAssignment = {
 // Form types
 export type EmployeeFormData = {
   full_name: string;
-  sector_id: string;
+  department_id: string;
   role_id: string;
 };
 
@@ -204,5 +211,9 @@ export type LockerFormData = {
 };
 
 export type RoleFormData = {
+  name: string;
+};
+
+export type DepartmentFormData = {
   name: string;
 };
