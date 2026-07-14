@@ -112,8 +112,43 @@ export function parseEmployeeCsv(text: string): ParsedCsvRow[] {
   return rows;
 }
 
-function buildLookup(items: ImportLookupItem[]): Map<string, string> {
-  return new Map(items.map((item) => [normalizeKey(item.name), item.id]));
+type LookupMatch = {
+  ids: string[];
+  names: string[];
+};
+
+/**
+ * Agrupa por chave normalizada. Guarda TODOS os que colidem em vez de deixar o
+ * último sobrescrever: dois cadastros que só diferem em acento ("Produção" e
+ * "Producao") tornariam o casamento ambíguo, e adivinhar em silêncio espalharia
+ * colaboradores entre setores visualmente idênticos.
+ */
+function buildLookup(items: ImportLookupItem[]): Map<string, LookupMatch> {
+  const lookup = new Map<string, LookupMatch>();
+
+  for (const item of items) {
+    const key = normalizeKey(item.name);
+    const existing = lookup.get(key);
+    if (existing) {
+      existing.ids.push(item.id);
+      existing.names.push(item.name);
+      continue;
+    }
+    lookup.set(key, { ids: [item.id], names: [item.name] });
+  }
+
+  return lookup;
+}
+
+/** Retorna o id quando o casamento é único; null quando não existe ou é ambíguo. */
+function resolveMatch(
+  lookup: Map<string, LookupMatch>,
+  value: string
+): { id: string; ambiguous?: undefined } | { id: null; ambiguous: string[] | null } {
+  const match = lookup.get(normalizeKey(value));
+  if (!match) return { id: null, ambiguous: null };
+  if (match.ids.length > 1) return { id: null, ambiguous: match.names };
+  return { id: match.ids[0] };
 }
 
 function tally(counter: Map<string, MissingValue>, name: string) {
@@ -158,19 +193,26 @@ export function validateEmployeeRows(
       continue;
     }
 
-    const departmentId = departmentByName.get(normalizeKey(row.setor));
-    if (!departmentId) {
+    const department = resolveMatch(departmentByName, row.setor);
+    if (department.id === null) {
       const label = row.setor || '(vazio)';
-      errors.push({ line: row.line, name: row.nome, reason: `Setor "${label}" não existe` });
-      if (row.setor) tally(missingDepartments, row.setor);
+      const reason = department.ambiguous
+        ? `Setor "${label}" está duplicado no cadastro (${department.ambiguous.join(', ')})`
+        : `Setor "${label}" não existe`;
+      errors.push({ line: row.line, name: row.nome, reason });
+      // Ambíguo não entra em "não cadastrados": o setor existe, o cadastro é que precisa ser limpo.
+      if (row.setor && !department.ambiguous) tally(missingDepartments, row.setor);
       continue;
     }
 
-    const roleId = roleByName.get(normalizeKey(row.funcao));
-    if (!roleId) {
+    const role = resolveMatch(roleByName, row.funcao);
+    if (role.id === null) {
       const label = row.funcao || '(vazio)';
-      errors.push({ line: row.line, name: row.nome, reason: `Função "${label}" não existe` });
-      if (row.funcao) tally(missingRoles, row.funcao);
+      const reason = role.ambiguous
+        ? `Função "${label}" está duplicada no cadastro (${role.ambiguous.join(', ')})`
+        : `Função "${label}" não existe`;
+      errors.push({ line: row.line, name: row.nome, reason });
+      if (row.funcao && !role.ambiguous) tally(missingRoles, row.funcao);
       continue;
     }
 
@@ -194,7 +236,7 @@ export function validateEmployeeRows(
     }
 
     seenInFile.set(nameKey, row.line);
-    valid.push({ full_name: row.nome, department_id: departmentId, role_id: roleId });
+    valid.push({ full_name: row.nome, department_id: department.id, role_id: role.id });
   }
 
   const byCountDesc = (a: MissingValue, b: MissingValue) => b.count - a.count || a.name.localeCompare(b.name);

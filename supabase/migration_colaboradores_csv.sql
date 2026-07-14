@@ -17,6 +17,16 @@ CREATE TABLE IF NOT EXISTS departments (
 
 -- Sem seed: os setores de colaborador são cadastrados pela tela antes da importação.
 
+-- O UNIQUE acima é case-sensitive, então nada impediria cadastrar 'Produção' e
+-- 'PRODUÇÃO' como dois setores distintos. A importação casa o CSV com o cadastro
+-- ignorando caixa, e diante desses dois não teria como escolher — atribuiria os
+-- colaboradores a um deles em silêncio. Estes índices barram a ambiguidade na origem.
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_departments_name_ci
+  ON departments (lower(trim(name)));
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_roles_name_ci
+  ON roles (lower(trim(name)));
+
 -- =====================
 -- LIMPEZA DOS DADOS DE TESTE (somente na primeira execução)
 -- =====================

@@ -168,8 +168,10 @@ export default function EmployeesPage() {
     defaultValues: initialEmployeeValues,
   });
 
+  // Não liga isLoading nos refetches: o `if (isLoading)` lá embaixo desmonta os
+  // diálogos, e o de importação perderia o CSV já carregado em memória quando o
+  // usuário cadastra um setor pela prévia. isLoading serve só à carga inicial.
   const fetchData = useCallback(async () => {
-    setIsLoading(true);
     try {
       const [employeesRes, departmentsRes, rolesRes] = await Promise.all([
         supabase
@@ -688,6 +690,7 @@ export default function EmployeesPage() {
         description="Cadastre e gerencie os setores dos colaboradores."
         placeholder="Novo setor (ex: Produção)"
         entityLabel="setor"
+        duplicateMessage="Já existe um setor com esse nome."
         inUseMessage="Este setor está em uso por colaboradores. Reatribua-os antes de excluir."
         items={departments}
         onChanged={fetchData}
@@ -701,6 +704,7 @@ export default function EmployeesPage() {
         description="Cadastre e gerencie as funções dos colaboradores."
         placeholder="Nova função (ex: Motorista)"
         entityLabel="função"
+        duplicateMessage="Já existe uma função com esse nome."
         inUseMessage="Esta função está em uso por colaboradores. Reatribua-os antes de excluir."
         items={roles}
         onChanged={fetchData}

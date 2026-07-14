@@ -38,8 +38,10 @@ type SimpleCrudDialogProps = {
   title: string;
   description: string;
   placeholder: string;
-  /** Singular noun used in toasts and confirmations, e.g. "função". */
+  /** Singular noun used in titles, e.g. "função" -> "Excluir função". */
   entityLabel: string;
+  /** Shown when the unique name index rejects a create/rename. */
+  duplicateMessage: string;
   /** Shown when a delete is blocked by a foreign key from employees. */
   inUseMessage: string;
   items: SimpleCrudItem[];
@@ -61,6 +63,7 @@ export function SimpleCrudDialog({
   description,
   placeholder,
   entityLabel,
+  duplicateMessage,
   inUseMessage,
   items,
   onChanged,
@@ -81,8 +84,6 @@ export function SimpleCrudDialog({
     setEditingId(null);
     setEditingName('');
   };
-
-  const duplicateMessage = `Já existe ${entityLabel} com esse nome.`;
 
   const handleAdd = form.handleSubmit(async (values) => {
     setIsSaving(true);

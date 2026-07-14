@@ -39,6 +39,7 @@ Aditiva e idempotente, no padrão das migrações anteriores.
 2. **Limpeza dos dados de teste, guardada para rodar só na primeira execução.** Envolver num bloco `DO $$ ... $$` condicionado à existência da coluna `employees.sector_id` em `information_schema.columns`. Dentro do bloco, nesta ordem: `DELETE FROM locker_assignments;` depois `DELETE FROM employees;`. A ordem importa porque `locker_assignments.employee_id` é `ON DELETE RESTRICT` — o inverso falha. Os armários (`lockers`) **não** são apagados.
 3. `ALTER TABLE employees DROP COLUMN IF EXISTS sector_id;` e `ADD COLUMN IF NOT EXISTS department_id UUID NOT NULL REFERENCES departments(id) ON DELETE RESTRICT;` + `idx_employees_department`.
 4. `CREATE UNIQUE INDEX IF NOT EXISTS uniq_employees_full_name ON employees (lower(trim(full_name)));`
+5. Índices únicos case-insensitive em `departments (lower(trim(name)))` e `roles (lower(trim(name)))`, para que "Produção" e "PRODUÇÃO" não coexistam e tornem o casamento do CSV ambíguo.
 
 O guard do passo 2 é obrigatório. Sem ele o arquivo não seria idempotente de verdade: uma segunda execução no SQL Editor apagaria os colaboradores já importados de produção. A presença de `sector_id` é o sinal confiável de "banco ainda no estado antigo", porque o passo 3 a remove — logo, na segunda execução o bloco inteiro é pulado.
 
@@ -78,11 +79,15 @@ Cada linha é avaliada em ordem; o primeiro problema encontrado a manda para o r
 
 1. Nome vazio → `Nome vazio`
 2. Setor não cadastrado → `Setor "X" não existe`
-3. Função não cadastrada → `Função "Y" não existe`
-4. Nome já existe no banco → `Já cadastrado`
-5. Nome repetido dentro do próprio arquivo → `Nome duplicado no arquivo (linha N)`
+3. Setor duplicado no cadastro → `Setor "X" está duplicado no cadastro (A, B)`
+4. Função não cadastrada → `Função "Y" não existe`
+5. Função duplicada no cadastro → `Função "Y" está duplicada no cadastro (A, B)`
+6. Nome já existe no banco → `Já cadastrado`
+7. Nome repetido dentro do próprio arquivo → `Nome duplicado no arquivo (linha N)`
 
-A regra 5 não foi pedida, mas é necessária: sem ela, um nome repetido na planilha passa a validação, a primeira linha entra e a segunda estoura no índice único, derrubando a importação inteira com erro técnico do Postgres. Com ela, vira um erro legível na prévia.
+A regra 7 não foi pedida, mas é necessária: sem ela, um nome repetido na planilha passa a validação, a primeira linha entra e a segunda estoura no índice único, derrubando a importação inteira com erro técnico do Postgres. Com ela, vira um erro legível na prévia.
+
+As regras 3 e 5 cobrem o cadastro sujo. O casamento com o cadastro ignora acento e caixa, então "Produção" e "Producao" cadastrados lado a lado tornariam o CSV ambíguo. Índices únicos case-insensitive em `departments` e `roles` barram a variação por caixa na origem; a variação por acento ainda é possível, e nesse caso a importação **recusa a linha nomeando as duas duplicatas** em vez de escolher uma em silêncio — coerente com a decisão de nunca adivinhar. A linha ambígua não entra em "não cadastrados": o setor existe, o que precisa de limpeza é o cadastro.
 
 ### Prévia
 

@@ -134,6 +134,10 @@ export function EmployeeImportDialog({
       setFileText(text);
     } catch {
       toast.error('Não foi possível ler o arquivo.');
+    } finally {
+      // Sem isso, corrigir o CSV no Excel e reselecionar o MESMO arquivo não
+      // dispara o onChange (o value do input não mudou) e a prévia fica velha.
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
