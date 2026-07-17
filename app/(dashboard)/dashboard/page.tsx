@@ -36,6 +36,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CHART_TOOLTIP_STYLE } from '@/lib/chart';
 import type { Product, Movement, Sector } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
@@ -45,17 +46,6 @@ function formatCurrency(value: number | null): string {
     currency: 'BRL',
   }).format(value);
 }
-
-const COLORS = [
-  'var(--chart-1)',
-  'var(--chart-2)',
-  'var(--chart-3)',
-  'var(--chart-4)',
-  'var(--chart-5)',
-  'var(--brand)',
-  'var(--warning)',
-  'var(--destructive)',
-];
 
 const MONTHS = [
   { value: '0', label: 'Janeiro' },
@@ -207,7 +197,6 @@ export default function DashboardPage() {
       sub: `${financeStats.countIns} entradas realizadas`,
       icon: TrendingUp,
       color: 'text-success',
-      bg: 'bg-success-muted',
     },
     {
       title: 'Saídas (R$)',
@@ -215,15 +204,13 @@ export default function DashboardPage() {
       sub: `${financeStats.countOuts} baixas de estoque`,
       icon: TrendingDown,
       color: 'text-danger',
-      bg: 'bg-danger-muted',
     },
     {
       title: 'Itens Críticos',
       value: filteredProducts.filter(p => p.current_qty <= p.min_stock && p.current_qty > 0).length,
       sub: 'Abaixo do saldo mínimo',
       icon: AlertTriangle,
-      color: 'text-warning-foreground',
-      bg: 'bg-warning-muted',
+      color: 'text-warning',
     },
     {
       title: 'Estoque Zerado',
@@ -231,7 +218,6 @@ export default function DashboardPage() {
       sub: 'Necessita reposição',
       icon: Inbox,
       color: 'text-danger',
-      bg: 'bg-danger-muted',
     },
   ];
 
@@ -245,7 +231,7 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Visão geral do estoque e consumo por setor"
         actions={
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1.5">
             <Filter className="ml-2 h-4 w-4 text-muted-foreground" />
             <Select value={filterMonth} onValueChange={setFilterMonth}>
               <SelectTrigger className="h-8 w-[130px] border-none bg-transparent text-xs font-semibold shadow-none">
@@ -280,15 +266,15 @@ export default function DashboardPage() {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => (
-          <Card key={idx} className="rounded-xl shadow-sm gap-0 py-0 overflow-hidden transition-shadow hover:shadow-md">
+          <Card key={idx} className="gap-0 py-0 overflow-hidden">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className={cn("w-11 h-11 rounded-lg flex items-center justify-center shrink-0", kpi.bg)}>
+              <div className="w-11 h-11 rounded-md bg-muted flex items-center justify-center shrink-0">
                 <kpi.icon className={cn("h-5 w-5", kpi.color)} />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{kpi.title}</p>
+                <p className="text-caption-uppercase text-[11px] text-muted-foreground mb-0.5">{kpi.title}</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-semibold text-foreground truncate">{kpi.value}</span>
+                  <span className="text-stat-display text-3xl truncate">{kpi.value}</span>
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{kpi.sub}</p>
               </div>
@@ -299,7 +285,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Gráfico de Barras: Gasto por Setor */}
-        <Card className="rounded-xl shadow-sm py-0 gap-0">
+        <Card className="py-0 gap-0">
           <CardHeader className="p-4 pb-0">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">Gasto por Setor</CardTitle>
             <CardDescription className="text-xs">Valor financeiro consumido por departamento</CardDescription>
@@ -320,14 +306,7 @@ export default function DashboardPage() {
                   />
                   <Tooltip
                     cursor={{ fill: 'var(--muted)' }}
-                    contentStyle={{
-                      borderRadius: '10px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--popover)',
-                      color: 'var(--popover-foreground)',
-                      boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.12)',
-                      fontSize: '12px',
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                     formatter={(value: unknown) => [formatCurrency(Number(value) || 0), 'Total']}
                   />
                   <Bar
@@ -351,7 +330,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Lista de Consumo por Produto (substitui Pie Chart) */}
-        <Card className="xl:col-span-2 rounded-xl shadow-sm py-0 gap-0 overflow-hidden">
+        <Card className="xl:col-span-2 py-0 gap-0 overflow-hidden">
           <CardHeader className="p-4 pb-0">
             <CardTitle className="text-sm font-semibold">Consumo por Produto</CardTitle>
             <CardDescription className="text-xs">Top 8 produtos mais consumidos no período</CardDescription>
@@ -380,10 +359,9 @@ export default function DashboardPage() {
                     </span>
                     <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all"
+                        className="h-full rounded-full bg-primary transition-[width]"
                         style={{
                           width: `${(item.value / financeStats.maxProductValue) * 100}%`,
-                          backgroundColor: COLORS[index % COLORS.length]
                         }}
                       />
                     </div>

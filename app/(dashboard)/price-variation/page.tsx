@@ -44,6 +44,7 @@ import {
   CalendarRange,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CHART_TOOLTIP_STYLE } from '@/lib/chart';
 import type { PriceHistory, Product, Sector } from '@/lib/types';
 
 type DirectionFilter = 'all' | 'increases' | 'decreases';
@@ -309,44 +310,44 @@ export default function PriceVariationPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-              <AlertTriangle className="h-5 w-5 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total de alertas</p>
-              <p className="text-xl font-bold text-foreground">{filteredHistory.length}</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Total de alertas</p>
+              <p className="text-stat-display text-3xl">{filteredHistory.length}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-muted">
-              <TrendingUp className="h-5 w-5 text-warning-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+              <TrendingUp className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Variacao media</p>
-              <p className="text-xl font-bold text-warning-foreground">{averageVariation.toFixed(1)}%</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Variacao media</p>
+              <p className="text-stat-display text-3xl">{averageVariation.toFixed(1)}%</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
               <CalendarRange className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Setor mais afetado</p>
-              <p className="text-base font-bold text-success">{mostAffectedSector}</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Setor mais afetado</p>
+              <p className="text-display text-base text-foreground">{mostAffectedSector}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-2.5">
         <div className="grid grid-cols-1 gap-2 xl:grid-cols-5">
           <div className="relative xl:col-span-2">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -354,15 +355,15 @@ export default function PriceVariationPage() {
               placeholder="Buscar por produto ou NF..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 rounded-lg border-border pl-9 text-sm"
+              className="h-10 border-border pl-9 text-sm"
             />
           </div>
 
           <Select value={selectedSector} onValueChange={setSelectedSector}>
-            <SelectTrigger className="h-10 rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 border-border text-xs font-bold">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos os setores</SelectItem>
               {sectors.map((sector) => (
                 <SelectItem key={sector.id} value={sector.id}>
@@ -376,10 +377,10 @@ export default function PriceVariationPage() {
             value={selectedDirection}
             onValueChange={(value) => setSelectedDirection(value as DirectionFilter)}
           >
-            <SelectTrigger className="h-10 rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 border-border text-xs font-bold">
               <SelectValue placeholder="Direcao" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="increases">Aumentos</SelectItem>
               <SelectItem value="decreases">Reducoes</SelectItem>
@@ -387,10 +388,10 @@ export default function PriceVariationPage() {
           </Select>
 
           <Select value={minThreshold} onValueChange={setMinThreshold}>
-            <SelectTrigger className="h-10 rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 border-border text-xs font-bold">
               <SelectValue placeholder="Limite minimo" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               {THRESHOLD_OPTIONS.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}%
@@ -405,13 +406,13 @@ export default function PriceVariationPage() {
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="h-10 rounded-lg border-border text-sm"
+            className="h-10 border-border text-sm"
           />
           <Input
             type="date"
             value={dateTo}
             onChange={(event) => setDateTo(event.target.value)}
-            className="h-10 rounded-lg border-border text-sm"
+            className="h-10 border-border text-sm"
           />
         </div>
       </div>
@@ -435,7 +436,7 @@ export default function PriceVariationPage() {
       />
 
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
-        <DialogContent className="max-w-4xl rounded-2xl border-none p-6 shadow-2xl">
+        <DialogContent className="max-w-4xl p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Evolucao de Preco</DialogTitle>
             <p className="text-sm font-medium text-muted-foreground">{selectedProductName}</p>
@@ -447,30 +448,31 @@ export default function PriceVariationPage() {
             </div>
           ) : (
             <div className="space-y-4 pt-2">
-              <div className="h-[260px] rounded-xl border border-border bg-card p-3">
+              <div className="h-[260px] rounded-lg border border-border bg-card p-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                       minTickGap={20}
                     />
                     <YAxis
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                       tickFormatter={(value) => formatCurrency(Number(value))}
                       width={90}
                     />
                     <Tooltip
+                      contentStyle={CHART_TOOLTIP_STYLE}
                       formatter={(value: unknown) => [formatCurrency(Number(value)), 'Preco']}
                       labelFormatter={(label) => `Data: ${label}`}
                     />
                     <Line
                       type="monotone"
                       dataKey="price"
-                      stroke="#0f172a"
+                      stroke="var(--primary)"
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: '#0f172a' }}
+                      dot={{ r: 3, fill: 'var(--primary)' }}
                       activeDot={{ r: 5 }}
                     />
                   </LineChart>

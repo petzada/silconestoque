@@ -445,7 +445,7 @@ export default function FollowUpPage() {
             const orders = sol.purchase_orders || [];
 
             return (
-              <div key={sol.id} className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+              <div key={sol.id} className="bg-card rounded-lg border border-border overflow-hidden">
                 {/* Row header */}
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : sol.id)}
@@ -607,7 +607,7 @@ export default function FollowUpPage() {
                                   <div className="mt-3">
                                     <Button
                                       size="sm"
-                                      className="w-full h-7 text-[11px] font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
+                                      className="w-full h-7 text-[11px] font-bold"
                                       onClick={() => {
                                         setActivePurchaseOrderId(po.id);
                                         setReceiptForm({ supplier_name: po.supplier_name, invoice_value: undefined });
@@ -635,7 +635,7 @@ export default function FollowUpPage() {
 
       {/* Modal: Nova Solicitação */}
       <Dialog open={solicitationModalOpen} onOpenChange={setSolicitationModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <FileText className="h-5 w-5 text-primary" />
@@ -674,7 +674,7 @@ export default function FollowUpPage() {
             <Button
               onClick={handleCreateSolicitation}
               disabled={isSubmitting}
-              className="w-full bg-primary hover:bg-primary/90 h-9 text-xs font-bold"
+              className="w-full h-9 text-xs font-bold"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -684,7 +684,7 @@ export default function FollowUpPage() {
 
       {/* Modal: Novo Pedido de Compra */}
       <Dialog open={poModalOpen} onOpenChange={setPoModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <Truck className="h-5 w-5 text-primary" />
@@ -723,7 +723,7 @@ export default function FollowUpPage() {
             <Button
               onClick={handleCreatePurchaseOrder}
               disabled={isSubmitting}
-              className="w-full bg-primary hover:bg-primary/90 h-9 text-xs font-bold text-primary-foreground"
+              className="w-full h-9 text-xs font-bold text-primary-foreground"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -733,7 +733,7 @@ export default function FollowUpPage() {
 
       {/* Modal: Confirmar Recebimento */}
       <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <PackageCheck className="h-5 w-5 text-success" />
@@ -774,7 +774,7 @@ export default function FollowUpPage() {
 
       {/* Modal: Confirmação de Exclusão */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="max-w-sm rounded-2xl p-6 shadow-2xl border-none">
+        <DialogContent className="max-w-sm p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-foreground">Confirmar Exclusão</DialogTitle>
           </DialogHeader>

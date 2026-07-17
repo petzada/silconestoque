@@ -30,6 +30,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
 import type { Product, Sector } from '@/lib/types';
 
 type UrgencyFilter = 'all' | 'zerado' | 'critico';
@@ -118,13 +119,12 @@ export default function ReplenishmentQueuePage() {
       const now = new Date();
       const timestamp = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
 
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 26, 'F');
+      drawPdfBrandHeader(doc, 26);
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(15);
       doc.text('FILA DE REPOSICAO', 14, 17);
 
-      doc.setTextColor(15, 23, 42);
+      doc.setTextColor(10, 10, 10);
       doc.setFontSize(10);
       doc.text(`Gerado em: ${timestamp}`, 14, 34);
 
@@ -153,8 +153,8 @@ export default function ReplenishmentQueuePage() {
           item.urgencyLevel === 'zerado' ? 'ZERADO' : 'CRITICO',
         ]),
         styles: { fontSize: 8 },
-        headStyles: { fillColor: [15, 23, 42] },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
+        headStyles: PDF_HEAD_STYLES,
+        alternateRowStyles: PDF_ALTERNATE_ROW_STYLES,
       });
 
       doc.save('fila_reposicao.pdf');
@@ -202,7 +202,7 @@ export default function ReplenishmentQueuePage() {
           <Badge
             className={cn(
               'border-none px-2 py-0.5 text-xs font-bold',
-              item.current_qty === 0 ? 'bg-destructive/15 text-destructive' : 'bg-warning-muted text-warning-foreground'
+              item.current_qty === 0 ? 'bg-destructive/15 text-destructive' : 'bg-warning-muted text-warning'
             )}
           >
             {item.current_qty}
@@ -261,7 +261,7 @@ export default function ReplenishmentQueuePage() {
           <Badge
             className={cn(
               'border-none px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-              item.urgencyLevel === 'zerado' ? 'bg-destructive text-white' : 'bg-warning text-warning-foreground'
+              item.urgencyLevel === 'zerado' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
             )}
           >
             {item.urgencyLevel === 'zerado' ? 'ZERADO' : 'CRITICO'}
@@ -289,44 +289,44 @@ export default function ReplenishmentQueuePage() {
       />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-              <PackageSearch className="h-5 w-5 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+              <PackageSearch className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total na fila</p>
-              <p className="text-xl font-bold text-foreground">{kpis.total}</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Total na fila</p>
+              <p className="text-stat-display text-3xl">{kpis.total}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
               <Inbox className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Estoque zerado</p>
-              <p className="text-xl font-bold text-destructive">{kpis.zeroed}</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Estoque zerado</p>
+              <p className="text-stat-display text-3xl">{kpis.zeroed}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-muted">
-              <ShieldAlert className="h-5 w-5 text-warning-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+              <ShieldAlert className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Estoque critico</p>
-              <p className="text-xl font-bold text-warning-foreground">{kpis.critical}</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Estoque critico</p>
+              <p className="text-stat-display text-3xl">{kpis.critical}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-2.5">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -334,15 +334,15 @@ export default function ReplenishmentQueuePage() {
               placeholder="Buscar por produto ou SKU..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 rounded-lg border-border pl-9 text-sm"
+              className="h-10 border-border pl-9 text-sm"
             />
           </div>
 
           <Select value={selectedSector} onValueChange={setSelectedSector}>
-            <SelectTrigger className="h-10 w-full rounded-lg border-border text-xs font-bold lg:w-[220px]">
+            <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos os setores</SelectItem>
               {sectors.map((sector) => (
                 <SelectItem key={sector.id} value={sector.id}>
@@ -353,10 +353,10 @@ export default function ReplenishmentQueuePage() {
           </Select>
 
           <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
-            <SelectTrigger className="h-10 w-full rounded-lg border-border text-xs font-bold lg:w-[180px]">
+            <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[180px]">
               <SelectValue placeholder="Urgencia" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="zerado">Zerado</SelectItem>
               <SelectItem value="critico">Critico</SelectItem>

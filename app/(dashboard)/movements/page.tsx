@@ -420,7 +420,7 @@ export default function MovementsPage() {
             size="icon"
             title="Excluir movimentacao"
             aria-label="Excluir movimentacao"
-            className="h-8 w-8 rounded-lg text-destructive/70 hover:bg-destructive/10"
+            className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
             onClick={() => openDeleteDialog(movement)}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -458,7 +458,7 @@ export default function MovementsPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5">
         <div className="flex flex-col items-center gap-2 sm:flex-row">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -466,7 +466,7 @@ export default function MovementsPage() {
               placeholder="Produto, fornecedor ou NF..."
               value={filters.searchTerm}
               onChange={(event) => setFilters((prev) => ({ ...prev, searchTerm: event.target.value }))}
-              className="h-10 rounded-lg border-border pl-9 text-sm"
+              className="h-10 border-border pl-9 text-sm"
             />
           </div>
           <Tabs
@@ -479,8 +479,8 @@ export default function MovementsPage() {
             }
             className="shrink-0"
           >
-            <TabsList className="h-10 rounded-lg bg-muted p-1">
-              <TabsTrigger value="all" className="h-8 rounded-md px-4 text-xs font-bold">
+            <TabsList className="h-10 bg-muted p-1">
+              <TabsTrigger value="all" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground">
                 TODAS
               </TabsTrigger>
               <TabsTrigger value="IN" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -498,10 +498,10 @@ export default function MovementsPage() {
             value={filters.month}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, month: value }))}
           >
-            <SelectTrigger className="h-10 w-[150px] rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[150px] border-border text-xs font-bold">
               <SelectValue placeholder="Mes" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos os meses</SelectItem>
               {MONTHS.map((month) => (
                 <SelectItem key={month.value} value={month.value}>
@@ -515,10 +515,10 @@ export default function MovementsPage() {
             value={filters.year}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, year: value }))}
           >
-            <SelectTrigger className="h-10 w-[130px] rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[130px] border-border text-xs font-bold">
               <SelectValue placeholder="Ano" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos os anos</SelectItem>
               {availableYears.map((year) => (
                 <SelectItem key={year} value={year}>
@@ -532,10 +532,10 @@ export default function MovementsPage() {
             value={filters.sectorId}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, sectorId: value }))}
           >
-            <SelectTrigger className="h-10 w-[220px] rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
               <SelectValue placeholder="Setor" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos os setores</SelectItem>
               {sectors.map((sector) => (
                 <SelectItem key={sector.id} value={sector.id}>
@@ -549,10 +549,10 @@ export default function MovementsPage() {
             value={filters.employeeId}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, employeeId: value }))}
           >
-            <SelectTrigger className="h-10 w-[220px] rounded-lg border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
               <SelectValue placeholder="Colaborador" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-lg">
               <SelectItem value="all">Todos os colaboradores</SelectItem>
               {employeeFilterOptions.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
@@ -595,7 +595,7 @@ export default function MovementsPage() {
       />
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-md rounded-2xl border-none p-6 shadow-2xl">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               {movementType === 'IN' ? (
@@ -621,13 +621,13 @@ export default function MovementsPage() {
                             type="button"
                             variant="outline"
                             role="combobox"
-                            className="h-10 w-full justify-between rounded-lg border-border bg-muted px-3 text-[12px] font-bold"
+                            className="h-10 w-full justify-between border-border bg-muted px-3 text-[12px] font-bold"
                           >
                             {field.value ? products.find((product) => product.id === field.value)?.name : 'Pesquisar produto...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[min(450px,90vw)] min-w-[280px] rounded-xl p-0 shadow-2xl overflow-hidden">
+                        <PopoverContent className="w-[min(450px,90vw)] min-w-[280px] rounded-lg p-0 overflow-hidden">
                           <Command>
                             <CommandInput placeholder="Digite para buscar..." className="h-10 text-sm" />
                             <CommandList>
@@ -671,7 +671,7 @@ export default function MovementsPage() {
                           type="number"
                           min={1}
                           step={1}
-                          className="h-10 rounded-lg bg-muted"
+                          className="h-10 bg-muted"
                           value={field.value ?? ''}
                           onChange={(event) => field.onChange(Number(event.target.value))}
                         />
@@ -690,7 +690,7 @@ export default function MovementsPage() {
                       </FormLabel>
                       <FormControl>
                         {movementType === 'IN' ? (
-                          <Input {...field} className="h-10 rounded-lg bg-muted" />
+                          <Input {...field} className="h-10 bg-muted" />
                         ) : (
                           <div className="flex gap-1">
                             <Popover
@@ -705,13 +705,13 @@ export default function MovementsPage() {
                                   type="button"
                                   variant="outline"
                                   role="combobox"
-                                  className="h-10 min-w-0 flex-1 justify-between rounded-lg border-border bg-muted px-3 text-[12px] font-bold"
+                                  className="h-10 min-w-0 flex-1 justify-between border-border bg-muted px-3 text-[12px] font-bold"
                                 >
                                   <span className="truncate">{field.value || 'Selecionar colaborador...'}</span>
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[min(320px,90vw)] p-0 rounded-xl shadow-2xl overflow-hidden" align="start">
+                              <PopoverContent className="w-[min(320px,90vw)] p-0 rounded-lg overflow-hidden" align="start">
                                 <Command shouldFilter>
                                   <CommandInput
                                     placeholder="Buscar colaborador..."
@@ -771,7 +771,7 @@ export default function MovementsPage() {
                                 size="icon"
                                 title="Limpar solicitante"
                                 aria-label="Limpar solicitante"
-                                className="h-10 w-10 shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
+                                className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
                                 onClick={() => {
                                   form.setValue('entity_name', '', { shouldDirty: true });
                                   form.setValue('employee_id', undefined, { shouldDirty: true });
@@ -801,7 +801,7 @@ export default function MovementsPage() {
                           <Input
                             {...field}
                             placeholder="Opcional. Ativa o campo de preco."
-                            className="h-10 rounded-lg bg-muted"
+                            className="h-10 bg-muted"
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -821,7 +821,7 @@ export default function MovementsPage() {
                               type="number"
                               min={0.01}
                               step="0.01"
-                              className="h-10 rounded-lg border-success/30 bg-success-muted font-bold"
+                              className="h-10 border-success/30 bg-success-muted font-bold"
                               value={field.value ?? ''}
                               onChange={(event) =>
                                 field.onChange(
@@ -842,7 +842,7 @@ export default function MovementsPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-10 rounded-lg px-6 font-bold"
+                  className="h-10 px-6 font-bold"
                   onClick={() => handleDialogOpenChange(false)}
                 >
                   Cancelar
@@ -850,8 +850,10 @@ export default function MovementsPage() {
                 <Button
                   type="submit"
                   className={cn(
-                    'h-10 rounded-lg px-8 font-bold text-white',
-                    movementType === 'IN' ? 'bg-primary hover:bg-primary/90' : 'bg-destructive hover:bg-destructive/90'
+                    'h-10 px-8 font-semibold',
+                    movementType === 'IN'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary-active'
+                      : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
                   )}
                   disabled={isSaving}
                 >

@@ -541,18 +541,18 @@ export default function EmployeesPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 sm:flex-row sm:items-center">
         <div className="relative w-full flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            className="h-10 rounded-lg border-border pl-9 text-sm"
+            className="h-10 border-border pl-9 text-sm"
           />
         </div>
         <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-          <SelectTrigger className="h-10 w-full rounded-lg border-border text-sm sm:w-[200px]">
+          <SelectTrigger className="h-10 w-full border-border text-sm sm:w-[200px]">
             <SelectValue placeholder="Setor" />
           </SelectTrigger>
           <SelectContent>
@@ -565,7 +565,7 @@ export default function EmployeesPage() {
           </SelectContent>
         </Select>
         <Select value={filterRole} onValueChange={setFilterRole}>
-          <SelectTrigger className="h-10 w-full rounded-lg border-border text-sm sm:w-[200px]">
+          <SelectTrigger className="h-10 w-full border-border text-sm sm:w-[200px]">
             <SelectValue placeholder="Função" />
           </SelectTrigger>
           <SelectContent>
@@ -578,7 +578,7 @@ export default function EmployeesPage() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as typeof filterStatus)}>
-          <SelectTrigger className="h-10 w-full rounded-lg border-border text-sm sm:w-[160px]">
+          <SelectTrigger className="h-10 w-full border-border text-sm sm:w-[160px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -604,7 +604,7 @@ export default function EmployeesPage() {
 
       {/* Dialog: Novo/Editar colaborador */}
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-md">
+ <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editingEmployee ? 'Editar colaborador' : 'Novo colaborador'}</DialogTitle>
           </DialogHeader>
@@ -681,7 +681,7 @@ export default function EmployeesPage() {
               </div>
             </form>
           </Form>
-        </DialogContent>
+ </DialogContent>
       </Dialog>
 
       <SimpleCrudDialog

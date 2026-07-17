@@ -64,6 +64,7 @@ import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
 import type { Product, Sector, PriceHistory } from '@/lib/types';
 
 const UNIT_OPTIONS = [
@@ -420,9 +421,9 @@ export default function ProductsPage() {
         e.sector.substring(0, 20) + (e.sector.length > 20 ? '...' : ''),
         e.reason
       ]),
-      headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
+      headStyles: { ...PDF_HEAD_STYLES, fontSize: 9 },
       bodyStyles: { fontSize: 8 },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      alternateRowStyles: PDF_ALTERNATE_ROW_STYLES,
     });
 
     doc.save(`erros_importacao_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
@@ -466,14 +467,13 @@ export default function ProductsPage() {
       );
 
       const doc = new jsPDF();
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 24, 'F');
+      drawPdfBrandHeader(doc, 24);
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.text('Relatório de Produtos por Setor', 14, 15);
 
-      doc.setTextColor(15, 23, 42);
+      doc.setTextColor(10, 10, 10);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.text(`Setor: ${selectedSector?.name || 'Setor'}`, 14, 32);
@@ -490,9 +490,9 @@ export default function ProductsPage() {
           String(row.maxStock),
         ]),
         styles: { fontSize: 9 },
-        headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
+        headStyles: { ...PDF_HEAD_STYLES, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
+        alternateRowStyles: PDF_ALTERNATE_ROW_STYLES,
         columnStyles: {
           1: { halign: 'right' },
           2: { halign: 'right' },
@@ -589,7 +589,7 @@ export default function ProductsPage() {
   const getStatus = (p: Product) => {
     if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-destructive text-destructive-foreground' };
     if (p.current_qty <= p.min_stock) return { label: 'CRITICO', color: 'bg-warning text-warning-foreground' };
-    return { label: 'ESTAVEL', color: 'bg-primary text-primary-foreground' };
+    return { label: 'ESTAVEL', color: 'bg-success-muted text-success' };
   };
 
   const columns = useMemo<DataTableColumn<Product>[]>(
@@ -671,7 +671,7 @@ export default function ProductsPage() {
               size="icon"
               title="Ver historico de precos"
               aria-label="Ver historico de precos"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted"
+              className="h-8 w-8 text-muted-foreground hover:bg-muted"
               onClick={() => handleOpenHistory(product)}
             >
               <History className="h-3.5 w-3.5" />
@@ -682,7 +682,7 @@ export default function ProductsPage() {
               size="icon"
               title="Editar produto"
               aria-label="Editar produto"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted"
+              className="h-8 w-8 text-muted-foreground hover:bg-muted"
               onClick={() => handleOpenDialog(product)}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -693,7 +693,7 @@ export default function ProductsPage() {
               size="icon"
               title="Excluir produto"
               aria-label="Excluir produto"
-              className="h-8 w-8 rounded-lg text-destructive/70 hover:bg-destructive/10"
+              className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
               onClick={() => handleOpenDeleteDialog(product)}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -727,21 +727,21 @@ export default function ProductsPage() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 rounded-xl shadow-sm border border-border">
+      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 rounded-lg border border-border">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome ou SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 border-border rounded-lg font-medium text-sm"
+            className="pl-9 h-10 border-border font-medium text-sm"
           />
         </div>
         <Select value={filterSector} onValueChange={setFilterSector}>
-          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border rounded-lg text-sm font-semibold">
+          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border text-sm font-semibold">
             <SelectValue placeholder="Setor" />
           </SelectTrigger>
-          <SelectContent className="rounded-xl">
+          <SelectContent className="rounded-lg">
             <SelectItem value="all" className="font-semibold">Todos os setores</SelectItem>
             {sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
@@ -759,7 +759,7 @@ export default function ProductsPage() {
 
       {/* Dialog: Novo/Editar Produto */}
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-md rounded-2xl p-6 shadow-2xl border-none">
+        <DialogContent className="max-w-md p-6">
           <DialogHeader><DialogTitle className="text-lg font-bold flex items-center gap-2">
             {editingProduct ? <><Pencil className="h-4 w-4 text-muted-foreground" /> Editar Material</> : <><Plus className="h-4 w-4 text-primary" /> Novo Material</>}
           </DialogTitle></DialogHeader>
@@ -772,7 +772,7 @@ export default function ProductsPage() {
                   <FormItem>
                     <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nome do Produto</FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-10 bg-muted rounded-lg" autoFocus />
+                      <Input {...field} className="h-10 bg-muted" autoFocus />
                     </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>
@@ -786,7 +786,7 @@ export default function ProductsPage() {
                     <FormItem>
                       <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">SKU</FormLabel>
                       <FormControl>
-                        <Input {...field} className="h-10 bg-muted rounded-lg" />
+                        <Input {...field} className="h-10 bg-muted" />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -800,8 +800,8 @@ export default function ProductsPage() {
                       <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Unid. Medida</FormLabel>
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
-                          <SelectTrigger className="h-10 border-border rounded-lg bg-muted"><SelectValue /></SelectTrigger>
-                          <SelectContent className="rounded-xl">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                          <SelectTrigger className="h-10 border-border bg-muted"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-lg">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -817,8 +817,8 @@ export default function ProductsPage() {
                     <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Setor Alocado</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="h-10 border-border rounded-lg bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent className="rounded-xl">{sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                        <SelectTrigger className="h-10 border-border bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent className="rounded-lg">{sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </FormControl>
                     <FormMessage className="text-xs" />
@@ -837,7 +837,7 @@ export default function ProductsPage() {
                           type="number"
                           min={0}
                           step={1}
-                          className="h-10 bg-muted rounded-lg"
+                          className="h-10 bg-muted"
                           value={field.value ?? ''}
                           onChange={(event) => field.onChange(Number(event.target.value))}
                         />
@@ -857,7 +857,7 @@ export default function ProductsPage() {
                           type="number"
                           min={0}
                           step={1}
-                          className="h-10 bg-muted rounded-lg"
+                          className="h-10 bg-muted"
                           value={field.value ?? ''}
                           onChange={(event) => field.onChange(Number(event.target.value))}
                         />
@@ -868,8 +868,8 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="ghost" className="h-10 px-6 rounded-lg font-bold" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90 h-10 px-8 rounded-lg font-bold" disabled={isSaving}>Salvar</Button>
+                <Button type="button" variant="ghost" className="h-10 px-6 font-bold" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
+                <Button type="submit" className="h-10 px-8 font-bold" disabled={isSaving}>Salvar</Button>
               </div>
             </form>
           </Form>
@@ -889,7 +889,7 @@ export default function ProductsPage() {
 
       {/* Dialog: Importar CSV com Validação */}
       <Dialog open={isImportDialogOpen} onOpenChange={handleCloseImportDialog}>
-        <DialogContent className={cn("rounded-2xl p-6 shadow-2xl border-none", validationResult ? "max-w-2xl" : "max-w-md")}>
+        <DialogContent className={cn('p-6', validationResult ? 'max-w-2xl' : 'max-w-md')}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <Upload className="h-4 w-4 text-primary" /> Importar Produtos via CSV
@@ -899,7 +899,7 @@ export default function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div className="p-4 border-2 border-dashed border-border rounded-xl bg-muted text-center">
+            <div className="p-4 border-2 border-dashed border-border bg-muted text-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -981,7 +981,7 @@ export default function ProductsPage() {
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
               <Button
-                className="bg-primary hover:bg-primary/90 h-10 px-8 text-xs font-bold rounded-lg"
+                className="h-10 px-8 text-xs font-bold"
                 onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
@@ -994,7 +994,7 @@ export default function ProductsPage() {
 
       {/* Dialog: Histórico de Preços */}
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
-        <DialogContent className="max-w-lg rounded-2xl p-6 shadow-2xl border-none">
+        <DialogContent className="max-w-lg p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <History className="h-4 w-4 text-success" /> Histórico de Preços

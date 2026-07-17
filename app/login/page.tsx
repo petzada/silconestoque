@@ -58,21 +58,16 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background p-4">
-      {/* Ambient brand wash */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,var(--accent),transparent)]"
-      />
-      <Card className="relative w-full max-w-md border-border shadow-lg">
+      <Card className="relative w-full max-w-md border-border">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden border border-border bg-muted">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
             <Image src="/logo.png" alt="Silcon Logo" width={64} height={64} className="object-contain" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
+            <CardTitle className="text-display text-2xl text-foreground">
               Silcon Ambiental
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardDescription className="text-caption-uppercase text-[11px] text-muted-foreground">
               Sistema de Gestão de Estoque
             </CardDescription>
           </div>

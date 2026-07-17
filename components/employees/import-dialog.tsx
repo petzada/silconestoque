@@ -237,7 +237,7 @@ export function EmployeeImportDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          <div className="rounded-xl border-2 border-dashed border-border bg-muted p-4 text-center">
+          <div className="rounded-lg border-2 border-dashed border-border bg-muted p-4 text-center">
             <input
               ref={fileInputRef}
               type="file"

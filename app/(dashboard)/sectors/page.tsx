@@ -221,7 +221,7 @@ export default function SectorsPage() {
       />
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-sm">
+ <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{editingSector ? 'Editar setor' : 'Novo setor'}</DialogTitle>
           </DialogHeader>
@@ -260,7 +260,7 @@ export default function SectorsPage() {
               </div>
             </form>
           </Form>
-        </DialogContent>
+ </DialogContent>
       </Dialog>
 
       <ConfirmDialog

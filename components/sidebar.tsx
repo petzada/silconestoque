@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/components/auth-provider';
 import { useState } from 'react';
 
@@ -83,7 +82,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         size="icon"
         title={mobileOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
         aria-label={mobileOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-card shadow-sm"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-card"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -92,7 +91,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -111,10 +110,10 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             <Image src="/logo.png" alt="Silcon Logo" width={36} height={36} className="object-contain" />
           </div>
           <div className="min-w-0">
-            <h1 className="font-semibold text-sm leading-tight tracking-tight text-foreground truncate">
+            <h1 className="text-display text-sm leading-tight text-foreground truncate">
               Silcon Ambiental
             </h1>
-            <p className="text-[11px] font-medium tracking-wide text-muted-foreground truncate">
+            <p className="text-caption-uppercase text-[10px] text-muted-foreground truncate">
               Almoxarifado
             </p>
           </div>
@@ -126,7 +125,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             {navSections.map((section, sectionIndex) => (
               <div key={section.label ?? `section-${sectionIndex}`} className="space-y-1">
                 {section.label && (
-                  <p className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground/70 px-3 pb-1">
+                  <p className="text-caption-uppercase text-[11px] text-muted-foreground/70 px-3 pb-1">
                     {section.label}
                   </p>
                 )}
@@ -142,13 +141,10 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                       className={cn(
                         'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                         isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
                       )}
                     >
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
-                      )}
                       <item.icon
                         className={cn(
                           'h-4 w-4 shrink-0 transition-colors',
@@ -183,8 +179,6 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             <Settings className="h-4 w-4" />
           </Link>
 
-          <ThemeToggle />
-
           <button
             type="button"
             onClick={logout}
@@ -213,7 +207,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           size="icon"
           title="Expandir menu"
           aria-label="Expandir menu"
-          className="hidden lg:flex fixed top-4 left-4 z-50 bg-card shadow-sm"
+          className="hidden lg:flex fixed top-4 left-4 z-50 bg-card"
           onClick={onToggleCollapse}
         >
           <PanelLeftOpen className="h-5 w-5" />

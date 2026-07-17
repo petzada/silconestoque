@@ -16,7 +16,7 @@ export default function SettingsPage() {
       />
 
       <div className="grid gap-6">
-        <Card className="overflow-hidden rounded-xl bg-card shadow-sm">
+        <Card className="overflow-hidden">
           <CardHeader className="bg-muted/50 pb-4">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-success-muted p-2">
@@ -31,7 +31,7 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="space-y-1 rounded-xl border border-border bg-muted/30 p-4">
+            <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-4">
               <p className="text-sm font-bold text-foreground">Fluxo unico de atualizacao</p>
               <p className="max-w-[620px] text-xs text-muted-foreground">
                 Esta tela nao executa recalculo manual de estoque para evitar sobrescrita indevida de saldos e custos.
@@ -41,7 +41,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="pointer-events-none overflow-hidden rounded-xl bg-card opacity-80 grayscale shadow-sm">
+        <Card className="pointer-events-none overflow-hidden opacity-80 grayscale">
           <CardHeader className="bg-muted/50 pb-4">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-muted p-2">

@@ -42,6 +42,7 @@ import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cn } from "@/lib/utils";
+import { drawPdfBrandHeader, PDF_HEAD_STYLES } from '@/lib/pdf';
 import type { PurchaseOrderItem, PurchaseOrderType, Sector } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
@@ -106,8 +107,7 @@ export default function PurchaseOrdersPage() {
   const generatePDF = () => {
     try {
       const doc = new jsPDF();
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 30, 'F');
+      drawPdfBrandHeader(doc, 30);
       doc.setTextColor(255);
       doc.setFontSize(18);
       doc.text('SILCON AMBIENTAL', 14, 20);
@@ -121,7 +121,7 @@ export default function PurchaseOrdersPage() {
         head: [['SKU', 'PRODUTO', 'SETOR', 'UND', 'SALDO', 'PEDIR', 'CUSTO', 'TOTAL']],
         body: orderItems.map(i => [i.sku_code || '-', i.product_name, i.sector_name, i.unit.substring(0, 2).toUpperCase(), i.current_qty, i.order_qty, formatCurrency(i.cost_price), formatCurrency(i.total_cost)]),
         styles: { fontSize: 8 },
-        headStyles: { fillColor: [15, 23, 42] }
+        headStyles: PDF_HEAD_STYLES
       });
 
       doc.save(`pedido_${orderType}.pdf`);
@@ -137,13 +137,13 @@ export default function PurchaseOrdersPage() {
         title="Pedidos"
         description="Sugestões de compra emergenciais e programadas"
         actions={
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1 shadow-sm">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1">
             <Filter className="ml-2 h-3.5 w-3.5 text-muted-foreground" />
             <Select value={selectedSector} onValueChange={setSelectedSector}>
               <SelectTrigger className="h-8 w-[200px] border-none text-xs font-semibold shadow-none">
                 <SelectValue placeholder="Filtrar Setor" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent className="rounded-lg">
                 <SelectItem value="all" className="font-semibold">Todos os produtos</SelectItem>
                 {sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
@@ -154,28 +154,28 @@ export default function PurchaseOrdersPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Emergencial */}
-        <Card className="shadow-sm rounded-xl overflow-hidden bg-card hover:shadow-md transition-all">
-          <div className="p-6 border-l-4 border-l-red-500 flex flex-col h-full">
+        <Card className="overflow-hidden py-0">
+          <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-destructive/10 rounded-lg flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-foreground">Pedido Emergencial</h2>
+              <div className="w-9 h-9 bg-muted rounded-md flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+              <h2 className="text-display text-lg text-foreground">Pedido Emergencial</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Itens abaixo do estoque mínimo de segurança.</p>
-            <Button className="w-full bg-destructive hover:bg-destructive/90 h-10 text-xs font-bold rounded-lg shadow-sm" onClick={() => generateOrder('emergency')} disabled={isLoading}>
+            <Button className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 text-xs font-semibold rounded-md" onClick={() => generateOrder('emergency')} disabled={isLoading}>
               Gerar Lista de Críticos <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
         </Card>
 
         {/* Mensal */}
-        <Card className="shadow-sm rounded-xl overflow-hidden bg-card hover:shadow-md transition-all">
-          <div className="p-6 border-l-4 border-l-blue-600 flex flex-col h-full">
+        <Card className="overflow-hidden py-0">
+          <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-foreground">Pedido Mensal</h2>
+              <div className="w-9 h-9 bg-muted rounded-md flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
+              <h2 className="text-display text-lg text-foreground">Pedido Mensal</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Reposição programada para atingir o estoque máximo.</p>
-            <Button className="w-full bg-primary hover:bg-primary/90 h-10 text-xs font-bold rounded-lg shadow-sm" onClick={() => generateOrder('monthly')} disabled={isLoading}>
+            <Button className="w-full h-10 text-xs font-semibold rounded-md" onClick={() => generateOrder('monthly')} disabled={isLoading}>
               Gerar Reposição Total <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -184,8 +184,8 @@ export default function PurchaseOrdersPage() {
 
       {/* Preview Dialog: Compact */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl h-[85vh] rounded-2xl p-0 shadow-2xl border-none flex flex-col overflow-hidden">
-          <DialogHeader className={cn("px-8 py-6 text-white", orderType === 'emergency' ? 'bg-destructive' : 'bg-primary')}>
+        <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className={cn('px-8 py-6', orderType === 'emergency' ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground')}>
             <DialogTitle className="text-xl font-bold mb-1">Prévia do Pedido</DialogTitle>
             <p className="text-xs font-medium opacity-90">{orderItems.length} itens identificados para compra.</p>
           </DialogHeader>
@@ -214,7 +214,7 @@ export default function PurchaseOrdersPage() {
           <div className="p-4 bg-muted flex justify-end gap-2 border-t">
             <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             {orderItems.length > 0 && (
-              <Button className="bg-foreground hover:bg-foreground h-10 px-8 text-xs font-bold rounded-lg" onClick={generatePDF}>
+              <Button className="h-10 px-8 text-xs" onClick={generatePDF}>
                 <FileDown className="h-3.5 w-3.5 mr-2" /> Exportar PDF
               </Button>
             )}
