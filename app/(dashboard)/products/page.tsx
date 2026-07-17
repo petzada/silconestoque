@@ -65,7 +65,7 @@ import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
-import type { Product, Sector, PriceHistory } from '@/lib/types';
+import type { Product, Category, PriceHistory } from '@/lib/types';
 
 const UNIT_OPTIONS = [
   { value: 'unidade', label: 'Unidade' },
@@ -85,7 +85,7 @@ const productFormSchema = z.object({
   name: z.string().trim().min(2, 'Informe o nome do produto com pelo menos 2 caracteres.'),
   sku_code: z.string().optional(),
   unit: z.enum(['unidade', 'caixa', 'pacote']),
-  sector_id: z.string().min(1, 'Selecione um setor.'),
+  category_id: z.string().min(1, 'Selecione uma categoria.'),
   min_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
   max_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
 });
@@ -94,7 +94,7 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface CSVValidRow {
   row: Record<string, string>;
-  sectorId: string;
+  categoryName: string;
   initialQty: number;
   costPrice: number | null;
   validUnit: string;
@@ -103,7 +103,7 @@ interface CSVValidRow {
 interface CSVErrorRow {
   line: number;
   name: string;
-  sector: string;
+  category: string;
   reason: string;
 }
 
@@ -121,20 +121,20 @@ type ProductPdfRow = {
   maxStock: number;
 };
 
-function slugifySectorName(value: string): string {
+function slugifyCategoryName(value: string): string {
   return (
     value
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'setor'
+      .replace(/^_+|_+$/g, '') || 'categoria'
   );
 }
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -147,7 +147,7 @@ export default function ProductsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSector, setFilterSector] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
@@ -161,7 +161,7 @@ export default function ProductsPage() {
       name: '',
       sku_code: '',
       unit: 'unidade',
-      sector_id: '',
+      category_id: '',
       min_stock: 0,
       max_stock: 0,
     },
@@ -174,17 +174,17 @@ export default function ProductsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [productsRes, sectorsRes] = await Promise.all([
+      const [productsRes, categoriesRes] = await Promise.all([
         supabase
           .from('products')
-          .select('*, sector:sectors(*)')
+          .select('*, category:categories(*)')
           .eq('is_active', true)
           .order('name'),
-        supabase.from('sectors').select('*').order('name'),
+        supabase.from('categories').select('*').order('name'),
       ]);
 
       setProducts(productsRes.data || []);
-      setSectors(sectorsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch {
       toast.error('Erro ao carregar dados');
     } finally {
@@ -199,7 +199,7 @@ export default function ProductsPage() {
         name: product.name,
         sku_code: product.sku_code || '',
         unit: product.unit,
-        sector_id: product.sector_id,
+        category_id: product.category_id,
         min_stock: product.min_stock,
         max_stock: product.max_stock,
       });
@@ -209,7 +209,7 @@ export default function ProductsPage() {
         name: '',
         sku_code: '',
         unit: 'unidade',
-        sector_id: '',
+        category_id: '',
         min_stock: 0,
         max_stock: 0,
       });
@@ -273,7 +273,7 @@ export default function ProductsPage() {
         name: '',
         sku_code: '',
         unit: 'unidade',
-        sector_id: '',
+        category_id: '',
         min_stock: 0,
         max_stock: 0,
       });
@@ -289,7 +289,7 @@ export default function ProductsPage() {
         name: values.name.trim(),
         sku_code: values.sku_code?.trim() || null,
         unit: values.unit,
-        sector_id: values.sector_id,
+        category_id: values.category_id,
         min_stock: values.min_stock || 0,
         max_stock: values.max_stock || 0,
       };
@@ -307,7 +307,7 @@ export default function ProductsPage() {
         name: '',
         sku_code: '',
         unit: 'unidade',
-        sector_id: '',
+        category_id: '',
         min_stock: 0,
         max_stock: 0,
       });
@@ -335,15 +335,17 @@ export default function ProductsPage() {
       const lines = text.split('\n').filter(line => line.trim());
       const header = lines[0].split(';').map(h => h.trim().toLowerCase());
 
-      const requiredCols = ['nome', 'setor', 'unidade'];
+      // Aceita tanto o header antigo "setor" quanto o novo "categoria".
+      const hasCategoryCol = header.includes('categoria') || header.includes('setor');
+      const requiredCols = ['nome', 'unidade'];
       const missingCols = requiredCols.filter(col => !header.includes(col));
+      if (!hasCategoryCol) missingCols.push('categoria (ou setor)');
       if (missingCols.length > 0) {
         toast.error(`Colunas obrigatórias faltando: ${missingCols.join(', ')}`);
         setIsValidating(false);
         return;
       }
 
-      const sectorMap = new Map(sectors.map(s => [s.name.toLowerCase().trim(), s.id]));
       const valid: CSVValidRow[] = [];
       const errors: CSVErrorRow[] = [];
 
@@ -353,16 +355,15 @@ export default function ProductsPage() {
         header.forEach((h, idx) => { row[h] = values[idx] || ''; });
 
         const name = row.nome?.trim() || '';
-        const sectorName = row.setor?.trim() || '';
-        const sectorId = sectorMap.get(sectorName.toLowerCase());
+        const categoryName = (row.categoria?.trim() || row.setor?.trim() || '');
 
         if (!name) {
-          errors.push({ line: i + 1, name: '(vazio)', sector: sectorName, reason: 'Nome do produto vazio' });
+          errors.push({ line: i + 1, name: '(vazio)', category: categoryName, reason: 'Nome do produto vazio' });
           continue;
         }
 
-        if (!sectorId) {
-          errors.push({ line: i + 1, name, sector: sectorName || '(vazio)', reason: `Setor "${sectorName}" não existe` });
+        if (!categoryName) {
+          errors.push({ line: i + 1, name, category: '(vazio)', reason: 'Categoria vazia' });
           continue;
         }
 
@@ -371,7 +372,7 @@ export default function ProductsPage() {
         const initialQty = parseInt(row.estoque || row.quantidade || row.qty || '0') || 0;
         const costPrice = parseFloat(row.custo || row.cost_price || '0') || null;
 
-        valid.push({ row, sectorId, initialQty, costPrice, validUnit });
+        valid.push({ row, categoryName, initialQty, costPrice, validUnit });
       }
 
       setValidationResult({ valid, errors });
@@ -380,7 +381,7 @@ export default function ProductsPage() {
     } finally {
       setIsValidating(false);
     }
-  }, [sectors]);
+  }, []);
 
   const handleFileSelect = (file: File | null) => {
     setImportFile(file);
@@ -414,11 +415,11 @@ export default function ProductsPage() {
 
     autoTable(doc, {
       startY: 65,
-      head: [['Linha', 'Produto', 'Setor', 'Erro']],
+      head: [['Linha', 'Produto', 'Categoria', 'Erro']],
       body: validationResult.errors.map(e => [
         e.line.toString(),
         e.name.substring(0, 30) + (e.name.length > 30 ? '...' : ''),
-        e.sector.substring(0, 20) + (e.sector.length > 20 ? '...' : ''),
+        e.category.substring(0, 20) + (e.category.length > 20 ? '...' : ''),
         e.reason
       ]),
       headStyles: { ...PDF_HEAD_STYLES, fontSize: 9 },
@@ -430,19 +431,19 @@ export default function ProductsPage() {
     toast.success('PDF de erros exportado');
   };
 
-  const exportSectorProductsPDF = async () => {
-    if (filterSector === 'all') {
-      toast.error('Selecione um setor para extrair o PDF');
+  const exportCategoryProductsPDF = async () => {
+    if (filterCategory === 'all') {
+      toast.error('Selecione uma categoria para extrair o PDF');
       return;
     }
 
-    const selectedSector = sectors.find((sector) => sector.id === filterSector);
+    const selectedCategory = categories.find((category) => category.id === filterCategory);
     const selectedProducts = products.filter(
-      (product) => product.is_active && product.sector_id === filterSector
+      (product) => product.is_active && product.category_id === filterCategory
     );
 
     if (selectedProducts.length === 0) {
-      toast.error('Nenhum produto ativo encontrado para este setor');
+      toast.error('Nenhum produto ativo encontrado para esta categoria');
       return;
     }
 
@@ -471,12 +472,12 @@ export default function ProductsPage() {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
-      doc.text('Relatório de Produtos por Setor', 14, 15);
+      doc.text('Relatório de Produtos por Categoria', 14, 15);
 
       doc.setTextColor(10, 10, 10);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(`Setor: ${selectedSector?.name || 'Setor'}`, 14, 32);
+      doc.text(`Categoria: ${selectedCategory?.name || 'Categoria'}`, 14, 32);
       doc.text(`Gerado em: ${format(now, 'dd/MM/yyyy HH:mm')}`, 14, 38);
 
       autoTable(doc, {
@@ -509,7 +510,7 @@ export default function ProductsPage() {
       doc.text(`Total de produtos: ${pdfRows.length}`, 14, summaryY);
       doc.text(`Valor total em estoque: ${formatCurrency(totalInventoryValue)}`, 14, summaryY + 6);
 
-      const fileName = `produtos_${slugifySectorName(selectedSector?.name || 'setor')}_${format(now, 'yyyyMMdd_HHmm')}.pdf`;
+      const fileName = `produtos_${slugifyCategoryName(selectedCategory?.name || 'categoria')}_${format(now, 'yyyyMMdd_HHmm')}.pdf`;
       doc.save(fileName);
       toast.success('PDF exportado com sucesso');
     } catch {
@@ -530,13 +531,33 @@ export default function ProductsPage() {
     let errors = 0;
 
     try {
+      // Categorias que ainda não existem são criadas a partir do próprio CSV
+      // (comparação por nome, ignorando maiúsculas/minúsculas, para não
+      // duplicar uma categoria já cadastrada com grafia diferente).
+      const categoryIdByName = new Map(categories.map((c) => [c.name.toLowerCase().trim(), c.id]));
+      const missingCategoryNames = Array.from(
+        new Set(validationResult.valid.map((item) => item.categoryName))
+      ).filter((name) => !categoryIdByName.has(name.toLowerCase().trim()));
+
+      if (missingCategoryNames.length > 0) {
+        const { data: newCategories, error: categoryError } = await supabase
+          .from('categories')
+          .insert(missingCategoryNames.map((name) => ({ name })))
+          .select();
+        if (categoryError) throw categoryError;
+        newCategories?.forEach((category) => categoryIdByName.set(category.name.toLowerCase().trim(), category.id));
+      }
+
       for (const item of validationResult.valid) {
         try {
+          const categoryId = categoryIdByName.get(item.categoryName.toLowerCase().trim());
+          if (!categoryId) throw new Error('Categoria não encontrada');
+
           const { data: newProduct } = await supabase.from('products').insert({
             name: item.row.nome,
             sku_code: item.row.sku || item.row.codigo || null,
             unit: item.validUnit,
-            sector_id: item.sectorId,
+            category_id: categoryId,
             current_qty: 0,
             min_stock: parseInt(item.row.minimo || item.row.min_stock || '0') || 0,
             max_stock: parseInt(item.row.maximo || item.row.max_stock || '0') || 0,
@@ -582,13 +603,13 @@ export default function ProductsPage() {
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku_code?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSector = filterSector === 'all' || p.sector_id === filterSector;
-    return matchesSearch && matchesSector;
+    const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
+    return matchesSearch && matchesCategory;
   });
 
   const getStatus = (p: Product) => {
     if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-destructive text-destructive-foreground' };
-    if (p.current_qty <= p.min_stock) return { label: 'CRITICO', color: 'bg-warning text-warning-foreground' };
+    if (p.current_qty < p.min_stock) return { label: 'CRITICO', color: 'bg-warning text-warning-foreground' };
     return { label: 'ESTAVEL', color: 'bg-success-muted text-success' };
   };
 
@@ -615,12 +636,12 @@ export default function ProductsPage() {
         ),
       },
       {
-        key: 'sector',
-        header: 'Setor',
+        key: 'category',
+        header: 'Categoria',
         sortable: true,
-        accessor: (product) => product.sector?.name || '',
+        accessor: (product) => product.category?.name || '',
         cell: (product) => (
-          <TruncatedCell value={product.sector?.name || '-'} className="max-w-[240px] text-xs font-semibold text-muted-foreground" />
+          <TruncatedCell value={product.category?.name || '-'} className="max-w-[240px] text-xs font-semibold text-muted-foreground" />
         ),
       },
       {
@@ -717,7 +738,7 @@ export default function ProductsPage() {
             <Button type="button" variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="h-4 w-4" /> Importar CSV
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => void exportSectorProductsPDF()} disabled={isExportingPdf}>
+            <Button type="button" variant="outline" size="sm" onClick={() => void exportCategoryProductsPDF()} disabled={isExportingPdf}>
               <FileDown className="h-4 w-4" /> {isExportingPdf ? 'Extraindo...' : 'Extrair PDF'}
             </Button>
             <Button type="button" size="sm" onClick={() => handleOpenDialog()}>
@@ -737,13 +758,13 @@ export default function ProductsPage() {
             className="pl-9 h-10 border-border font-medium text-sm"
           />
         </div>
-        <Select value={filterSector} onValueChange={setFilterSector}>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-full sm:w-[220px] h-10 border-border text-sm font-semibold">
-            <SelectValue placeholder="Setor" />
+            <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent className="rounded-lg">
-            <SelectItem value="all" className="font-semibold">Todos os setores</SelectItem>
-            {sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            <SelectItem value="all" className="font-semibold">Todas as categorias</SelectItem>
+            {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -752,7 +773,7 @@ export default function ProductsPage() {
         data={filteredProducts}
         columns={columns}
         rowKey={(product) => product.id}
-        emptyMessage={searchTerm || filterSector !== 'all' ? 'Nenhum produto encontrado para este filtro.' : 'Nenhum produto cadastrado.'}
+        emptyMessage={searchTerm || filterCategory !== 'all' ? 'Nenhum produto encontrado para este filtro.' : 'Nenhum produto cadastrado.'}
         defaultSort={{ key: 'name', direction: 'asc' }}
         initialPageSize={25}
       />
@@ -811,14 +832,14 @@ export default function ProductsPage() {
               </div>
               <FormField
                 control={form.control}
-                name="sector_id"
+                name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Setor Alocado</FormLabel>
+                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Categoria</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger className="h-10 border-border bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent className="rounded-lg">{sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                        <SelectContent className="rounded-lg">{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </FormControl>
                     <FormMessage className="text-xs" />
@@ -895,7 +916,8 @@ export default function ProductsPage() {
               <Upload className="h-4 w-4 text-primary" /> Importar Produtos via CSV
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Colunas: Nome, Setor, Unidade (obrigatórias) | SKU, Minimo, Maximo, Custo, Estoque (opcionais)
+              Colunas: Nome, Categoria (ou Setor), Unidade (obrigatórias) | SKU, Minimo, Maximo, Custo, Estoque (opcionais).
+              Categorias novas são criadas automaticamente.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
@@ -954,7 +976,7 @@ export default function ProductsPage() {
                           <TableRow className="bg-muted">
                             <TableHead className="py-2 px-3 text-[10px] font-bold w-[60px]">Linha</TableHead>
                             <TableHead className="py-2 px-3 text-[10px] font-bold">Produto</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Setor</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px] font-bold">Categoria</TableHead>
                             <TableHead className="py-2 px-3 text-[10px] font-bold">Erro</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -963,7 +985,7 @@ export default function ProductsPage() {
                             <TableRow key={i} className="border-border">
                               <TableCell className="py-1.5 px-3 text-xs font-mono">{e.line}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs font-medium truncate max-w-[120px]">{e.name}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{e.sector}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{e.category}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-destructive font-medium">{e.reason}</TableCell>
                             </TableRow>
                           ))}

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,60 +30,60 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Department } from '@/lib/types';
+import type { Category } from '@/lib/types';
 
-// Esta tela gerencia `departments`: o Setor real onde Colaboradores são
-// lotados (Produção, Logística...). Não confundir com Categoria de produto
-// (EPIs, Copa e Limpeza...), gerenciada em /categories. Ver ADR-0003.
-const departmentSchema = z.object({
+// Esta tela gerencia `categories`: a classificação de material do produto
+// (EPIs, Copa e Limpeza...). Não confundir com Setor de colaborador
+// (departamento real da empresa), gerenciado em /sectors. Ver ADR-0003.
+const categorySchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, 'Informe o nome do setor com pelo menos 2 caracteres.'),
+    .min(2, 'Informe o nome da categoria com pelo menos 2 caracteres.'),
 });
 
-type DepartmentFormValues = z.infer<typeof departmentSchema>;
+type CategoryFormValues = z.infer<typeof categorySchema>;
 
-export default function SectorsPage() {
-  const [departments, setDepartments] = useState<Department[]>([]);
+export default function CategoriesPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
-  const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const form = useForm<DepartmentFormValues>({
-    resolver: zodResolver(departmentSchema),
+  const form = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
     defaultValues: {
       name: '',
     },
   });
 
   useEffect(() => {
-    void fetchDepartments();
+    void fetchCategories();
   }, []);
 
-  const fetchDepartments = async () => {
+  const fetchCategories = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('departments').select('*').order('name');
+      const { data, error } = await supabase.from('categories').select('*').order('name');
       if (error) throw error;
-      setDepartments(data || []);
+      setCategories(data || []);
     } catch {
-      toast.error('Erro ao carregar setores');
+      toast.error('Erro ao carregar categorias');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const openFormDialog = (department?: Department) => {
-    if (department) {
-      setEditingDepartment(department);
-      form.reset({ name: department.name });
+  const openFormDialog = (category?: Category) => {
+    if (category) {
+      setEditingCategory(category);
+      form.reset({ name: category.name });
     } else {
-      setEditingDepartment(null);
+      setEditingCategory(null);
       form.reset({ name: '' });
     }
     setIsDialogOpen(true);
@@ -96,7 +96,7 @@ export default function SectorsPage() {
     }
 
     if (!open) {
-      setEditingDepartment(null);
+      setEditingCategory(null);
       form.reset({ name: '' });
     }
 
@@ -106,79 +106,79 @@ export default function SectorsPage() {
   const handleSave = form.handleSubmit(async (values) => {
     setIsSaving(true);
     try {
-      if (editingDepartment) {
+      if (editingCategory) {
         const { error } = await supabase
-          .from('departments')
+          .from('categories')
           .update({ name: values.name.trim() })
-          .eq('id', editingDepartment.id);
+          .eq('id', editingCategory.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('departments').insert({ name: values.name.trim() });
+        const { error } = await supabase.from('categories').insert({ name: values.name.trim() });
         if (error) throw error;
       }
 
       toast.success('Salvo com sucesso');
       setIsDialogOpen(false);
-      setEditingDepartment(null);
+      setEditingCategory(null);
       form.reset({ name: '' });
-      await fetchDepartments();
+      await fetchCategories();
     } catch {
-      toast.error('Erro ao salvar setor');
+      toast.error('Erro ao salvar categoria');
     } finally {
       setIsSaving(false);
     }
   });
 
-  const openDeleteDialog = (department: Department) => {
-    setDepartmentToDelete(department);
+  const openDeleteDialog = (category: Category) => {
+    setCategoryToDelete(category);
     setIsDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!departmentToDelete) return;
+    if (!categoryToDelete) return;
 
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('departments').delete().eq('id', departmentToDelete.id);
+      const { error } = await supabase.from('categories').delete().eq('id', categoryToDelete.id);
       if (error) throw error;
 
-      toast.success('Setor excluido com sucesso');
+      toast.success('Categoria excluida com sucesso');
       setIsDeleteDialogOpen(false);
-      setDepartmentToDelete(null);
-      await fetchDepartments();
+      setCategoryToDelete(null);
+      await fetchCategories();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
       toast.error(
-        message.includes('foreign') ? 'Existem colaboradores vinculados a este setor.' : 'Erro ao excluir setor'
+        message.includes('foreign') ? 'Existem produtos vinculados a esta categoria.' : 'Erro ao excluir categoria'
       );
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const columns = useMemo<DataTableColumn<Department>[]>(
+  const columns = useMemo<DataTableColumn<Category>[]>(
     () => [
       {
         key: 'name',
-        header: 'Setor',
+        header: 'Categoria',
         sortable: true,
-        accessor: (department) => department.name,
-        cell: (department) => <span className="font-medium text-foreground">{department.name}</span>,
+        accessor: (category) => category.name,
+        cell: (category) => <span className="font-medium text-foreground">{category.name}</span>,
       },
       {
         key: 'actions',
         header: 'Acoes',
         align: 'right',
-        cell: (department) => (
+        cell: (category) => (
           <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              title="Editar setor"
-              aria-label="Editar setor"
+              title="Editar categoria"
+              aria-label="Editar categoria"
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={() => openFormDialog(department)}
+              onClick={() => openFormDialog(category)}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -186,10 +186,10 @@ export default function SectorsPage() {
               type="button"
               variant="ghost"
               size="icon"
-              title="Excluir setor"
-              aria-label="Excluir setor"
+              title="Excluir categoria"
+              aria-label="Excluir categoria"
               className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => openDeleteDialog(department)}
+              onClick={() => openDeleteDialog(category)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -201,26 +201,26 @@ export default function SectorsPage() {
   );
 
   if (isLoading) {
-    return <PageLoading label="Carregando setores..." />;
+    return <PageLoading label="Carregando categorias..." />;
   }
 
   return (
     <PageContainer>
       <PageHeader
-        title="Setores"
-        description="Departamentos da empresa onde os colaboradores são lotados"
+        title="Categorias"
+        description="Classificação dos produtos do almoxarifado por tipo de material"
         actions={
           <Button type="button" size="sm" onClick={() => openFormDialog()}>
-            <Plus className="h-4 w-4" /> Novo setor
+            <Plus className="h-4 w-4" /> Nova categoria
           </Button>
         }
       />
 
       <DataTable
-        data={departments}
+        data={categories}
         columns={columns}
-        rowKey={(department) => department.id}
-        emptyMessage="Nenhum setor cadastrado."
+        rowKey={(category) => category.id}
+        emptyMessage="Nenhuma categoria cadastrada."
         defaultSort={{ key: 'name', direction: 'asc' }}
         initialPageSize={10}
       />
@@ -228,7 +228,7 @@ export default function SectorsPage() {
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
  <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editingDepartment ? 'Editar setor' : 'Novo setor'}</DialogTitle>
+            <DialogTitle>{editingCategory ? 'Editar categoria' : 'Nova categoria'}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -238,12 +238,12 @@ export default function SectorsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do setor</FormLabel>
+                    <FormLabel>Nome da categoria</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         autoFocus
-                        placeholder="Ex: Produção, Logística..."
+                        placeholder="Ex: EPIs, Copa e Limpeza..."
                       />
                     </FormControl>
                     <FormMessage />
@@ -272,7 +272,7 @@ export default function SectorsPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         title="Confirmar Exclusao"
-        description={`Deseja excluir o setor \"${departmentToDelete?.name || ''}\"?`}
+        description={`Deseja excluir a categoria \"${categoryToDelete?.name || ''}\"?`}
         onConfirm={handleDelete}
         confirmLabel="Excluir"
         cancelLabel="Cancelar"

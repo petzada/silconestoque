@@ -1,6 +1,16 @@
 // Database Types for Silcon Ambiental
 
+// Setor do colaborador (departamento real da empresa onde ele é lotado). Ver
+// ADR-0003. Não usado diretamente pelo código hoje — `Department` (abaixo) é
+// a implementação em uso; mantido por compatibilidade.
 export type Sector = {
+  id: string;
+  name: string;
+};
+
+// Categoria de produto (classificação por tipo de material). Distinta de
+// `Sector`, que é o departamento real onde colaboradores são lotados. Ver ADR-0003.
+export type Category = {
   id: string;
   name: string;
 };
@@ -10,13 +20,13 @@ export type Product = {
   sku_code: string | null;
   name: string;
   unit: 'unidade' | 'caixa' | 'pacote';
-  sector_id: string;
+  category_id: string;
   current_qty: number;
   min_stock: number;
   max_stock: number;
   cost_price: number | null;
   is_active: boolean;
-  sector?: Sector;
+  category?: Category;
 };
 
 export type MovementType = 'IN' | 'OUT';
@@ -51,7 +61,7 @@ export type ProductFormData = {
   sku_code?: string;
   name: string;
   unit: 'unidade' | 'caixa' | 'pacote';
-  sector_id: string;
+  category_id: string;
   current_qty: number;
   min_stock: number;
   max_stock: number;
@@ -74,7 +84,7 @@ export type MovementFilters = {
   type: MovementType | 'all';
   month: string;
   year: string;
-  sectorId: string;
+  categoryId: string;
   employeeId: string;
 };
 
@@ -86,7 +96,7 @@ export type PurchaseOrderItem = {
   product_name: string;
   sku_code: string | null;
   unit: string;
-  sector_name: string;
+  category_name: string;
   current_qty: number;
   min_stock: number;
   max_stock: number;
@@ -158,7 +168,11 @@ export type Role = {
   created_at: string;
 };
 
-// Setor do colaborador. Distinto de `Sector`, que é a categoria de material.
+// Setor do colaborador (departamento real da empresa onde ele é lotado). Ver
+// ADR-0003. `Department`/`departments` é a implementação em uso hoje; o tipo
+// `Sector` (topo deste arquivo) representa o mesmo conceito mas não está mais
+// ligado a nenhuma tabela consumida pelo código — mantido apenas por
+// compatibilidade.
 export type Department = {
   id: string;
   name: string;

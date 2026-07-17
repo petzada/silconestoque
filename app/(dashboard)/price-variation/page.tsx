@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CHART_TOOLTIP_STYLE } from '@/lib/chart';
-import type { PriceHistory, Product, Sector } from '@/lib/types';
+import type { PriceHistory, Product, Category } from '@/lib/types';
 
 type DirectionFilter = 'all' | 'increases' | 'decreases';
 
@@ -66,10 +66,10 @@ function formatCurrency(value: number | null): string {
 
 export default function PriceVariationPage() {
   const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDirection, setSelectedDirection] = useState<DirectionFilter>('all');
   const [minThreshold, setMinThreshold] = useState<string>('15');
   const [dateFrom, setDateFrom] = useState('');
@@ -84,19 +84,19 @@ export default function PriceVariationPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [priceHistoryRes, sectorsRes] = await Promise.all([
+      const [priceHistoryRes, categoriesRes] = await Promise.all([
         supabase
           .from('price_history')
-          .select('*, product:products(*, sector:sectors(*))')
+          .select('*, product:products(*, category:categories(*))')
           .order('created_at', { ascending: false }),
-        supabase.from('sectors').select('*').order('name'),
+        supabase.from('categories').select('*').order('name'),
       ]);
 
       if (priceHistoryRes.error) throw priceHistoryRes.error;
-      if (sectorsRes.error) throw sectorsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
 
       setPriceHistory(priceHistoryRes.data || []);
-      setSectors(sectorsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch {
       toast.error('Erro ao carregar variacoes de preco');
     } finally {
@@ -119,7 +119,7 @@ export default function PriceVariationPage() {
         if (selectedDirection === 'increases' && variation <= 0) return false;
         if (selectedDirection === 'decreases' && variation >= 0) return false;
 
-        if (selectedSector !== 'all' && history.product?.sector_id !== selectedSector) return false;
+        if (selectedCategory !== 'all' && history.product?.category_id !== selectedCategory) return false;
 
         if (normalizedSearch) {
           const values = [history.product?.name, history.invoice_number];
@@ -141,7 +141,7 @@ export default function PriceVariationPage() {
     priceHistory,
     minThreshold,
     selectedDirection,
-    selectedSector,
+    selectedCategory,
     searchTerm,
     dateFrom,
     dateTo,
@@ -153,13 +153,13 @@ export default function PriceVariationPage() {
     return total / filteredHistory.length;
   }, [filteredHistory]);
 
-  const mostAffectedSector = useMemo(() => {
+  const mostAffectedCategory = useMemo(() => {
     if (filteredHistory.length === 0) return '-';
     const counter = new Map<string, number>();
 
     filteredHistory.forEach((item) => {
-      const sectorName = item.product?.sector?.name || 'Sem setor';
-      counter.set(sectorName, (counter.get(sectorName) || 0) + 1);
+      const categoryName = item.product?.category?.name || 'Sem categoria';
+      counter.set(categoryName, (counter.get(categoryName) || 0) + 1);
     });
 
     const sorted = Array.from(counter.entries()).sort((a, b) => b[1] - a[1]);
@@ -208,7 +208,7 @@ export default function PriceVariationPage() {
           <div className="flex flex-col">
             <TruncatedCell value={item.product?.name || '-'} className="max-w-[280px] font-bold text-foreground" />
             <TruncatedCell
-              value={item.product?.sector?.name || '-'}
+              value={item.product?.category?.name || '-'}
               className="max-w-[280px] text-xs font-bold uppercase tracking-wide text-muted-foreground"
             />
           </div>
@@ -340,8 +340,8 @@ export default function PriceVariationPage() {
               <CalendarRange className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Setor mais afetado</p>
-              <p className="text-display text-base text-foreground">{mostAffectedSector}</p>
+              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Categoria mais afetada</p>
+              <p className="text-display text-base text-foreground">{mostAffectedCategory}</p>
             </div>
           </CardContent>
         </Card>
@@ -359,15 +359,15 @@ export default function PriceVariationPage() {
             />
           </div>
 
-          <Select value={selectedSector} onValueChange={setSelectedSector}>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="h-10 border-border text-xs font-bold">
-              <SelectValue placeholder="Setor" />
+              <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent className="rounded-lg">
-              <SelectItem value="all">Todos os setores</SelectItem>
-              {sectors.map((sector) => (
-                <SelectItem key={sector.id} value={sector.id}>
-                  {sector.name}
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -423,7 +423,7 @@ export default function PriceVariationPage() {
         rowKey={(item) => item.id}
         emptyMessage={
           searchTerm ||
-          selectedSector !== 'all' ||
+          selectedCategory !== 'all' ||
           selectedDirection !== 'all' ||
           minThreshold !== '0' ||
           dateFrom ||

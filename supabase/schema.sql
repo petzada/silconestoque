@@ -16,8 +16,34 @@ CREATE TABLE IF NOT EXISTS sectors (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Pre-seed sectors
+-- LEGADO: esta tabela não é mais referenciada pelo app. O setor do colaborador
+-- vive em `departments` (migration_colaboradores_csv.sql) e a classificação do
+-- produto em `categories` (ver ADR-0003). Mantida apenas para instalações
+-- existentes; não usar em código novo.
 INSERT INTO sectors (name) VALUES
+  ('Copa e Limpeza'),
+  ('EPIs'),
+  ('Logística'),
+  ('Manutenção Elétrica'),
+  ('Manutenção Mecânica'),
+  ('Manutenção Predial'),
+  ('Pintura e Predial'),
+  ('Produção')
+ON CONFLICT (name) DO NOTHING;
+
+-- =====================
+-- CATEGORIES TABLE
+-- =====================
+-- Classificação do produto por tipo de material (EPIs, Copa e Limpeza, ...).
+-- Distinta de `sectors` (departamento real, de colaborador) — ver ADR-0003.
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Pre-seed categories (mesmo conjunto original de sectors, agora exclusivo de produto)
+INSERT INTO categories (name) VALUES
   ('Copa e Limpeza'),
   ('EPIs'),
   ('Logística'),
@@ -36,7 +62,7 @@ CREATE TABLE IF NOT EXISTS products (
   sku_code TEXT,
   name TEXT NOT NULL,
   unit TEXT NOT NULL CHECK (unit IN ('unidade', 'caixa', 'pacote')),
-  sector_id UUID NOT NULL REFERENCES sectors(id) ON DELETE RESTRICT,
+  category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
   current_qty INTEGER NOT NULL DEFAULT 0,
   min_stock INTEGER NOT NULL DEFAULT 0,
   max_stock INTEGER NOT NULL DEFAULT 0,
@@ -46,7 +72,7 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_products_sector ON products(sector_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
 
 -- =====================
@@ -159,6 +185,28 @@ CREATE TRIGGER trigger_update_product_qty
   AFTER INSERT ON movements
   FOR EACH ROW
   EXECUTE FUNCTION update_product_quantity();
+
+-- 1b. Freeze Exit Cost (ADR-0002)
+-- Saídas gravam o cost_price vigente do produto na própria movimentação, no
+-- momento do registro, para que relatórios de consumo em R$ nunca reavaliem
+-- o histórico quando o preço do produto muda.
+CREATE OR REPLACE FUNCTION freeze_exit_cost()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.type = 'OUT' AND NEW.unit_value IS NULL THEN
+    SELECT cost_price INTO NEW.unit_value
+    FROM products
+    WHERE id = NEW.product_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_freeze_exit_cost ON movements;
+CREATE TRIGGER trigger_freeze_exit_cost
+  BEFORE INSERT ON movements
+  FOR EACH ROW
+  EXECUTE FUNCTION freeze_exit_cost();
 
 -- 2. Handle Price Change
 CREATE OR REPLACE FUNCTION handle_price_change()
@@ -314,6 +362,7 @@ AND p.current_qty <> 0;
 -- RLS POLICIES
 -- =====================
 ALTER TABLE sectors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE movements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config ENABLE ROW LEVEL SECURITY;
@@ -321,6 +370,9 @@ ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow all" ON sectors;
 CREATE POLICY "Allow all" ON sectors FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all" ON categories;
+CREATE POLICY "Allow all" ON categories FOR ALL USING (true);
 
 DROP POLICY IF EXISTS "Allow all" ON products;
 CREATE POLICY "Allow all" ON products FOR ALL USING (true);
@@ -396,6 +448,6 @@ CREATE POLICY "Allow all" ON follow_up_receipts FOR ALL USING (true);
 DROP VIEW IF EXISTS dashboard_stats;
 CREATE OR REPLACE VIEW dashboard_stats AS
 SELECT
-  (SELECT COUNT(*) FROM products WHERE current_qty < min_stock) as critical_products,
+  (SELECT COUNT(*) FROM products WHERE current_qty < min_stock AND current_qty > 0) as critical_products,
   (SELECT COUNT(*) FROM products WHERE current_qty = 0) as zero_stock,
   (SELECT COALESCE(SUM(current_qty * COALESCE(cost_price, 0)), 0) FROM products) as total_inventory_cost;

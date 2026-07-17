@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
-import type { Product, Sector } from '@/lib/types';
+import type { Product, Category } from '@/lib/types';
 
 type UrgencyFilter = 'all' | 'zerado' | 'critico';
 type UrgencyLevel = Exclude<UrgencyFilter, 'all'>;
@@ -44,10 +44,10 @@ type ReplenishmentItem = Product & {
 
 export default function ReplenishmentQueuePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedUrgency, setSelectedUrgency] = useState<UrgencyFilter>('all');
 
   useEffect(() => {
@@ -57,16 +57,16 @@ export default function ReplenishmentQueuePage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [productsRes, sectorsRes] = await Promise.all([
-        supabase.from('products').select('*, sector:sectors(*)').eq('is_active', true),
-        supabase.from('sectors').select('*').order('name'),
+      const [productsRes, categoriesRes] = await Promise.all([
+        supabase.from('products').select('*, category:categories(*)').eq('is_active', true),
+        supabase.from('categories').select('*').order('name'),
       ]);
 
       if (productsRes.error) throw productsRes.error;
-      if (sectorsRes.error) throw sectorsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
 
       setProducts(productsRes.data || []);
-      setSectors(sectorsRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch {
       toast.error('Erro ao carregar fila de reposicao');
     } finally {
@@ -78,12 +78,12 @@ export default function ReplenishmentQueuePage() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     return products
-      .filter((product) => product.current_qty <= product.min_stock)
-      .filter((product) => selectedSector === 'all' || product.sector_id === selectedSector)
+      .filter((product) => product.current_qty === 0 || product.current_qty < product.min_stock)
+      .filter((product) => selectedCategory === 'all' || product.category_id === selectedCategory)
       .filter((product) => {
         if (selectedUrgency === 'all') return true;
         if (selectedUrgency === 'zerado') return product.current_qty === 0;
-        return product.current_qty > 0 && product.current_qty <= product.min_stock;
+        return product.current_qty > 0 && product.current_qty < product.min_stock;
       })
       .filter((product) => {
         if (!normalizedSearch) return true;
@@ -97,13 +97,13 @@ export default function ReplenishmentQueuePage() {
         targetDeficit: product.max_stock - product.current_qty,
         urgencyLevel: product.current_qty === 0 ? 'zerado' : 'critico',
       }));
-  }, [products, searchTerm, selectedSector, selectedUrgency]);
+  }, [products, searchTerm, selectedCategory, selectedUrgency]);
 
   const kpis = useMemo(
     () => ({
       total: replenishmentItems.length,
       zeroed: replenishmentItems.filter((item) => item.current_qty === 0).length,
-      critical: replenishmentItems.filter((item) => item.current_qty > 0 && item.current_qty <= item.min_stock).length,
+      critical: replenishmentItems.filter((item) => item.current_qty > 0 && item.current_qty < item.min_stock).length,
     }),
     [replenishmentItems]
   );
@@ -132,7 +132,7 @@ export default function ReplenishmentQueuePage() {
         startY: 40,
         head: [[
           'Produto',
-          'Setor',
+          'Categoria',
           'Saldo',
           'Min',
           'Max',
@@ -143,7 +143,7 @@ export default function ReplenishmentQueuePage() {
         ]],
         body: replenishmentItems.map((item) => [
           item.sku_code ? `${item.name} (${item.sku_code})` : item.name,
-          item.sector?.name || '-',
+          item.category?.name || '-',
           item.current_qty,
           item.min_stock,
           item.max_stock,
@@ -181,13 +181,13 @@ export default function ReplenishmentQueuePage() {
         ),
       },
       {
-        key: 'sector',
-        header: 'Setor',
+        key: 'category',
+        header: 'Categoria',
         sortable: true,
-        accessor: (item) => item.sector?.name || '',
+        accessor: (item) => item.category?.name || '',
         cell: (item) => (
           <TruncatedCell
-            value={item.sector?.name || '-'}
+            value={item.category?.name || '-'}
             className="max-w-[220px] text-xs font-semibold text-muted-foreground"
           />
         ),
@@ -338,15 +338,15 @@ export default function ReplenishmentQueuePage() {
             />
           </div>
 
-          <Select value={selectedSector} onValueChange={setSelectedSector}>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
-              <SelectValue placeholder="Setor" />
+              <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent className="rounded-lg">
-              <SelectItem value="all">Todos os setores</SelectItem>
-              {sectors.map((sector) => (
-                <SelectItem key={sector.id} value={sector.id}>
-                  {sector.name}
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -370,7 +370,7 @@ export default function ReplenishmentQueuePage() {
         columns={columns}
         rowKey={(item) => item.id}
         emptyMessage={
-          searchTerm || selectedSector !== 'all' || selectedUrgency !== 'all'
+          searchTerm || selectedCategory !== 'all' || selectedUrgency !== 'all'
             ? 'Nenhum item encontrado para o filtro selecionado.'
             : 'Nao ha itens na fila de reposicao.'
         }

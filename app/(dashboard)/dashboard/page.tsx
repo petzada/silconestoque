@@ -37,7 +37,7 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CHART_TOOLTIP_STYLE } from '@/lib/chart';
-import type { Product, Movement, Sector } from '@/lib/types';
+import type { Product, Movement, Category } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -66,14 +66,14 @@ export default function DashboardPage() {
   const [data, setData] = useState({
     products: [] as Product[],
     movements: [] as Movement[],
-    sectors: [] as Sector[],
+    categories: [] as Category[],
   });
   const [isLoading, setIsLoading] = useState(true);
 
   const currentDate = new Date();
   const [filterMonth, setFilterMonth] = useState<string>(String(currentDate.getMonth()));
   const [filterYear, setFilterYear] = useState<string>(String(currentDate.getFullYear()));
-  const [filterSector, setFilterSector] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const availableYears = useMemo(() => {
     const years = [];
@@ -90,16 +90,16 @@ export default function DashboardPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [productsRes, movementsRes, sectorsRes] = await Promise.all([
-        supabase.from('products').select('*, sector:sectors(*)').eq('is_active', true),
-        supabase.from('movements').select('*, product:products(*, sector:sectors(*))').order('created_at', { ascending: false }),
-        supabase.from('sectors').select('*').order('name'),
+      const [productsRes, movementsRes, categoriesRes] = await Promise.all([
+        supabase.from('products').select('*, category:categories(*)').eq('is_active', true),
+        supabase.from('movements').select('*, product:products(*, category:categories(*))').order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').order('name'),
       ]);
 
       setData({
         products: productsRes.data || [],
         movements: movementsRes.data || [],
-        sectors: sectorsRes.data || [],
+        categories: categoriesRes.data || [],
       });
     } catch {
       toast.error('Erro ao carregar dados do dashboard');
@@ -120,47 +120,47 @@ export default function DashboardPage() {
       return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     });
 
-    // Filtrar por setor se selecionado
-    if (filterSector !== 'all') {
-      filteredMovements = filteredMovements.filter(m => m.product?.sector_id === filterSector);
+    // Filtrar por categoria se selecionada
+    if (filterCategory !== 'all') {
+      filteredMovements = filteredMovements.filter(m => m.product?.category_id === filterCategory);
     }
 
     const ins = filteredMovements.filter(m => m.type === 'IN');
     const outs = filteredMovements.filter(m => m.type === 'OUT');
 
     const totalInValue = ins.reduce((sum, m) => {
-      const price = m.unit_value || m.product?.cost_price || 0;
+      const price = m.unit_value || 0;
       return sum + (m.quantity * price);
     }, 0);
 
     const totalOutValue = outs.reduce((sum, m) => {
-      const price = m.unit_value || m.product?.cost_price || 0;
+      const price = m.unit_value || 0;
       return sum + (m.quantity * price);
     }, 0);
 
-    // Gráfico de Barras: SEMPRE mostra todos os setores (independente do filtro)
+    // Gráfico de Barras: SEMPRE mostra todas as categorias (independente do filtro)
     const allOuts = data.movements.filter(m => {
       if (m.is_initial_import) return false;
       const d = new Date(m.created_at);
       return m.type === 'OUT' && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     });
 
-    const sectorMap = new Map<string, number>();
-    data.sectors.forEach(s => sectorMap.set(s.name, 0));
+    const categoryMap = new Map<string, number>();
+    data.categories.forEach(c => categoryMap.set(c.name, 0));
 
     allOuts.forEach(m => {
-      const sectorName = m.product?.sector?.name;
-      if (sectorName) {
-        const price = m.unit_value || m.product?.cost_price || 0;
-        sectorMap.set(sectorName, (sectorMap.get(sectorName) || 0) + (m.quantity * price));
+      const categoryName = m.product?.category?.name;
+      if (categoryName) {
+        const price = m.unit_value || 0;
+        categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + (m.quantity * price));
       }
     });
 
-    const barData = Array.from(sectorMap.entries())
+    const barData = Array.from(categoryMap.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // Lista de consumo por produto (só quando setor selecionado)
+    // Lista de consumo por produto (só quando categoria selecionada)
     const productMap = new Map<string, number>();
     outs.forEach(m => {
       const name = m.product?.name || 'Insumo';
@@ -183,12 +183,12 @@ export default function DashboardPage() {
       countIns: ins.length,
       countOuts: outs.length
     };
-  }, [data, filterMonth, filterYear, filterSector]);
+  }, [data, filterMonth, filterYear, filterCategory]);
 
   const filteredProducts = useMemo(() => {
-    if (filterSector === 'all') return data.products;
-    return data.products.filter(p => p.sector_id === filterSector);
-  }, [data.products, filterSector]);
+    if (filterCategory === 'all') return data.products;
+    return data.products.filter(p => p.category_id === filterCategory);
+  }, [data.products, filterCategory]);
 
   const kpis = [
     {
@@ -207,7 +207,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Itens Críticos',
-      value: filteredProducts.filter(p => p.current_qty <= p.min_stock && p.current_qty > 0).length,
+      value: filteredProducts.filter(p => p.current_qty < p.min_stock && p.current_qty > 0).length,
       sub: 'Abaixo do saldo mínimo',
       icon: AlertTriangle,
       color: 'text-warning',
@@ -229,7 +229,7 @@ export default function DashboardPage() {
     <PageContainer>
       <PageHeader
         title="Dashboard"
-        description="Visão geral do estoque e consumo por setor"
+        description="Visão geral do estoque e consumo por categoria"
         actions={
           <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1.5">
             <Filter className="ml-2 h-4 w-4 text-muted-foreground" />
@@ -250,13 +250,13 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
             <div className="h-6 w-px bg-border" />
-            <Select value={filterSector} onValueChange={setFilterSector}>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="h-8 w-[160px] border-none bg-transparent text-xs font-semibold shadow-none">
-                <SelectValue placeholder="Setor" />
+                <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all" className="font-semibold">Todos os Setores</SelectItem>
-                {data.sectors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                <SelectItem value="all" className="font-semibold">Todas as Categorias</SelectItem>
+                {data.categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -284,11 +284,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Gráfico de Barras: Gasto por Setor */}
+        {/* Gráfico de Barras: Gasto por Categoria */}
         <Card className="py-0 gap-0">
           <CardHeader className="p-4 pb-0">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">Gasto por Setor</CardTitle>
-            <CardDescription className="text-xs">Valor financeiro consumido por departamento</CardDescription>
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">Gasto por Categoria</CardTitle>
+            <CardDescription className="text-xs">Valor financeiro consumido por categoria de material</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-4">
             <div className="h-[300px] w-full">
@@ -336,12 +336,12 @@ export default function DashboardPage() {
             <CardDescription className="text-xs">Top 8 produtos mais consumidos no período</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            {filterSector === 'all' ? (
-              // Aviso para selecionar setor
+            {filterCategory === 'all' ? (
+              // Aviso para selecionar categoria
               <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <Package className="h-12 w-12 opacity-30" />
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-foreground">Selecione um setor</p>
+                  <p className="text-sm font-semibold text-foreground">Selecione uma categoria</p>
                   <p className="text-xs text-muted-foreground mt-1">Para visualizar o consumo detalhado por produto</p>
                 </div>
               </div>

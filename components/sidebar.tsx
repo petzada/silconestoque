@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Package,
   FolderOpen,
+  Tags,
   ArrowLeftRight,
   ShoppingCart,
   ClipboardList,
@@ -39,6 +40,7 @@ const navSections = [
     label: 'Cadastro',
     items: [
       { title: 'Setores', href: '/sectors', icon: FolderOpen },
+      { title: 'Categorias', href: '/categories', icon: Tags },
       { title: 'Produtos', href: '/products', icon: Package },
     ],
   },
@@ -60,7 +62,7 @@ const navSections = [
   },
   {
     label: 'Relatórios',
-    items: [{ title: 'Pedidos', href: '/purchase-orders', icon: ShoppingCart }],
+    items: [{ title: 'Sugestões', href: '/purchase-orders', icon: ShoppingCart }],
   },
 ];
 

@@ -63,7 +63,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Employee, Movement, MovementFilters, Product, Sector } from '@/lib/types';
+import type { Employee, Movement, MovementFilters, Product, Category } from '@/lib/types';
 
 const movementSchema = z
   .object({
@@ -117,7 +117,7 @@ const initialMovementFilters: MovementFilters = {
   type: 'all',
   month: 'all',
   year: 'all',
-  sectorId: 'all',
+  categoryId: 'all',
   employeeId: 'all',
 };
 
@@ -132,7 +132,7 @@ function formatCurrency(value: number | null): string {
 export default function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -161,28 +161,28 @@ export default function MovementsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [movementsRes, productsRes, sectorsRes, employeesRes] = await Promise.all([
+      const [movementsRes, productsRes, categoriesRes, employeesRes] = await Promise.all([
         supabase
           .from('movements')
-          .select('*, product:products(*, sector:sectors(*)), employee:employees(id, full_name)')
+          .select('*, product:products(*, category:categories(*)), employee:employees(id, full_name)')
           .order('created_at', { ascending: false }),
         supabase
           .from('products')
-          .select('*, sector:sectors(*)')
+          .select('*, category:categories(*)')
           .eq('is_active', true)
           .order('name'),
-        supabase.from('sectors').select('*').order('name'),
+        supabase.from('categories').select('*').order('name'),
         supabase.from('employees').select('*, role:roles(*)').order('full_name'),
       ]);
 
       if (movementsRes.error) throw movementsRes.error;
       if (productsRes.error) throw productsRes.error;
-      if (sectorsRes.error) throw sectorsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
       if (employeesRes.error) throw employeesRes.error;
 
       setMovements(movementsRes.data || []);
       setProducts(productsRes.data || []);
-      setSectors(sectorsRes.data || []);
+      setCategories(categoriesRes.data || []);
       setEmployees(employeesRes.data || []);
     } catch {
       toast.error('Erro ao carregar dados');
@@ -304,10 +304,10 @@ export default function MovementsPage() {
         const matchesType = filters.type === 'all' || movement.type === filters.type;
         const matchesMonth = filters.month === 'all' || String(movementDate.getMonth()) === filters.month;
         const matchesYear = filters.year === 'all' || String(movementDate.getFullYear()) === filters.year;
-        const matchesSector = filters.sectorId === 'all' || movement.product?.sector_id === filters.sectorId;
+        const matchesCategory = filters.categoryId === 'all' || movement.product?.category_id === filters.categoryId;
         const matchesEmployee = filters.employeeId === 'all' || movement.employee_id === filters.employeeId;
 
-        return matchesSearch && matchesType && matchesMonth && matchesYear && matchesSector && matchesEmployee;
+        return matchesSearch && matchesType && matchesMonth && matchesYear && matchesCategory && matchesEmployee;
       }),
     [movements, filters]
   );
@@ -334,7 +334,7 @@ export default function MovementsPage() {
           <div className="flex flex-col">
             <TruncatedCell value={movement.product?.name || '-'} className="max-w-[260px] font-bold text-foreground" />
             <TruncatedCell
-              value={movement.product?.sector?.name || '-'}
+              value={movement.product?.category?.name || '-'}
               className="max-w-[260px] text-xs font-bold uppercase tracking-wide text-muted-foreground"
             />
           </div>
@@ -389,11 +389,11 @@ export default function MovementsPage() {
         key: 'total',
         header: 'Total',
         sortable: true,
-        accessor: (movement) => (movement.unit_value || movement.product?.cost_price || 0) * movement.quantity,
+        accessor: (movement) => (movement.unit_value || 0) * movement.quantity,
         align: 'right',
         cell: (movement) => (
           <span className={cn('text-sm font-bold', movement.type === 'IN' ? 'text-success' : 'text-muted-foreground')}>
-            {formatCurrency((movement.unit_value || movement.product?.cost_price || 0) * movement.quantity)}
+            {formatCurrency((movement.unit_value || 0) * movement.quantity)}
           </span>
         ),
       },
@@ -529,17 +529,17 @@ export default function MovementsPage() {
           </Select>
 
           <Select
-            value={filters.sectorId}
-            onValueChange={(value) => setFilters((prev) => ({ ...prev, sectorId: value }))}
+            value={filters.categoryId}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, categoryId: value }))}
           >
             <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
-              <SelectValue placeholder="Setor" />
+              <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent className="rounded-lg">
-              <SelectItem value="all">Todos os setores</SelectItem>
-              {sectors.map((sector) => (
-                <SelectItem key={sector.id} value={sector.id}>
-                  {sector.name}
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -574,7 +574,7 @@ export default function MovementsPage() {
           filters.type !== 'all' ||
           filters.month !== 'all' ||
           filters.year !== 'all' ||
-          filters.sectorId !== 'all' ||
+          filters.categoryId !== 'all' ||
           filters.employeeId !== 'all'
             ? 'Nenhuma movimentacao encontrada para este filtro.'
             : 'Nenhuma movimentacao cadastrada.'
