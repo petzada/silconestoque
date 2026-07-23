@@ -402,7 +402,7 @@ export default function EmployeesPage() {
       },
       {
         key: 'locker',
-        header: 'Chapa/Armário',
+        header: 'Armários',
         cell: (employee) => {
           const uniformAssignment = getAssignmentByKind(employee, 'uniforme');
           const vestiarioAssignment = getAssignmentByKind(employee, 'vestiario');
@@ -413,7 +413,7 @@ export default function EmployeesPage() {
                   Nº {String(uniformAssignment.locker.number).padStart(2, '0')} · {uniformAssignment.locker.size}
                 </Badge>
               ) : (
-                <span className="text-xs text-muted-foreground">sem chapa</span>
+                <span className="text-xs text-muted-foreground">sem uniforme</span>
               )}
               {vestiarioAssignment?.locker ? (
                 <Badge variant="outline" className="font-mono text-xs font-semibold">

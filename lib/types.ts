@@ -155,7 +155,7 @@ export type ReceiptFormData = {
   invoice_value?: number;
 };
 
-// Chapas & Armários / Colaboradores types
+// Armários / Colaboradores types
 export type LockerKind = 'uniforme' | 'vestiario';
 
 export type LockerSize = 'P' | 'M' | 'G' | 'GG' | 'XG' | 'SSG';

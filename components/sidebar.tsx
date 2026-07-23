@@ -21,7 +21,6 @@ import {
   PanelLeftOpen,
   Users,
   Lock,
-  DoorClosed,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,35 +33,28 @@ const navSections = [
   },
   {
     label: 'Estoque',
-    items: [{ title: 'Movimentações', href: '/movements', icon: ArrowLeftRight }],
+    items: [
+      { title: 'Movimentações', href: '/movements', icon: ArrowLeftRight },
+      { title: 'Produtos', href: '/products', icon: Package },
+      { title: 'Categorias', href: '/categories', icon: Tags },
+    ],
   },
   {
-    label: 'Cadastro',
+    label: 'Compras',
     items: [
-      { title: 'Setores', href: '/sectors', icon: FolderOpen },
-      { title: 'Categorias', href: '/categories', icon: Tags },
-      { title: 'Produtos', href: '/products', icon: Package },
+      { title: 'Fila de Reposição', href: '/replenishment-queue', icon: AlertTriangle },
+      { title: 'Sugestões de Compra', href: '/purchase-orders', icon: ShoppingCart },
+      { title: 'Follow-up', href: '/follow-up', icon: ClipboardList },
+      { title: 'Variação de Preço', href: '/price-variation', icon: TrendingUp },
     ],
   },
   {
     label: 'Pessoal',
     items: [
       { title: 'Colaboradores', href: '/employees', icon: Users },
-      { title: 'Armários & Chapas', href: '/lockers', icon: Lock },
-      { title: 'Vestiário', href: '/vestiario', icon: DoorClosed },
+      { title: 'Setores', href: '/sectors', icon: FolderOpen },
+      { title: 'Armários', href: '/lockers', icon: Lock },
     ],
-  },
-  {
-    label: 'Controle',
-    items: [
-      { title: 'Follow-up', href: '/follow-up', icon: ClipboardList },
-      { title: 'Fila de Reposição', href: '/replenishment-queue', icon: AlertTriangle },
-      { title: 'Variação de Preço', href: '/price-variation', icon: TrendingUp },
-    ],
-  },
-  {
-    label: 'Relatórios',
-    items: [{ title: 'Sugestões', href: '/purchase-orders', icon: ShoppingCart }],
   },
 ];
 
