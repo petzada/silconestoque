@@ -24,6 +24,11 @@ import {
   scoreAnswers,
 } from '@/lib/quiz-seguranca';
 
+// Página de campanha "Dia Nacional de Prevenção de Acidentes de Trabalho".
+// Paleta própria (fundo branco, texto preto, destaques #0B576F) — exceção
+// intencional ao tema dark do DESIGN.md, aplicada só a esta superfície pública.
+const ACCENT = '#0B576F';
+
 type Stage = 'welcome' | 'quiz' | 'result';
 
 export default function QuizSegurancaPage() {
@@ -97,7 +102,7 @@ export default function QuizSegurancaPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-white text-neutral-900 flex flex-col">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6 sm:pt-10">
         {stage === 'welcome' && (
           <WelcomeScreen
@@ -158,22 +163,34 @@ function WelcomeScreen({
   onStart: () => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="text-caption-uppercase text-[12px] text-muted-foreground">
+    <div className="flex flex-1 flex-col pb-10">
+      <div className="text-caption-uppercase text-[12px]" style={{ color: ACCENT }}>
         Silcon Ambiental
       </div>
 
-      <div className="mt-8 flex flex-col items-center text-center">
-        <div className="flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <div className="mt-6 flex flex-col items-center text-center">
+        <div
+          className="flex size-20 items-center justify-center rounded-full text-white"
+          style={{ backgroundColor: ACCENT }}
+        >
           <HardHat className="size-10" strokeWidth={2} />
         </div>
-        <h1 className="text-display mt-6 text-[30px] leading-[1.15] text-foreground">
-          Quiz de Segurança do Trabalho
+        <h1 className="text-display mt-6 text-[44px] leading-none text-neutral-900">
+          Quiz
         </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-body">
-          Um teste rápido de conhecimentos promovido pela Segurança do Trabalho.
-          São {QUIZ_TOTAL} perguntas — leva menos de 3 minutos. Bora fortalecer a
-          prevenção? 👷
+        <p
+          className="mt-3 text-[16px] font-semibold leading-snug"
+          style={{ color: ACCENT }}
+        >
+          Dia Nacional de Prevenção de Acidentes de Trabalho
+        </p>
+        <p className="mt-4 text-[15px] leading-relaxed text-neutral-700">
+          Em 27 de julho, celebramos o Dia Nacional de Prevenção de Acidentes de
+          Trabalho, uma data para conscientizar sobre a importância da segurança,
+          da saúde e do cuidado com as pessoas. Juntos, fortalecemos a cultura da
+          prevenção e construímos um ambiente onde a vida está sempre em primeiro
+          lugar. Responda o quiz com 6 perguntas - leva menos de um minuto -. Bora
+          fortalecer a prevenção?
         </p>
       </div>
 
@@ -190,7 +207,7 @@ function WelcomeScreen({
             onChange={(e) => onName(e.target.value)}
             placeholder="Ex.: Maria da Silva"
             autoComplete="name"
-            className="h-12 w-full rounded-md border border-input bg-card px-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/30"
+            className="h-12 w-full rounded-md border border-neutral-300 bg-white px-4 text-base text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus-visible:border-[#0B576F] focus-visible:ring-[3px] focus-visible:ring-[#0B576F]/30"
           />
         </Field>
         <Field label="Setor / Área">
@@ -198,14 +215,15 @@ function WelcomeScreen({
             value={sector}
             onChange={(e) => onSector(e.target.value)}
             placeholder="Ex.: Operação, Administrativo, Logística"
-            className="h-12 w-full rounded-md border border-input bg-card px-4 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/30"
+            className="h-12 w-full rounded-md border border-neutral-300 bg-white px-4 text-base text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus-visible:border-[#0B576F] focus-visible:ring-[3px] focus-visible:ring-[#0B576F]/30"
           />
         </Field>
 
         <button
           type="submit"
           disabled={!canStart}
-          className="mt-2 flex h-12 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:pointer-events-none disabled:opacity-50"
+          className="mt-2 flex h-12 items-center justify-center gap-2 rounded-md text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+          style={{ backgroundColor: ACCENT }}
         >
           Iniciar Quiz
           <ArrowRight className="size-5" />
@@ -215,7 +233,7 @@ function WelcomeScreen({
       <div className="mt-auto pt-10">
         <Link
           href="/quiz-seguranca/painel"
-          className="flex items-center justify-center gap-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="flex items-center justify-center gap-2 text-[13px] font-medium text-neutral-500 transition-colors hover:text-neutral-900"
         >
           <Lock className="size-3.5" />
           Painel do gestor
@@ -228,7 +246,7 @@ function WelcomeScreen({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-[13px] font-medium text-body-strong">{label}</span>
+      <span className="text-[13px] font-medium text-neutral-800">{label}</span>
       {children}
     </label>
   );
@@ -265,23 +283,26 @@ function QuizScreen({
     <div className="flex flex-1 flex-col pb-28">
       {/* Progresso */}
       <div className="flex items-center justify-between text-[13px]">
-        <span className="font-semibold text-foreground">
+        <span className="font-semibold text-neutral-900">
           Pergunta {index + 1}
-          <span className="text-muted-foreground"> de {QUIZ_TOTAL}</span>
+          <span className="text-neutral-500"> de {QUIZ_TOTAL}</span>
         </span>
-        <span className="text-caption-uppercase text-[11px] text-muted-foreground">
+        <span
+          className="text-caption-uppercase text-[11px]"
+          style={{ color: ACCENT }}
+        >
           Segurança
         </span>
       </div>
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-200">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
-          style={{ width: `${progress}%` }}
+          className="h-full rounded-full transition-all duration-300 ease-out"
+          style={{ width: `${progress}%`, backgroundColor: ACCENT }}
         />
       </div>
 
       {/* Enunciado */}
-      <h2 className="mt-6 text-[22px] font-bold leading-snug tracking-tight text-foreground">
+      <h2 className="mt-6 text-[22px] font-bold leading-snug tracking-tight text-neutral-900">
         {prompt}
       </h2>
 
@@ -296,25 +317,27 @@ function QuizScreen({
               onClick={() => onSelect(opt.key)}
               className={cn(
                 'flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all',
-                active
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border bg-card hover:border-hairline-strong'
+                !active && 'border-neutral-200 bg-white hover:border-neutral-300'
               )}
+              style={
+                active
+                  ? { borderColor: ACCENT, backgroundColor: `${ACCENT}14` }
+                  : undefined
+              }
             >
               <span
                 className={cn(
                   'flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold transition-colors',
-                  active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-body'
+                  !active && 'bg-neutral-100 text-neutral-600'
                 )}
+                style={active ? { backgroundColor: ACCENT, color: '#fff' } : undefined}
               >
                 {active ? <Check className="size-4" strokeWidth={3} /> : opt.key}
               </span>
               <span
                 className={cn(
                   'text-[15px] leading-snug',
-                  active ? 'font-medium text-foreground' : 'text-body'
+                  active ? 'font-medium text-neutral-900' : 'text-neutral-700'
                 )}
               >
                 {opt.text}
@@ -325,13 +348,13 @@ function QuizScreen({
       </div>
 
       {/* Navegação fixa no rodapé (bottom-nav) */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onBack}
             disabled={index === 0 || submitting}
-            className="flex h-12 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-4 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-12 items-center justify-center gap-1.5 rounded-md border border-neutral-300 bg-white px-4 text-[15px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-40"
           >
             <ArrowLeft className="size-5" />
             Voltar
@@ -340,7 +363,8 @@ function QuizScreen({
             type="button"
             onClick={onNext}
             disabled={!selected || submitting}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:pointer-events-none disabled:opacity-50"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+            style={{ backgroundColor: ACCENT }}
           >
             {submitting ? (
               <>
@@ -393,31 +417,37 @@ function ResultScreen({
   return (
     <div className="flex flex-1 flex-col pb-28">
       <div className="flex flex-col items-center text-center">
-        <div className="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <div
+          className="flex size-16 items-center justify-center rounded-full text-white"
+          style={{ backgroundColor: ACCENT }}
+        >
           <CheckCircle2 className="size-8" strokeWidth={2} />
         </div>
-        <h1 className="text-display mt-4 text-[26px] leading-tight text-foreground">
+        <h1 className="text-display mt-4 text-[26px] leading-tight text-neutral-900">
           Respostas enviadas!
         </h1>
-        <p className="mt-2 text-[15px] text-body">
+        <p className="mt-2 text-[15px] text-neutral-700">
           Valeu, {firstName}! {message}
         </p>
 
-        <div className="mt-6 w-full rounded-lg border border-border bg-card p-6">
-          <div className="text-caption-uppercase text-[11px] text-muted-foreground">
+        <div className="mt-6 w-full rounded-lg border border-neutral-200 bg-white p-6">
+          <div className="text-caption-uppercase text-[11px] text-neutral-500">
             Sua pontuação
           </div>
-          <div className="text-stat-display mt-1 text-[52px]">
+          <div
+            className="mt-1 text-[52px] font-bold leading-none tracking-tight tabular-nums"
+            style={{ color: ACCENT }}
+          >
             {score}
-            <span className="text-[24px] text-muted-foreground">/{QUIZ_TOTAL}</span>
+            <span className="text-[24px] text-neutral-400">/{QUIZ_TOTAL}</span>
           </div>
-          <div className="mt-1 text-[13px] text-body">{pct}% de acertos</div>
+          <div className="mt-1 text-[13px] text-neutral-700">{pct}% de acertos</div>
         </div>
       </div>
 
       {/* Gabarito */}
       <div className="mt-6">
-        <div className="text-[13px] font-semibold text-body-strong">
+        <div className="text-[13px] font-semibold text-neutral-800">
           Confira o gabarito
         </div>
         <div className="mt-3 flex flex-col gap-3">
@@ -429,24 +459,24 @@ function ResultScreen({
             return (
               <div
                 key={q.id}
-                className="rounded-lg border border-border bg-card p-4"
+                className="rounded-lg border border-neutral-200 bg-white p-4"
               >
                 <div className="flex items-start gap-2">
                   {correct ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#16a34a]" />
                   ) : (
-                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-[#dc2626]" />
                   )}
-                  <p className="text-[14px] font-medium leading-snug text-foreground">
+                  <p className="text-[14px] font-medium leading-snug text-neutral-900">
                     {q.prompt}
                   </p>
                 </div>
                 {!correct && (
-                  <p className="mt-2 pl-6 text-[13px] leading-snug text-muted-foreground">
+                  <p className="mt-2 pl-6 text-[13px] leading-snug text-neutral-500">
                     Sua resposta: {chosen}) {chosenOption?.text}
                   </p>
                 )}
-                <p className="mt-1 pl-6 text-[13px] leading-snug text-success">
+                <p className="mt-1 pl-6 text-[13px] leading-snug text-[#16a34a]">
                   Correta: {q.answer}) {correctOption?.text}
                 </p>
               </div>
@@ -456,12 +486,12 @@ function ResultScreen({
       </div>
 
       {/* Ação fixa no rodapé (bottom-nav) */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
         <div className="mx-auto w-full max-w-md px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onRestart}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-card text-[15px] font-semibold text-foreground transition-colors hover:bg-muted"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white text-[15px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100"
           >
             <RotateCcw className="size-5" />
             Responder como outro colaborador
