@@ -13,6 +13,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Rotas públicas que dispensam login (ex.: quiz divulgado aos colaboradores).
+const PUBLIC_PATHS = ['/login', '/quiz-seguranca'];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
 
       // Redirect logic
-      if (!authenticated && pathname !== '/login') {
+      if (!authenticated && !isPublicPath(pathname)) {
         router.push('/login');
       } else if (authenticated && pathname === '/login') {
         router.push('/dashboard');
