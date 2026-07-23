@@ -97,8 +97,8 @@ export default function QuizSegurancaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-6 sm:py-10">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6 sm:pt-10">
         {stage === 'welcome' && (
           <WelcomeScreen
             fullName={fullName}
@@ -262,7 +262,7 @@ function QuizScreen({
   onNext: () => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col pb-28">
       {/* Progresso */}
       <div className="flex items-center justify-between text-[13px]">
         <span className="font-semibold text-foreground">
@@ -281,7 +281,7 @@ function QuizScreen({
       </div>
 
       {/* Enunciado */}
-      <h2 className="mt-8 text-[22px] font-bold leading-snug tracking-tight text-foreground">
+      <h2 className="mt-6 text-[22px] font-bold leading-snug tracking-tight text-foreground">
         {prompt}
       </h2>
 
@@ -324,40 +324,42 @@ function QuizScreen({
         })}
       </div>
 
-      {/* Navegação */}
-      <div className="mt-auto flex items-center gap-3 pt-8">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={index === 0 || submitting}
-          className="flex h-12 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-4 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
-        >
-          <ArrowLeft className="size-5" />
-          Voltar
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!selected || submitting}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:pointer-events-none disabled:opacity-50"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="size-5 animate-spin" />
-              Enviando...
-            </>
-          ) : isLast ? (
-            <>
-              Finalizar
-              <ShieldCheck className="size-5" />
-            </>
-          ) : (
-            <>
-              Próxima
-              <ArrowRight className="size-5" />
-            </>
-          )}
-        </button>
+      {/* Navegação fixa no rodapé (bottom-nav) */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-md items-center gap-3 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={index === 0 || submitting}
+            className="flex h-12 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-4 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+          >
+            <ArrowLeft className="size-5" />
+            Voltar
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={!selected || submitting}
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:pointer-events-none disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="size-5 animate-spin" />
+                Enviando...
+              </>
+            ) : isLast ? (
+              <>
+                Finalizar
+                <ShieldCheck className="size-5" />
+              </>
+            ) : (
+              <>
+                Próxima
+                <ArrowRight className="size-5" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -389,19 +391,19 @@ function ResultScreen({
   const firstName = name.trim().split(' ')[0];
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col pb-28">
       <div className="flex flex-col items-center text-center">
-        <div className="flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <CheckCircle2 className="size-10" strokeWidth={2} />
+        <div className="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <CheckCircle2 className="size-8" strokeWidth={2} />
         </div>
-        <h1 className="text-display mt-6 text-[26px] leading-tight text-foreground">
+        <h1 className="text-display mt-4 text-[26px] leading-tight text-foreground">
           Respostas enviadas!
         </h1>
         <p className="mt-2 text-[15px] text-body">
           Valeu, {firstName}! {message}
         </p>
 
-        <div className="mt-8 w-full rounded-lg border border-border bg-card p-6">
+        <div className="mt-6 w-full rounded-lg border border-border bg-card p-6">
           <div className="text-caption-uppercase text-[11px] text-muted-foreground">
             Sua pontuação
           </div>
@@ -414,7 +416,7 @@ function ResultScreen({
       </div>
 
       {/* Gabarito */}
-      <div className="mt-8">
+      <div className="mt-6">
         <div className="text-[13px] font-semibold text-body-strong">
           Confira o gabarito
         </div>
@@ -453,15 +455,18 @@ function ResultScreen({
         </div>
       </div>
 
-      <div className="mt-8">
-        <button
-          type="button"
-          onClick={onRestart}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-card text-[15px] font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          <RotateCcw className="size-5" />
-          Responder como outro colaborador
-        </button>
+      {/* Ação fixa no rodapé (bottom-nav) */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto w-full max-w-md px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={onRestart}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-card text-[15px] font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            <RotateCcw className="size-5" />
+            Responder como outro colaborador
+          </button>
+        </div>
       </div>
     </div>
   );
