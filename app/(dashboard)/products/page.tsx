@@ -45,12 +45,12 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import {
   Plus,
   Pencil,
   Package,
   Upload,
-  Search,
   History,
   TrendingUp,
   TrendingDown,
@@ -898,16 +898,9 @@ export default function ProductsPage() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 border border-border">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 border-border font-medium text-sm"
-          />
-        </div>
+      <FilterBar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por nome ou SKU...' }}
+      >
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-full sm:w-[220px] h-10 border-border text-sm font-semibold">
             <SelectValue placeholder="Categoria" />
@@ -927,7 +920,7 @@ export default function ProductsPage() {
             <SelectItem value="all">Todos</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredProducts}
@@ -1126,7 +1119,7 @@ export default function ProductsPage() {
                   <div className="border overflow-hidden">
                     <div className="bg-danger-muted px-3 py-2 flex items-center justify-between">
                       <span className="text-xs font-bold text-destructive">Linhas com Erro</span>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-destructive hover:bg-danger-muted" onClick={exportErrorsPDF}>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-destructive hover:bg-danger-muted" onClick={exportErrorsPDF}>
                         <FileDown className="h-3 w-3 mr-1" /> Exportar PDF
                       </Button>
                     </div>

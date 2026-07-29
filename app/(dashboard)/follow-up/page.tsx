@@ -424,7 +424,7 @@ export default function FollowUpPage() {
           placeholder="Buscar por número ou descrição..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="pl-10 h-9 text-sm"
+          className="pl-10 h-10 text-sm"
         />
       </div>
 
@@ -449,7 +449,7 @@ export default function FollowUpPage() {
                 {/* Row header */}
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : sol.id)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted transition-colors text-left"
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted transition-colors text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {isExpanded ? (
@@ -511,7 +511,7 @@ export default function FollowUpPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] font-bold"
+                          className="h-8 text-[11px] font-bold"
                           onClick={() => {
                             setActiveSolicitationId(sol.id);
                             setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
@@ -530,7 +530,7 @@ export default function FollowUpPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[11px] font-bold"
+                            className="h-8 text-[11px] font-bold"
                             onClick={() => {
                               setActiveSolicitationId(sol.id);
                               setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
@@ -607,7 +607,7 @@ export default function FollowUpPage() {
                                   <div className="mt-3">
                                     <Button
                                       size="sm"
-                                      className="w-full h-7 text-[11px] font-bold"
+                                      className="w-full h-8 text-[11px] font-bold"
                                       onClick={() => {
                                         setActivePurchaseOrderId(po.id);
                                         setReceiptForm({ supplier_name: po.supplier_name, invoice_value: undefined });
@@ -649,7 +649,7 @@ export default function FollowUpPage() {
                 value={solicitationForm.request_number}
                 onChange={e => setSolicitationForm(f => ({ ...f, request_number: e.target.value }))}
                 placeholder="Ex: SOL-001"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
@@ -659,7 +659,7 @@ export default function FollowUpPage() {
                 onChange={e => setDateDisplay(applyDateMask(e.target.value))}
                 placeholder="DD/MM/AAAA"
                 maxLength={10}
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
@@ -668,13 +668,13 @@ export default function FollowUpPage() {
                 value={solicitationForm.description}
                 onChange={e => setSolicitationForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="Descrição da solicitação"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <Button
               onClick={handleCreateSolicitation}
               disabled={isSubmitting}
-              className="w-full h-9 text-xs font-bold"
+              className="w-full h-10 text-xs font-bold"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -698,7 +698,7 @@ export default function FollowUpPage() {
                 value={poForm.po_number}
                 onChange={e => setPoForm(f => ({ ...f, po_number: e.target.value }))}
                 placeholder="Ex: PC-001"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
@@ -707,7 +707,7 @@ export default function FollowUpPage() {
                 value={poForm.supplier_name}
                 onChange={e => setPoForm(f => ({ ...f, supplier_name: e.target.value }))}
                 placeholder="Nome do fornecedor"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
@@ -717,13 +717,13 @@ export default function FollowUpPage() {
                 onChange={e => setPoDateDisplay(applyDateMask(e.target.value))}
                 placeholder="DD/MM/AAAA"
                 maxLength={10}
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <Button
               onClick={handleCreatePurchaseOrder}
               disabled={isSubmitting}
-              className="w-full h-9 text-xs font-bold text-primary-foreground"
+              className="w-full h-10 text-xs font-bold text-primary-foreground"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -747,7 +747,7 @@ export default function FollowUpPage() {
                 value={receiptForm.supplier_name}
                 onChange={e => setReceiptForm(f => ({ ...f, supplier_name: e.target.value }))}
                 placeholder="Fornecedor que entregou"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
@@ -758,13 +758,13 @@ export default function FollowUpPage() {
                 value={receiptForm.invoice_value ?? ''}
                 onChange={e => setReceiptForm(f => ({ ...f, invoice_value: e.target.value ? parseFloat(e.target.value) : undefined }))}
                 placeholder="0,00"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <Button
               onClick={handleCreateReceipt}
               disabled={isSubmitting}
-              className="w-full bg-success hover:bg-success-active h-9 text-xs font-bold text-success-foreground"
+              className="w-full bg-success hover:bg-success-active h-10 text-xs font-bold text-success-foreground"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -786,13 +786,13 @@ export default function FollowUpPage() {
           <div className="flex gap-2 mt-4">
             <Button
               variant="outline"
-              className="flex-1 h-9 text-xs font-bold"
+              className="flex-1 h-10 text-xs font-bold"
               onClick={() => setDeleteConfirmOpen(false)}
             >
               Cancelar
             </Button>
             <Button
-              className="flex-1 h-9 text-xs font-bold bg-destructive hover:bg-destructive-active text-destructive-foreground"
+              className="flex-1 h-10 text-xs font-bold bg-destructive hover:bg-destructive-active text-destructive-foreground"
               onClick={confirmDelete}
             >
               Excluir

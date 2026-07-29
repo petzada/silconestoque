@@ -385,7 +385,7 @@ export function LockerSheet({
                   ) : (
                     <ul className="space-y-2">
                       {history.map((entry) => (
-                        <li key={entry.id} className="bg-muted p-2.5 text-xs">
+                        <li key={entry.id} className="bg-muted p-3 text-xs">
                           <p className="font-semibold text-foreground">{entry.employee?.full_name || '—'}</p>
                           <p className="text-muted-foreground">
                             {formatDateTime(entry.started_at)} — {entry.ended_at ? formatDateTime(entry.ended_at) : 'Atual'}

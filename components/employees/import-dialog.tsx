@@ -65,7 +65,7 @@ function MissingList({
 
   return (
     <div className="flex-1 space-y-2 border border-warning/40 bg-warning-muted p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
+      <p className="flex items-center gap-2 text-xs font-semibold text-warning">
         <AlertTriangle className="h-3.5 w-3.5" />
         {title}
       </p>
@@ -79,7 +79,7 @@ function MissingList({
           </li>
         ))}
       </ul>
-      <Button type="button" variant="outline" size="sm" className="h-7 w-full text-xs" onClick={onManage}>
+      <Button type="button" variant="outline" size="sm" className="h-8 w-full text-xs" onClick={onManage}>
         {manageLabel}
       </Button>
     </div>
@@ -301,7 +301,7 @@ export function EmployeeImportDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 text-xs"
+                      className="h-8 text-xs"
                       onClick={exportErrorsPdf}
                     >
                       <FileDown className="h-3.5 w-3.5" /> Exportar PDF

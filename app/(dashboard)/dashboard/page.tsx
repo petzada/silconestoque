@@ -39,7 +39,14 @@ import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { CHART_TOOLTIP_STYLE } from '@/lib/chart';
+import {
+  CHART_TOOLTIP_STYLE,
+  CHART_GRID_PROPS,
+  CHART_AXIS_TICK_STYLE,
+  CHART_CURSOR_FILL,
+  CHART_SINGLE_SERIES_COLOR,
+  getSequentialRampColor,
+} from '@/lib/chart';
 import type { Product, Movement, Category } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
@@ -330,7 +337,7 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold text-foreground">Não foi possível carregar os dados do dashboard</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-md">{loadError}</p>
             </div>
-            <Button onClick={fetchData} size="sm" className="mt-2 gap-1.5">
+            <Button onClick={fetchData} size="sm" className="mt-2 gap-2">
               <RotateCw className="h-3.5 w-3.5" />
               Tentar novamente
             </Button>
@@ -383,7 +390,7 @@ export default function DashboardPage() {
         {kpis.map((kpi, idx) => (
           <Card key={idx} className="gap-0 py-0 overflow-hidden">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-11 h-11 bg-muted flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-muted flex items-center justify-center shrink-0">
                 <kpi.icon className={cn("h-5 w-5", kpi.color)} />
               </div>
               <div className="min-w-0">
@@ -411,7 +418,7 @@ export default function DashboardPage() {
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={financeStats.barData} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} stroke="var(--border)" vertical={false} />
+                  <CartesianGrid {...CHART_GRID_PROPS} horizontal vertical={false} />
                   <XAxis type="number" hide />
                   <YAxis
                     dataKey="name"
@@ -419,16 +426,16 @@ export default function DashboardPage() {
                     width={100}
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fontWeight: 500, fill: 'var(--muted-foreground)' }}
+                    tick={{ ...CHART_AXIS_TICK_STYLE, fontWeight: 500 }}
                   />
                   <Tooltip
-                    cursor={{ fill: 'var(--muted)' }}
+                    cursor={{ fill: CHART_CURSOR_FILL }}
                     contentStyle={CHART_TOOLTIP_STYLE}
                     formatter={(value: unknown) => [formatCurrency(Number(value) || 0), 'Total']}
                   />
                   <Bar
                     dataKey="value"
-                    fill="var(--brand)"
+                    fill={CHART_SINGLE_SERIES_COLOR}
                     radius={0}
                     barSize={18}
                     label={{
@@ -474,11 +481,16 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-muted-foreground w-[140px] truncate" title={item.name}>
                       {item.name.length > 18 ? `${item.name.substring(0, 18)}...` : item.name}
                     </span>
-                    <div className="flex-1 h-5 bg-muted overflow-hidden">
+                    {/* Ranking by magnitude is ordinal, not categorical (V1):
+                        a sequential mono ramp keyed to rank, no full-width
+                        track behind it (a filled track reads as "100% of
+                        something", which this bar isn't measuring). */}
+                    <div className="flex-1 h-5">
                       <div
-                        className="h-full bg-primary transition-[width]"
+                        className="h-full transition-[width]"
                         style={{
                           width: `${(item.value / financeStats.maxProductValue) * 100}%`,
+                          backgroundColor: getSequentialRampColor(index, financeStats.productListData.length),
                         }}
                       />
                     </div>

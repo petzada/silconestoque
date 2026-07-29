@@ -51,10 +51,10 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
-  Search,
   Check,
   ChevronsUpDown,
   Trash2,
@@ -405,7 +405,7 @@ export default function MovementsPage() {
         sortable: true,
         accessor: (movement) => movement.entity_name || '',
         cell: (movement) => (
-          <div className="flex max-w-[200px] items-center gap-1.5">
+          <div className="flex max-w-[200px] items-center gap-2">
             {movement.employee_id && (
               <span title="Colaborador cadastrado" className="shrink-0 text-primary">
                 <UserCheck className="h-3.5 w-3.5" />
@@ -498,42 +498,40 @@ export default function MovementsPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 border border-border bg-card p-2.5">
-        <div className="flex flex-col items-center gap-2 sm:flex-row">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Produto, fornecedor ou NF..."
-              value={filters.searchTerm}
-              onChange={(event) => setFilters((prev) => ({ ...prev, searchTerm: event.target.value }))}
-              className="h-10 border-border pl-9 text-sm"
-            />
-          </div>
-          <Tabs
-            value={filters.type}
-            onValueChange={(value) =>
-              setFilters((prev) => ({
-                ...prev,
-                type: value as MovementFilters['type'],
-              }))
-            }
-            className="shrink-0"
-          >
-            <TabsList className="h-10 bg-muted p-1">
-              <TabsTrigger value="all" className="h-8 px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground">
-                TODAS
-              </TabsTrigger>
-              <TabsTrigger value="IN" className="h-8 px-4 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                ENTRADAS
-              </TabsTrigger>
-              <TabsTrigger value="OUT" className="h-8 px-4 text-xs font-bold data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
-                SAIDAS
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <FilterBar
+        search={{
+          value: filters.searchTerm,
+          onChange: (value) => setFilters((prev) => ({ ...prev, searchTerm: value })),
+          placeholder: 'Produto, fornecedor ou NF...',
+        }}
+      >
+        <Tabs
+          value={filters.type}
+          onValueChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              type: value as MovementFilters['type'],
+            }))
+          }
+          className="shrink-0"
+        >
+          {/* Carbon Tabs default (underline, weight 600 on selected) — no
+              capsule override. The three tabs are equal in color; a tab is
+              not an error state, so SAIDAS no longer borrows bg-destructive. */}
+          <TabsList>
+            <TabsTrigger value="all" className="text-xs font-bold">
+              TODAS
+            </TabsTrigger>
+            <TabsTrigger value="IN" className="text-xs font-bold">
+              ENTRADAS
+            </TabsTrigger>
+            <TabsTrigger value="OUT" className="text-xs font-bold">
+              SAIDAS
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2">
           <Select
             value={filters.month}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, month: value }))}
@@ -603,7 +601,7 @@ export default function MovementsPage() {
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredMovements}

@@ -157,7 +157,7 @@ export default function PurchaseOrdersPage() {
         <Card className="overflow-hidden py-0">
           <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-muted flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+              <div className="w-10 h-10 bg-muted flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
               <h2 className="text-display text-lg text-foreground">Sugestão Emergencial</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Itens abaixo do estoque mínimo de segurança.</p>
@@ -171,7 +171,7 @@ export default function PurchaseOrdersPage() {
         <Card className="overflow-hidden py-0">
           <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-muted flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
+              <div className="w-10 h-10 bg-muted flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
               <h2 className="text-display text-lg text-foreground">Sugestão Mensal</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Reposição programada para atingir o estoque máximo.</p>
@@ -202,7 +202,7 @@ export default function PurchaseOrdersPage() {
               <TableBody>
                 {orderItems.map(i => (
                   <TableRow key={i.product_id} className="border-border">
-                    <TableCell className="py-2.5"><span className="font-bold text-foreground text-sm">{i.product_name}</span></TableCell>
+                    <TableCell className="py-3"><span className="font-bold text-foreground text-sm">{i.product_name}</span></TableCell>
                     <TableCell className="text-center text-xs font-bold text-muted-foreground">{i.current_qty}</TableCell>
                     <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-foreground text-background text-xs font-bold">{i.order_qty}</span></TableCell>
                     <TableCell className="text-right font-bold text-foreground text-sm">{formatCurrency(i.total_cost)}</TableCell>

@@ -176,6 +176,14 @@
   --chart-4: #9f1853;
   --chart-5: #fa4d56;
 
+  /* Chart-only alert/state steps (V1): orange-40 and yellow-30 from
+     @carbon/colors, used for a 4-tier severity ramp (red -> orange -> yellow
+     -> green) in lib/chart.ts's ALERT_PALETTE. Distinct from --warning
+     (tuned for AA-safe standalone text); these are always paired with a
+     label, matching Carbon's own alert-palette convention exactly. */
+  --chart-alert-orange: #ff832b;
+  --chart-alert-yellow: #f1c21b;
+
   /* Sidebar: clear per V3 — active item is a left rule + weight 600 at the
      call site, never a filled blue background. Not inverted to charcoal. */
   --sidebar: #ffffff;

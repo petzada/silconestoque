@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -19,12 +18,12 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   FileDown,
-  Search,
   PackageSearch,
   Inbox,
   ShieldAlert,
@@ -337,44 +336,34 @@ export default function ReplenishmentQueuePage() {
         </Card>
       </div>
 
-      <div className="border border-border bg-card p-2.5">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por produto ou SKU..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 border-border pl-9 text-sm"
-            />
-          </div>
+      <FilterBar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por produto ou SKU...' }}
+      >
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as categorias</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as categorias</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
-            <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[180px]">
-              <SelectValue placeholder="Urgencia" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="zerado">Zerado</SelectItem>
-              <SelectItem value="critico">Critico</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
+          <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[180px]">
+            <SelectValue placeholder="Urgencia" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="zerado">Zerado</SelectItem>
+            <SelectItem value="critico">Critico</SelectItem>
+          </SelectContent>
+        </Select>
+      </FilterBar>
 
       <DataTable
         data={replenishmentItems}

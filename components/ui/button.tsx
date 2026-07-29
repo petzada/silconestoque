@@ -46,7 +46,7 @@ const buttonVariants = cva(
         // sites today (checked before changing), so this is a safe fix.
         default: "h-10 px-4 py-3 has-[>svg]:px-4",
         xs: "h-8 gap-1 px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 px-3 has-[>svg]:px-2.5",
+        sm: "h-8 gap-2 px-3 has-[>svg]:px-2.5",
         lg: "h-12 px-6 has-[>svg]:px-4",
         icon: "size-10",
         "icon-xs": "size-8 [&_svg:not([class*='size-'])]:size-3",

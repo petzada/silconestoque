@@ -96,7 +96,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sheet-header"
       // 48px SidePanel header with a bottom hairline separating it from body.
       className={cn(
-        "flex min-h-12 flex-col justify-center gap-1.5 border-b border-border px-4 py-3",
+        "flex min-h-12 flex-col justify-center gap-2 border-b border-border px-4 py-3",
         className
       )}
       {...props}

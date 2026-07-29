@@ -52,12 +52,12 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import { SimpleCrudDialog } from '@/components/employees/simple-crud-dialog';
 import { EmployeeImportDialog } from '@/components/employees/import-dialog';
 import {
   Plus,
   Pencil,
-  Search,
   Settings2,
   Building2,
   Upload,
@@ -550,16 +550,9 @@ export default function EmployeesPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 border border-border bg-card p-2.5 sm:flex-row sm:items-center">
-        <div className="relative w-full flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            className="h-10 border-border pl-9 text-sm"
-          />
-        </div>
+      <FilterBar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por nome...' }}
+      >
         <Select value={filterDepartment} onValueChange={setFilterDepartment}>
           <SelectTrigger className="h-10 w-full border-border text-sm sm:w-[200px]">
             <SelectValue placeholder="Setor" />
@@ -596,7 +589,7 @@ export default function EmployeesPage() {
             <SelectItem value="inactive">Desligados</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredEmployees}

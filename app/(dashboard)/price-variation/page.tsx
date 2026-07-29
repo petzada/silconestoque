@@ -26,6 +26,7 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import { toast } from 'sonner';
 import {
   ResponsiveContainer,
@@ -40,11 +41,10 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  Search,
   CalendarRange,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CHART_TOOLTIP_STYLE } from '@/lib/chart';
+import { CHART_TOOLTIP_STYLE, CHART_GRID_PROPS, CHART_AXIS_TICK_STYLE, CHART_SINGLE_SERIES_COLOR } from '@/lib/chart';
 import type { PriceHistory, Product, Category } from '@/lib/types';
 
 type DirectionFilter = 'all' | 'increases' | 'decreases';
@@ -352,75 +352,72 @@ export default function PriceVariationPage() {
         </Card>
       </div>
 
-      <div className="border border-border bg-card p-2.5">
-        <div className="grid grid-cols-1 gap-2 xl:grid-cols-5">
-          <div className="relative xl:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por produto ou NF..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 border-border pl-9 text-sm"
-            />
-          </div>
+      <FilterBar
+        search={{
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: 'Buscar por produto ou NF...',
+          className: 'sm:w-[280px]',
+        }}
+      >
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="h-10 w-full border-border text-xs font-bold sm:w-[200px]">
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as categorias</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="h-10 border-border text-xs font-bold">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as categorias</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select
+          value={selectedDirection}
+          onValueChange={(value) => setSelectedDirection(value as DirectionFilter)}
+        >
+          <SelectTrigger className="h-10 w-full border-border text-xs font-bold sm:w-[160px]">
+            <SelectValue placeholder="Direcao" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="increases">Aumentos</SelectItem>
+            <SelectItem value="decreases">Reducoes</SelectItem>
+          </SelectContent>
+        </Select>
 
-          <Select
-            value={selectedDirection}
-            onValueChange={(value) => setSelectedDirection(value as DirectionFilter)}
-          >
-            <SelectTrigger className="h-10 border-border text-xs font-bold">
-              <SelectValue placeholder="Direcao" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="increases">Aumentos</SelectItem>
-              <SelectItem value="decreases">Reducoes</SelectItem>
-            </SelectContent>
-          </Select>
+        <Select value={minThreshold} onValueChange={setMinThreshold}>
+          <SelectTrigger className="h-10 w-full border-border text-xs font-bold sm:w-[160px]">
+            <SelectValue placeholder="Limite minimo" />
+          </SelectTrigger>
+          <SelectContent>
+            {THRESHOLD_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}%
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select value={minThreshold} onValueChange={setMinThreshold}>
-            <SelectTrigger className="h-10 border-border text-xs font-bold">
-              <SelectValue placeholder="Limite minimo" />
-            </SelectTrigger>
-            <SelectContent>
-              {THRESHOLD_OPTIONS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}%
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {/* Own full-width row: a w-full flex child always starts a new line
+            inside FilterBar's flex-wrap container. */}
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
           <Input
             type="date"
             value={dateFrom}
             onChange={(event) => setDateFrom(event.target.value)}
-            className="h-10 border-border text-sm"
+            className="h-10 border-border text-sm sm:w-[200px]"
           />
           <Input
             type="date"
             value={dateTo}
             onChange={(event) => setDateTo(event.target.value)}
-            className="h-10 border-border text-sm"
+            className="h-10 border-border text-sm sm:w-[200px]"
           />
         </div>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredHistory}
@@ -456,14 +453,14 @@ export default function PriceVariationPage() {
               <div className="h-[260px] border border-border bg-card p-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <CartesianGrid {...CHART_GRID_PROPS} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                      tick={{ ...CHART_AXIS_TICK_STYLE, fontSize: 10 }}
                       minTickGap={20}
                     />
                     <YAxis
-                      tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                      tick={{ ...CHART_AXIS_TICK_STYLE, fontSize: 10 }}
                       tickFormatter={(value) => formatCurrency(Number(value))}
                       width={90}
                     />
@@ -475,9 +472,9 @@ export default function PriceVariationPage() {
                     <Line
                       type="monotone"
                       dataKey="price"
-                      stroke="var(--primary)"
+                      stroke={CHART_SINGLE_SERIES_COLOR}
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: 'var(--primary)' }}
+                      dot={{ r: 3, fill: CHART_SINGLE_SERIES_COLOR }}
                       activeDot={{ r: 5 }}
                     />
                   </LineChart>

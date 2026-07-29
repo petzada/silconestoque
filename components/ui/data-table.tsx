@@ -151,7 +151,9 @@ export function DataTable<T>({
 
   const renderSortIcon = (column: DataTableColumn<T>) => {
     if (!column.sortable) return null;
-    if (sortKey !== column.key) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />;
+    // Sem alpha: e o unico indicio de que a coluna e ordenavel, entao precisa
+    // ser legivel. --muted-foreground a 60% sobre branco cai para ~#999.
+    if (sortKey !== column.key) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />;
     return sortDirection === 'asc' ? (
       <ArrowUp className="h-3.5 w-3.5 text-foreground" />
     ) : (
@@ -230,7 +232,7 @@ export function DataTable<T>({
                     type="button"
                     className={cn(
                       // Carbon focus: inset 2px ring, not an outset ring/border (E.4).
-                      'inline-flex items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]',
+                      'inline-flex items-center gap-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]',
                       column.align === 'right' && 'ml-auto'
                     )}
                     onClick={() => handleSort(column)}
