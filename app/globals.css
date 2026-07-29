@@ -238,7 +238,11 @@
      DESIGN.md {typography.eyebrow} (sentence case, weight 400, 0.16px
      tracking) instead of the old uppercase/widely-tracked treatment. Still
      size-agnostic: every call site pairs this with its own text-[Npx]. */
-  .text-caption-uppercase {
+  /* Carbon caption-01: 12px / 400 / 0.16px, sentence case. Carbon nao usa o
+     eyebrow all-caps com tracking (DESIGN.md), por isso a classe nao se chama
+     mais "-uppercase": o nome antigo passou a mentir quando o utilitario foi
+     reescrito, e nome que mente vira bug quando alguem confiar nele. */
+  .text-caption {
     font-weight: 400;
     letter-spacing: 0.16px;
     text-transform: none;

@@ -163,7 +163,7 @@ function WelcomeScreen({
 }) {
   return (
     <div className="flex flex-1 flex-col pb-10">
-      <div className="text-caption-uppercase text-[12px] text-muted-foreground">
+      <div className="text-caption text-xs text-muted-foreground">
         Silcon Ambiental
       </div>
 
@@ -285,7 +285,7 @@ function QuizScreen({
           Pergunta {index + 1}
           <span className="text-muted-foreground"> de {QUIZ_TOTAL}</span>
         </span>
-        <span className="text-caption-uppercase text-[11px] text-muted-foreground">
+        <span className="text-caption text-xs text-muted-foreground">
           Segurança
         </span>
       </div>
@@ -422,7 +422,7 @@ function ResultScreen({
         </p>
 
         <Card className="mt-6 w-full p-6">
-          <div className="text-caption-uppercase text-[11px] text-muted-foreground">
+          <div className="text-caption text-xs text-muted-foreground">
             Sua pontuação
           </div>
           <div className="mt-1 text-stat-display text-[52px] text-foreground">

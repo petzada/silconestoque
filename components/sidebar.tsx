@@ -109,7 +109,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             <h1 className="text-display text-sm leading-tight text-foreground truncate">
               Silcon Ambiental
             </h1>
-            <p className="text-caption-uppercase text-[10px] text-muted-foreground truncate">
+            <p className="text-caption text-xs text-muted-foreground truncate">
               Almoxarifado
             </p>
           </div>
@@ -123,7 +123,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                 {/* Rotulo de secao sem alpha: --muted-foreground a 70% sobre
                     canvas branco resolve para ~#8a8a8a e reprova AA (~3,4:1). */}
                 {section.label && (
-                  <p className="text-caption-uppercase text-xs text-muted-foreground px-3 pb-1">
+                  <p className="text-caption text-xs text-muted-foreground px-3 pb-1">
                     {section.label}
                   </p>
                 )}
