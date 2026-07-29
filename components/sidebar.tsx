@@ -189,7 +189,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             onClick={logout}
             title="Sair"
             aria-label="Sair"
-            className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-danger-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+            className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:bg-danger-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
           >
             <LogOut className="h-4 w-4" />
           </button>

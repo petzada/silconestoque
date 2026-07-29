@@ -64,7 +64,7 @@ function MissingList({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex-1 space-y-2 border border-warning/40 bg-warning-muted p-3">
+    <div className="flex-1 space-y-2 border border-warning bg-warning-muted p-3">
       <p className="flex items-center gap-2 text-xs text-warning">
         <AlertTriangle className="h-3.5 w-3.5" />
         {title}
