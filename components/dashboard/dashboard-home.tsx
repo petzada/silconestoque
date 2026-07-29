@@ -324,6 +324,11 @@ function DashboardSkeleton({ tiles }: { tiles: number }) {
         {Array.from({ length: tiles }).map((_, index) => (
           <div key={index} className="space-y-2 border border-border bg-card p-4">
             <Skeleton className="h-3 w-24" />
+            {/* h-9 (36px) é a altura da linha do `text-3xl` do KpiTile, não a
+                altura de um controle: a escala 32/40/48 da Carbon governa
+                componentes interativos. Forçar 40px aqui faria o skeleton
+                deixar de espelhar o conteúdo e reintroduziria o deslocamento
+                de layout que ele existe para evitar. */}
             <Skeleton className="h-9 w-32" />
             <Skeleton className="h-3 w-40" />
           </div>
