@@ -59,6 +59,7 @@ import {
   CheckCircle2,
   XCircle,
   RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -732,10 +733,12 @@ export default function ProductsPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Carbon Tag (V4): pale fill + dark text of the same color family, never a
+  // solid fill with light text. Sentence case per DESIGN.md (no all-caps tags).
   const getStatus = (p: Product) => {
-    if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-destructive text-destructive-foreground' };
-    if (p.current_qty < p.min_stock) return { label: 'CRITICO', color: 'bg-warning text-warning-foreground' };
-    return { label: 'ESTAVEL', color: 'bg-success-muted text-success' };
+    if (p.current_qty === 0) return { label: 'Zerado', color: 'bg-danger-muted text-destructive' };
+    if (p.current_qty < p.min_stock) return { label: 'Crítico', color: 'bg-warning-muted text-warning' };
+    return { label: 'Estável', color: 'bg-success-muted text-success' };
   };
 
   const columns = useMemo<DataTableColumn<Product>[]>(
@@ -746,7 +749,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.sku_code || '',
         cell: (product) => (
-          <span className="bg-muted px-2 py-1 font-mono text-xs font-bold text-muted-foreground">
+          <span className="bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
             {product.sku_code || '---'}
           </span>
         ),
@@ -760,11 +763,11 @@ export default function ProductsPage() {
           <div className="flex items-center gap-2">
             <TruncatedCell
               value={product.name}
-              className={cn('max-w-[300px] font-bold text-foreground', !product.is_active && 'opacity-50')}
+              className={cn('max-w-[300px] text-foreground', !product.is_active && 'opacity-50')}
             />
             {!product.is_active && (
-              <Badge variant="outline" className="shrink-0 border-none bg-muted px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
-                DESATIVADO
+              <Badge variant="outline" className="shrink-0 border-none bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">
+                Desativado
               </Badge>
             )}
           </div>
@@ -776,7 +779,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.category?.name || '',
         cell: (product) => (
-          <TruncatedCell value={product.category?.name || '-'} className="max-w-[240px] text-xs font-semibold text-muted-foreground" />
+          <TruncatedCell value={product.category?.name || '-'} className="max-w-[240px] text-xs text-muted-foreground" />
         ),
       },
       {
@@ -787,8 +790,8 @@ export default function ProductsPage() {
         align: 'center',
         cell: (product) => (
           <div className="flex flex-col items-center">
-            <span className="text-sm font-bold text-foreground leading-none">{product.current_qty}</span>
-            <span className="mt-0.5 text-xs font-bold uppercase text-muted-foreground">{product.unit}</span>
+            <span className="text-sm text-foreground leading-none">{product.current_qty}</span>
+            <span className="mt-0.5 text-xs text-muted-foreground">{product.unit}</span>
           </div>
         ),
       },
@@ -798,7 +801,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.cost_price || 0,
         align: 'right',
-        cell: (product) => <span className="font-bold text-foreground text-sm">{formatCurrency(product.cost_price)}</span>,
+        cell: (product) => <span className="text-foreground text-sm">{formatCurrency(product.cost_price)}</span>,
       },
       {
         key: 'status',
@@ -809,7 +812,7 @@ export default function ProductsPage() {
         cell: (product) => {
           const status = getStatus(product);
           return (
-            <Badge className={cn('border-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider', status.color)}>
+            <Badge className={cn('border-none px-2 py-0.5 text-xs', status.color)}>
               {status.label}
             </Badge>
           );
@@ -850,7 +853,7 @@ export default function ProductsPage() {
                 size="icon"
                 title="Desativar produto"
                 aria-label="Desativar produto"
-                className="h-8 w-8 text-destructive/70 hover:bg-danger-muted"
+                className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
                 onClick={() => handleOpenDeleteDialog(product)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -902,20 +905,20 @@ export default function ProductsPage() {
         search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por nome ou SKU...' }}
       >
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border text-sm font-semibold">
+          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="font-semibold">Todas as categorias</SelectItem>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as typeof filterStatus)}>
-          <SelectTrigger className="w-full sm:w-[170px] h-10 border-border text-sm font-semibold">
+          <SelectTrigger className="w-full sm:w-[170px] h-10 border-border">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="active" className="font-semibold">Ativos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
             <SelectItem value="inactive">Desativados</SelectItem>
             <SelectItem value="all">Todos</SelectItem>
           </SelectContent>
@@ -934,8 +937,8 @@ export default function ProductsPage() {
       {/* Dialog: Novo/Editar Produto */}
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-md p-6">
-          <DialogHeader><DialogTitle className="text-lg font-bold flex items-center gap-2">
-            {editingProduct ? <><Pencil className="h-4 w-4 text-muted-foreground" /> Editar Material</> : <><Plus className="h-4 w-4 text-primary" /> Novo Material</>}
+          <DialogHeader><DialogTitle className="flex items-center gap-2">
+            {editingProduct ? <><Pencil className="h-4 w-4 text-muted-foreground" /> Editar Material</> : <><Plus className="h-4 w-4 text-muted-foreground" /> Novo Material</>}
           </DialogTitle></DialogHeader>
           <Form {...form}>
             <form className="grid gap-4 pt-4" onSubmit={(event) => void handleSave(event)}>
@@ -944,7 +947,7 @@ export default function ProductsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nome do Produto</FormLabel>
+                    <FormLabel className="pl-1 text-muted-foreground">Nome do Produto</FormLabel>
                     <FormControl>
                       <Input {...field} className="h-10 bg-muted" autoFocus />
                     </FormControl>
@@ -958,7 +961,7 @@ export default function ProductsPage() {
                   name="sku_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">SKU</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">SKU</FormLabel>
                       <FormControl>
                         <Input {...field} className="h-10 bg-muted" />
                       </FormControl>
@@ -971,7 +974,7 @@ export default function ProductsPage() {
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Unid. Medida</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Unid. Medida</FormLabel>
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <SelectTrigger className="h-10 border-border bg-muted"><SelectValue /></SelectTrigger>
@@ -988,7 +991,7 @@ export default function ProductsPage() {
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Categoria</FormLabel>
+                    <FormLabel className="pl-1 text-muted-foreground">Categoria</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger className="h-10 border-border bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -1005,7 +1008,7 @@ export default function ProductsPage() {
                   name="min_stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Minimo</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Minimo</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -1025,7 +1028,7 @@ export default function ProductsPage() {
                   name="max_stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Maximo</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Maximo</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -1042,8 +1045,8 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="ghost" className="h-10 px-6 font-bold" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" className="h-10 px-8 font-bold" disabled={isSaving}>Salvar</Button>
+                <Button type="button" variant="ghost" className="h-10 px-6" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
+                <Button type="submit" className="h-10 px-8" disabled={isSaving}>Salvar</Button>
               </div>
             </form>
           </Form>
@@ -1065,8 +1068,8 @@ export default function ProductsPage() {
       <Dialog open={isImportDialogOpen} onOpenChange={handleCloseImportDialog}>
         <DialogContent className={cn('p-6', validationResult ? 'max-w-2xl' : 'max-w-md')}>
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Upload className="h-4 w-4 text-primary" /> Importar Produtos via CSV
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-4 w-4 text-muted-foreground" /> Importar Produtos via CSV
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               Colunas: Nome, Categoria (ou Setor), Unidade (obrigatórias) | SKU, Minimo, Maximo, Custo, Estoque (opcionais).
@@ -1085,14 +1088,15 @@ export default function ProductsPage() {
               />
               <label htmlFor="csv-upload" className="cursor-pointer">
                 <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm font-bold text-muted-foreground">{importFile ? importFile.name : 'Clique para selecionar arquivo'}</p>
+                <p className="text-sm text-muted-foreground">{importFile ? importFile.name : 'Clique para selecionar arquivo'}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">Formato CSV separado por ponto e vírgula (;)</p>
               </label>
             </div>
 
             {isValidating && (
-              <div className="text-center py-4">
-                <p className="text-sm font-bold text-muted-foreground animate-pulse">Validando arquivo...</p>
+              <div className="flex items-center justify-center gap-2 py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Validando arquivo...</p>
               </div>
             )}
 
@@ -1102,14 +1106,14 @@ export default function ProductsPage() {
                   <div className="flex-1 p-3 bg-success-muted flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
-                      <p className="text-sm font-bold text-success">{validationResult.valid.length} válidos</p>
+                      <p className="text-sm text-success">{validationResult.valid.length} válidos</p>
                       <p className="text-[10px] text-success">Prontos para importar</p>
                     </div>
                   </div>
                   <div className="flex-1 p-3 bg-danger-muted flex items-center gap-2">
                     <XCircle className="h-5 w-5 text-destructive" />
                     <div>
-                      <p className="text-sm font-bold text-destructive">{validationResult.errors.length} com erro</p>
+                      <p className="text-sm text-destructive">{validationResult.errors.length} com erro</p>
                       <p className="text-[10px] text-destructive">Verifique abaixo</p>
                     </div>
                   </div>
@@ -1118,8 +1122,8 @@ export default function ProductsPage() {
                 {validationResult.errors.length > 0 && (
                   <div className="border overflow-hidden">
                     <div className="bg-danger-muted px-3 py-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-destructive">Linhas com Erro</span>
-                      <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-destructive hover:bg-danger-muted" onClick={exportErrorsPDF}>
+                      <span className="text-xs text-destructive">Linhas com Erro</span>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:bg-danger-muted" onClick={exportErrorsPDF}>
                         <FileDown className="h-3 w-3 mr-1" /> Exportar PDF
                       </Button>
                     </div>
@@ -1127,19 +1131,19 @@ export default function ProductsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted">
-                            <TableHead className="py-2 px-3 text-[10px] font-bold w-[60px]">Linha</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Produto</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Categoria</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Erro</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px] w-[60px]">Linha</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px]">Produto</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px]">Categoria</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px]">Erro</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {validationResult.errors.slice(0, 20).map((e, i) => (
                             <TableRow key={i} className="border-border">
                               <TableCell className="py-1.5 px-3 text-xs font-mono">{e.line}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs font-medium truncate max-w-[120px]">{e.name}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs truncate max-w-[120px]">{e.name}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{e.category}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs text-destructive font-medium">{e.reason}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-destructive">{e.reason}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1154,9 +1158,9 @@ export default function ProductsPage() {
             )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
+              <Button variant="ghost" className="h-10" onClick={handleCloseImportDialog}>Cancelar</Button>
               <Button
-                className="h-10 px-8 text-xs font-bold"
+                className="h-10 px-8"
                 onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
@@ -1171,18 +1175,17 @@ export default function ProductsPage() {
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
         <DialogContent className="max-w-lg p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2">
               <History className="h-4 w-4 text-success" /> Histórico de Preços
             </DialogTitle>
             {selectedProductForHistory && (
-              <p className="text-sm text-muted-foreground font-medium">{selectedProductForHistory.name}</p>
+              <p className="text-sm text-muted-foreground">{selectedProductForHistory.name}</p>
             )}
           </DialogHeader>
           <div className="pt-4">
             {priceHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <History className="h-12 w-12 mx-auto opacity-30 mb-2" />
-                <p className="text-xs font-bold">Nenhuma variação de preço registrada</p>
+              <div className="text-center py-8">
+                <p className="text-base font-normal text-foreground">Nenhuma variação de preço registrada</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -1192,16 +1195,16 @@ export default function ProductsPage() {
                   return (
                     <div key={h.id} className="flex items-center justify-between p-3 bg-muted">
                       <div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">NF: {h.invoice_number || '---'}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           {h.old_price && <p className="text-[10px] text-muted-foreground line-through">{formatCurrency(h.old_price)}</p>}
-                          <p className="text-sm font-bold text-foreground">{formatCurrency(h.new_price)}</p>
+                          <p className="text-sm text-foreground">{formatCurrency(h.new_price)}</p>
                         </div>
                         {h.old_price && (
-                          <Badge className={cn("font-bold text-[10px] h-6 px-2 border-none", isIncrease ? "bg-danger-muted text-destructive" : "bg-success-muted text-success")}>
+                          <Badge className={cn("text-[10px] h-6 px-2 border-none", isIncrease ? "bg-danger-muted text-destructive" : "bg-success-muted text-success")}>
                             {isIncrease ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                             {Math.abs(variation).toFixed(0)}%
                           </Badge>
