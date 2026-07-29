@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage, isPostgrestLikeError } from '@/lib/db-error';
 import type { Employee, Locker, LockerKind, Department, Role } from '@/lib/types';
 
 // ---------- Types ----------
@@ -47,17 +48,24 @@ export function formatDateTime(value: string): string {
 }
 
 export function friendlyDbError(error: unknown, fallback: string): string {
-  const message = error instanceof Error ? error.message : '';
-  if (message.includes('uniq_active_assignment_per_locker')) {
-    return 'Este armário acabou de ser ocupado.';
+  // 23505 (unique_violation) cobre três índices distintos aqui — só o texto
+  // da violação (que carrega o nome da constraint) permite diferenciá-los;
+  // o código sozinho não basta. P0001 (RAISE EXCEPTION de
+  // transfer_locker_assignment, ex.: "Ocupação não encontrada ou já
+  // encerrada") cai no fallback genérico do helper, que propaga a mensagem
+  // do banco como está.
+  if (isPostgrestLikeError(error) && error.code === '23505' && typeof error.message === 'string') {
+    if (error.message.includes('uniq_active_assignment_per_locker')) {
+      return 'Este armário acabou de ser ocupado.';
+    }
+    if (error.message.includes('uniq_active_assignment_per_employee_kind')) {
+      return 'Este colaborador já possui um armário.';
+    }
+    if (error.message.includes('uniq_lockers_kind_number')) {
+      return 'Já existe um armário com esse número.';
+    }
   }
-  if (message.includes('uniq_active_assignment_per_employee_kind')) {
-    return 'Este colaborador já possui um armário.';
-  }
-  if (message.includes('uniq_lockers_kind_number') || message.includes('duplicate key')) {
-    return 'Já existe um armário com esse número.';
-  }
-  return fallback;
+  return getDbErrorMessage(error, fallback);
 }
 
 // ---------- Data fetching ----------

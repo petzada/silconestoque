@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -122,18 +123,15 @@ function joinWithAnd(items: string[]): string {
   return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
 }
 
+// Delega ao helper central (lib/db-error.ts): supabase-js devolve o erro do
+// PostgREST como objeto plano, nunca como instância de Error, então
+// `error instanceof Error` (o que este arquivo fazia antes) é sempre falso e
+// nenhuma das mensagens abaixo nunca aparecia.
 function friendlyDbError(error: unknown, fallback: string): string {
-  const message = error instanceof Error ? error.message : '';
-  if (message.includes('uniq_employees_full_name')) {
-    return 'Já existe um colaborador com esse nome.';
-  }
-  if (message.includes('duplicate key') || message.includes('unique constraint')) {
-    return 'Já existe um registro com esses dados.';
-  }
-  if (message.includes('foreign key') || message.includes('violates foreign key')) {
-    return 'Este registro está em uso e não pode ser removido.';
-  }
-  return fallback;
+  return getDbErrorMessage(error, fallback, {
+    '23505': 'Já existe um colaborador com esse nome.',
+    '23503': 'Este registro está em uso e não pode ser removido.',
+  });
 }
 
 export default function EmployeesPage() {
@@ -293,8 +291,11 @@ export default function EmployeesPage() {
       setIsOffboardDialogOpen(false);
       setEmployeeToOffboard(null);
       await fetchData();
-    } catch {
-      toast.error('Erro ao desligar colaborador');
+    } catch (error: unknown) {
+      // deactivate_employee (RPC) levanta RAISE EXCEPTION com texto em
+      // português pronto para o usuário (ex.: "Colaborador não encontrado");
+      // sem capturar `error` aqui, esse texto nunca chegava à tela.
+      toast.error(friendlyDbError(error, 'Erro ao desligar colaborador'));
     } finally {
       setIsOffboarding(false);
     }

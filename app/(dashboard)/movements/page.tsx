@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage, isPostgrestLikeError } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -290,14 +291,22 @@ export default function MovementsPage() {
       form.reset(initialFormValues);
       await fetchData();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('stock')) {
-        toast.error('Estoque insuficiente');
-      } else if (message.includes('foreign key') || message.includes('employee_id')) {
+      // Antes isto era `error instanceof Error`, sempre falso para erro de
+      // banco (ver lib/db-error.ts), então nem "Estoque insuficiente" nem o
+      // aviso de colaborador inválido chegavam a aparecer — só o fallback.
+      // O 23503 continua tendo ramo próprio porque, além da mensagem, ele
+      // precisa recarregar a lista de colaboradores.
+      const code = isPostgrestLikeError(error) ? error.code : undefined;
+      if (code === '23503') {
         toast.error('Colaborador selecionado não é mais válido. A lista foi atualizada.');
         await fetchData();
       } else {
-        toast.error('Erro ao salvar');
+        // A trava de estoque é uma RAISE EXCEPTION do trigger
+        // update_product_quantity (schema.sql), cuja mensagem original está em
+        // inglês ('Insufficient stock for this product') — daí o override.
+        toast.error(
+          getDbErrorMessage(error, 'Erro ao salvar', { P0001: 'Estoque insuficiente' })
+        );
       }
     } finally {
       setIsSaving(false);

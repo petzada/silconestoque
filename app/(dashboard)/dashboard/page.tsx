@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 // Force UI Update
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -140,7 +141,9 @@ export default function DashboardPage() {
         categories: categoriesRes.data || [],
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido ao consultar o banco de dados.';
+      // `err instanceof Error` é sempre falso para erro de banco (ver
+      // lib/db-error.ts), então a mensagem real nunca chegava à tela.
+      const message = getDbErrorMessage(err, 'Erro desconhecido ao consultar o banco de dados.');
       setLoadError(message);
       toast.error('Erro ao carregar dados do dashboard');
     } finally {

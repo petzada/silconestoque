@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -94,8 +95,7 @@ export function SimpleCrudDialog({
       form.reset({ name: '' });
       await onChanged();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(message.includes('duplicate key') ? duplicateMessage : 'Erro ao salvar');
+      toast.error(getDbErrorMessage(error, 'Erro ao salvar', { '23505': duplicateMessage }));
     } finally {
       setIsSaving(false);
     }
@@ -123,8 +123,7 @@ export function SimpleCrudDialog({
       cancelEdit();
       await onChanged();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(message.includes('duplicate key') ? duplicateMessage : 'Erro ao atualizar');
+      toast.error(getDbErrorMessage(error, 'Erro ao atualizar', { '23505': duplicateMessage }));
     } finally {
       setIsSaving(false);
     }
@@ -147,8 +146,7 @@ export function SimpleCrudDialog({
       setItemToDelete(null);
       await onChanged();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(message.includes('foreign key') ? inUseMessage : 'Erro ao excluir');
+      toast.error(getDbErrorMessage(error, 'Erro ao excluir', { '23503': inUseMessage }));
     } finally {
       setIsDeleting(false);
     }

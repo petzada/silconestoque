@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getDbErrorMessage, isPostgrestLikeError } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -208,13 +209,12 @@ export function EmployeeImportDialog({
       onOpenChange(false);
       await onImported();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('duplicate key') || message.includes('uniq_employees_full_name')) {
+      if (isPostgrestLikeError(error) && error.code === '23505') {
         // Alguém cadastrou o mesmo nome entre a validação e o insert.
         toast.error('Alguns nomes já foram cadastrados. Revalidando o arquivo...');
         await onImported();
       } else {
-        toast.error('Erro ao importar colaboradores');
+        toast.error(getDbErrorMessage(error, 'Erro ao importar colaboradores'));
       }
     } finally {
       setIsImporting(false);
