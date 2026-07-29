@@ -239,3 +239,21 @@ $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_categories_name_ci
   ON categories (lower(trim(name)));
+
+-- =====================================================================
+-- 6. Registro em schema_migrations
+-- =====================================================================
+-- Convenção introduzida por migration_fase1_higiene.sql (ver supabase/README.md):
+-- toda migration se registra ao final, para que o estado aplicado seja
+-- verificável pelo banco e não apenas por comentário em prosa.
+--
+-- A tabela é criada aqui de forma idempotente, e não só na fase 1, para que a
+-- ordem entre as duas migrations desta leva não importe: qual das duas rodar
+-- primeiro cria a tabela, a outra apenas insere.
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  filename TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO schema_migrations (filename) VALUES ('migration_fase0_integridade.sql')
+ON CONFLICT (filename) DO NOTHING;
