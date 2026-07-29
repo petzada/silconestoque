@@ -17,6 +17,22 @@ type SortDirection = 'asc' | 'desc';
 type ColumnAlignment = 'left' | 'center' | 'right';
 type AccessorValue = string | number | boolean | Date | null | undefined;
 
+// Carbon data-table row heights. "short" (32px row / 48px header) is the
+// documented spec for listings (plan §1, "o que não se aplica"); "compact"
+// (24px row / 40px header) is Carbon's next step down for denser listings.
+// Default is "short" so existing call sites don't change unless they opt in.
+export type DataTableDensity = 'short' | 'compact';
+
+const DENSITY_ROW_CLASS: Record<DataTableDensity, string> = {
+  short: 'h-8',
+  compact: 'h-6',
+};
+
+const DENSITY_HEADER_CLASS: Record<DataTableDensity, string> = {
+  short: 'h-12',
+  compact: 'h-10',
+};
+
 export interface DataTableColumn<T> {
   key: string;
   header: string;
@@ -40,6 +56,7 @@ interface DataTableProps<T> {
   pageSizeOptions?: number[];
   initialPageSize?: number;
   stickyHeader?: boolean;
+  density?: DataTableDensity;
   className?: string;
 }
 
@@ -81,6 +98,7 @@ export function DataTable<T>({
   pageSizeOptions = [10, 25, 50],
   initialPageSize = 25,
   stickyHeader = true,
+  density = 'short',
   className,
 }: DataTableProps<T>) {
   const firstSortableKey = columns.find((column) => column.sortable)?.key;
@@ -199,7 +217,10 @@ export function DataTable<T>({
               <TableHead
                 key={column.key}
                 className={cn(
-                  'h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                  // Carbon data-table header: 48px (short) row, 14px/600,
+                  // sentence case — h-11 (44px) and uppercase/tracking removed.
+                  DENSITY_HEADER_CLASS[density],
+                  'px-4 text-sm font-semibold text-muted-foreground',
                   getAlignmentClassName(column.align),
                   column.headerClassName
                 )}
@@ -208,7 +229,8 @@ export function DataTable<T>({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      // Carbon focus: inset 2px ring, not an outset ring/border (E.4).
+                      'inline-flex items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]',
                       column.align === 'right' && 'ml-auto'
                     )}
                     onClick={() => handleSort(column)}
@@ -241,7 +263,9 @@ export function DataTable<T>({
                   <TableCell
                     key={`${rowKey(row)}-${column.key}`}
                     className={cn(
-                      'px-4 py-2.5 align-middle text-sm text-foreground',
+                      // Carbon data-table cell: 14px/400, row height per density.
+                      DENSITY_ROW_CLASS[density],
+                      'px-4 align-middle text-sm font-normal text-foreground',
                       getAlignmentClassName(column.align),
                       column.cellClassName
                     )}

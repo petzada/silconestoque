@@ -39,7 +39,8 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        // Pure black overlay is banned (DESIGN.md); Carbon's own scrim value.
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[rgba(22,22,22,0.5)]",
         className
       )}
       {...props}
@@ -103,7 +104,15 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        // Carbon modal footer: buttons split 50/50, flush to the dialog's
+        // outer edges, 64px tall, no gap between them — the most recognizable
+        // Carbon-modal tell, replacing shadcn's flex-col-reverse/gap footer.
+        // Negative margins cancel DialogContent's p-6 on 3 sides; the
+        // [data-slot=button] attribute selector out-specifies each Button's
+        // own h-10/h-8 class so height/flex-1 win without touching call sites.
+        "-mx-6 -mb-6 flex h-16 border-t border-border",
+        "[&>[data-slot=button]]:h-16 [&>[data-slot=button]]:flex-1 [&>[data-slot=button]]:rounded-none [&>[data-slot=button]]:m-0",
+        "[&>[data-slot=button]:not(:last-child)]:border-r [&>[data-slot=button]:not(:last-child)]:border-border",
         className
       )}
       {...props}
@@ -125,7 +134,9 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-display text-lg leading-none", className)}
+      // Carbon modal title: 20px/400 (DESIGN.md {typography.subhead}) — the
+      // old .text-display (weight 300) read as too light for a modal heading.
+      className={cn("text-xl font-normal leading-tight", className)}
       {...props}
     />
   )
