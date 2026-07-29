@@ -183,8 +183,8 @@ export default function ReplenishmentQueuePage() {
         accessor: (item) => item.name,
         cell: (item) => (
           <div className="flex flex-col">
-            <TruncatedCell value={item.name} className="max-w-[260px] font-bold text-foreground" />
-            <span className="font-mono text-xs font-bold text-muted-foreground">
+            <TruncatedCell value={item.name} className="max-w-[260px] text-foreground" />
+            <span className="font-mono text-xs text-muted-foreground">
               {item.sku_code || '---'}
             </span>
           </div>
@@ -198,7 +198,7 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <TruncatedCell
             value={item.category?.name || '-'}
-            className="max-w-[220px] text-xs font-semibold text-muted-foreground"
+            className="max-w-[220px] text-xs text-muted-foreground"
           />
         ),
       },
@@ -211,7 +211,7 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-xs font-bold',
+              'border-none px-2 py-0.5 text-xs',
               item.current_qty === 0 ? 'bg-danger-muted text-destructive' : 'bg-warning-muted text-warning'
             )}
           >
@@ -225,7 +225,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.min_stock,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-foreground">{item.min_stock}</span>,
+        cell: (item) => <span className="text-sm text-foreground">{item.min_stock}</span>,
       },
       {
         key: 'max_stock',
@@ -233,7 +233,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.max_stock,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-foreground">{item.max_stock}</span>,
+        cell: (item) => <span className="text-sm text-foreground">{item.max_stock}</span>,
       },
       {
         key: 'deficit',
@@ -241,7 +241,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.deficit,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-destructive">{item.deficit}</span>,
+        cell: (item) => <span className="text-sm text-destructive">{item.deficit}</span>,
       },
       {
         key: 'targetDeficit',
@@ -249,13 +249,13 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.targetDeficit,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-foreground">{item.targetDeficit}</span>,
+        cell: (item) => <span className="text-sm text-foreground">{item.targetDeficit}</span>,
       },
       {
         key: 'unit',
         header: 'Unidade',
         cell: (item) => (
-          <Badge variant="outline" className="text-xs font-bold uppercase">
+          <Badge variant="outline" className="text-xs">
             {item.unit}
           </Badge>
         ),
@@ -270,7 +270,7 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+              'border-none px-2 py-0.5 text-[10px]',
               item.urgencyLevel === 'zerado' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
             )}
           >
@@ -305,7 +305,7 @@ export default function ReplenishmentQueuePage() {
               <PackageSearch className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Total na fila</p>
+              <p className="text-[11px] text-muted-foreground">Total na fila</p>
               <p className="text-stat-display text-3xl">{kpis.total}</p>
             </div>
           </CardContent>
@@ -317,7 +317,7 @@ export default function ReplenishmentQueuePage() {
               <Inbox className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Estoque zerado</p>
+              <p className="text-[11px] text-muted-foreground">Estoque zerado</p>
               <p className="text-stat-display text-3xl">{kpis.zeroed}</p>
             </div>
           </CardContent>
@@ -329,7 +329,7 @@ export default function ReplenishmentQueuePage() {
               <ShieldAlert className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Estoque critico</p>
+              <p className="text-[11px] text-muted-foreground">Estoque critico</p>
               <p className="text-stat-display text-3xl">{kpis.critical}</p>
             </div>
           </CardContent>
@@ -340,7 +340,7 @@ export default function ReplenishmentQueuePage() {
         search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por produto ou SKU...' }}
       >
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
+          <SelectTrigger className="h-10 w-full border-border text-xs lg:w-[220px]">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
@@ -354,7 +354,7 @@ export default function ReplenishmentQueuePage() {
         </Select>
 
         <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
-          <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[180px]">
+          <SelectTrigger className="h-10 w-full border-border text-xs lg:w-[180px]">
             <SelectValue placeholder="Urgencia" />
           </SelectTrigger>
           <SelectContent>

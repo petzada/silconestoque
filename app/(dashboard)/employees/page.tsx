@@ -418,14 +418,14 @@ export default function EmployeesPage() {
           return (
             <div className="flex flex-wrap items-center gap-1">
               {uniformAssignment?.locker ? (
-                <Badge variant="outline" className="font-mono text-xs font-semibold">
+                <Badge variant="outline" className="font-mono text-xs">
                   Nº {String(uniformAssignment.locker.number).padStart(2, '0')} · {uniformAssignment.locker.size}
                 </Badge>
               ) : (
                 <span className="text-xs text-muted-foreground">sem uniforme</span>
               )}
               {vestiarioAssignment?.locker ? (
-                <Badge variant="outline" className="font-mono text-xs font-semibold">
+                <Badge variant="outline" className="font-mono text-xs">
                   Vest. {String(vestiarioAssignment.locker.number).padStart(2, '0')}
                 </Badge>
               ) : (
@@ -442,7 +442,7 @@ export default function EmployeesPage() {
         cell: (employee) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-xs font-semibold',
+              'border-none px-2 py-0.5 text-xs',
               employee.is_active ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'
             )}
           >
@@ -732,7 +732,7 @@ export default function EmployeesPage() {
             <>
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" />
+                  <History className="h-4 w-4 text-foreground" />
                   Retiradas de {employeeForWithdrawals.full_name}
                 </SheetTitle>
                 <SheetDescription>Histórico de saídas de material solicitadas por este colaborador.</SheetDescription>
@@ -747,9 +747,9 @@ export default function EmployeesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs font-semibold">Data</TableHead>
-                        <TableHead className="text-xs font-semibold">Produto</TableHead>
-                        <TableHead className="text-right text-xs font-semibold">Qtd</TableHead>
+                        <TableHead className="text-xs">Data</TableHead>
+                        <TableHead className="text-xs">Produto</TableHead>
+                        <TableHead className="text-right text-xs">Qtd</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -759,7 +759,7 @@ export default function EmployeesPage() {
                             {format(new Date(withdrawal.created_at), 'dd/MM/yyyy HH:mm')}
                           </TableCell>
                           <TableCell className="text-xs text-foreground">{withdrawal.product?.name || '-'}</TableCell>
-                          <TableCell className="text-right text-xs font-semibold text-foreground">
+                          <TableCell className="text-right text-xs text-foreground">
                             {withdrawal.quantity}
                           </TableCell>
                         </TableRow>

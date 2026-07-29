@@ -218,13 +218,13 @@ export function LockerRangeDialog({ kind, open, onOpenChange, onCreated }: Locke
                   <div className="flex flex-1 items-center gap-2 bg-success-muted p-3">
                     <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
-                      <p className="text-sm font-semibold text-success">{preview.toCreate.length} serão criados</p>
+                      <p className="text-sm text-success">{preview.toCreate.length} serão criados</p>
                     </div>
                   </div>
                   <div className="flex flex-1 items-center gap-2 bg-muted p-3">
                     <XCircle className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-semibold text-foreground">{preview.existing.length} já existem</p>
+                      <p className="text-sm text-foreground">{preview.existing.length} já existem</p>
                       <p className="text-[10px] text-muted-foreground">Serão ignorados</p>
                     </div>
                   </div>

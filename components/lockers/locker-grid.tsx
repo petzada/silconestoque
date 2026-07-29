@@ -56,25 +56,25 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">Total</span>
+            <span className="text-xs text-muted-foreground">Total</span>
             <span className="text-stat-display text-3xl">{summary.total}</span>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">Ocupados</span>
+            <span className="text-xs text-muted-foreground">Ocupados</span>
             <span className="text-stat-display text-3xl">{summary.occupied}</span>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">Livres</span>
+            <span className="text-xs text-muted-foreground">Livres</span>
             <span className="text-stat-display text-3xl">{summary.free}</span>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {kind === 'uniforme' ? 'Sem armário' : 'Sem vestiário'}
             </span>
             <span className="text-stat-display text-3xl">{summary.withoutLocker}</span>
@@ -118,7 +118,7 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
       </FilterBar>
 
       {filteredLockers.length === 0 ? (
-        <div className="border border-border bg-card py-16 text-center text-sm text-muted-foreground">
+        <div className="py-16 text-center text-sm text-muted-foreground">
           {lockers.length === 0 ? 'Nenhum armário cadastrado.' : 'Nenhum armário encontrado para este filtro.'}
         </div>
       ) : (
@@ -138,7 +138,7 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
                   // scarce (V2/V6) and this isn't an interactive element.
                   // Hover reuses --accent, the one universal solid hover
                   // token, same as every other hoverable surface in the app.
-                  status === 'occupied' && 'border-primary/40 bg-info-muted hover:bg-accent',
+                  status === 'occupied' && 'border-info bg-info-muted hover:bg-accent',
                   // Free lockers used a dashed border to read as "empty slot";
                   // Etapa 2 (V12) reserves dashed/2px for focus and error, so
                   // this becomes a plain hairline like every other card.
@@ -146,7 +146,7 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
                   status === 'inactive' && 'border-border bg-muted opacity-50 hover:opacity-70'
                 )}
               >
-                <span className={cn('text-xl font-bold', status === 'occupied' ? 'text-primary' : 'text-foreground')}>
+                <span className={cn('text-xl font-bold', status === 'occupied' ? 'text-info' : 'text-foreground')}>
                   {String(locker.number).padStart(2, '0')}
                 </span>
                 {kind === 'uniforme' && (

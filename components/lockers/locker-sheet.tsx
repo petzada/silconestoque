@@ -281,7 +281,7 @@ export function LockerSheet({
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   {getLockerStatus(locker) === 'occupied' ? (
-                    <Lock className="h-4 w-4 text-primary" />
+                    <Lock className="h-4 w-4 text-foreground" />
                   ) : (
                     <LockOpen className="h-4 w-4 text-muted-foreground" />
                   )}
@@ -305,7 +305,7 @@ export function LockerSheet({
 
                 {locker.is_active && selectedAssignment && (
                   <div className="space-y-3 border border-border p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ocupante atual</p>
+                    <p className="text-xs text-muted-foreground">Ocupante atual</p>
                     <p className="text-base font-semibold text-foreground">{selectedAssignment.employee?.full_name}</p>
                     <p className="text-sm text-muted-foreground">
                       {selectedAssignment.employee?.department?.name} · {selectedAssignment.employee?.role?.name}
@@ -329,7 +329,7 @@ export function LockerSheet({
                       </div>
                     ) : (
                       <div className="space-y-2 border-t border-border pt-3">
-                        <p className="text-xs font-semibold text-muted-foreground">Transferir para:</p>
+                        <p className="text-xs text-muted-foreground">Transferir para:</p>
                         <EmployeeCombobox
                           employees={employeesWithoutLocker}
                           value={transferEmployeeId}
@@ -363,7 +363,7 @@ export function LockerSheet({
 
                 {locker.is_active && !selectedAssignment && (
                   <div className="space-y-3 border border-border bg-surface-soft p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Armário livre</p>
+                    <p className="text-xs text-muted-foreground">Armário livre</p>
                     <EmployeeCombobox employees={employeesWithoutLocker} value={assignEmployeeId} onChange={setAssignEmployeeId} />
                     <Button
                       type="button"
@@ -377,7 +377,7 @@ export function LockerSheet({
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Histórico</p>
+                  <p className="text-xs text-muted-foreground">Histórico</p>
                   {isLoadingHistory ? (
                     <p className="text-xs text-muted-foreground">Carregando...</p>
                   ) : history.length === 0 ? (

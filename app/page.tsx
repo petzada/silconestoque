@@ -16,8 +16,14 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="animate-pulse text-muted-foreground">Carregando...</div>
+    <div
+      className="flex min-h-screen items-center justify-center bg-background"
+      role="status"
+      aria-live="polite"
+      aria-label="Carregando"
+    >
+      <div className="h-10 w-40 animate-pulse border border-border bg-card" />
+      <span className="sr-only">Carregando...</span>
     </div>
   );
 }

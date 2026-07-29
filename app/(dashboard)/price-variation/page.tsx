@@ -199,7 +199,7 @@ export default function PriceVariationPage() {
         sortable: true,
         accessor: (item) => new Date(item.created_at),
         cell: (item) => (
-          <span className="whitespace-nowrap text-xs font-bold text-muted-foreground">
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
             {format(new Date(item.created_at), 'dd/MM/yy HH:mm')}
           </span>
         ),
@@ -211,10 +211,10 @@ export default function PriceVariationPage() {
         accessor: (item) => item.product?.name || '',
         cell: (item) => (
           <div className="flex flex-col">
-            <TruncatedCell value={item.product?.name || '-'} className="max-w-[280px] font-bold text-foreground" />
+            <TruncatedCell value={item.product?.name || '-'} className="max-w-[280px] text-foreground" />
             <TruncatedCell
               value={item.product?.category?.name || '-'}
-              className="max-w-[280px] text-xs font-bold uppercase tracking-wide text-muted-foreground"
+              className="max-w-[280px] text-xs text-muted-foreground"
             />
           </div>
         ),
@@ -226,7 +226,7 @@ export default function PriceVariationPage() {
         accessor: (item) => item.invoice_number || '',
         align: 'center',
         cell: (item) => (
-          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs font-bold text-muted-foreground">
+          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
             {item.invoice_number || '---'}
           </span>
         ),
@@ -238,7 +238,7 @@ export default function PriceVariationPage() {
         accessor: (item) => item.old_price || 0,
         align: 'right',
         cell: (item) => (
-          <span className="text-xs font-bold text-muted-foreground line-through">
+          <span className="text-xs text-muted-foreground line-through">
             {formatCurrency(item.old_price)}
           </span>
         ),
@@ -250,7 +250,7 @@ export default function PriceVariationPage() {
         accessor: (item) => item.new_price,
         align: 'right',
         cell: (item) => (
-          <span className="text-sm font-bold text-foreground">
+          <span className="text-sm text-foreground">
             {formatCurrency(item.new_price)}
           </span>
         ),
@@ -266,7 +266,7 @@ export default function PriceVariationPage() {
           return (
             <Badge
               className={cn(
-                'border-none px-2 py-0.5 text-[10px] font-bold uppercase',
+                'border-none px-2 py-0.5 text-[10px]',
                 isIncrease ? 'bg-danger-muted text-destructive' : 'bg-success-muted text-success'
               )}
             >
@@ -289,7 +289,7 @@ export default function PriceVariationPage() {
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 text-[11px] font-bold"
+            className="h-8 text-[11px]"
             onClick={() => {
               setSelectedProductId(item.product_id);
               setIsHistoryDialogOpen(true);
@@ -321,7 +321,7 @@ export default function PriceVariationPage() {
               <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Total de alertas</p>
+              <p className="text-[11px] text-muted-foreground">Total de alertas</p>
               <p className="text-stat-display text-3xl">{filteredHistory.length}</p>
             </div>
           </CardContent>
@@ -333,7 +333,7 @@ export default function PriceVariationPage() {
               <TrendingUp className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Variacao media</p>
+              <p className="text-[11px] text-muted-foreground">Variacao media</p>
               <p className="text-stat-display text-3xl">{averageVariation.toFixed(1)}%</p>
             </div>
           </CardContent>
@@ -345,7 +345,7 @@ export default function PriceVariationPage() {
               <CalendarRange className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Categoria mais afetada</p>
+              <p className="text-[11px] text-muted-foreground">Categoria mais afetada</p>
               <p className="text-display text-base text-foreground">{mostAffectedCategory}</p>
             </div>
           </CardContent>
@@ -361,7 +361,7 @@ export default function PriceVariationPage() {
         }}
       >
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="h-10 w-full border-border text-xs font-bold sm:w-[200px]">
+          <SelectTrigger className="h-10 w-full border-border text-xs sm:w-[200px]">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
@@ -378,7 +378,7 @@ export default function PriceVariationPage() {
           value={selectedDirection}
           onValueChange={(value) => setSelectedDirection(value as DirectionFilter)}
         >
-          <SelectTrigger className="h-10 w-full border-border text-xs font-bold sm:w-[160px]">
+          <SelectTrigger className="h-10 w-full border-border text-xs sm:w-[160px]">
             <SelectValue placeholder="Direcao" />
           </SelectTrigger>
           <SelectContent>
@@ -389,7 +389,7 @@ export default function PriceVariationPage() {
         </Select>
 
         <Select value={minThreshold} onValueChange={setMinThreshold}>
-          <SelectTrigger className="h-10 w-full border-border text-xs font-bold sm:w-[160px]">
+          <SelectTrigger className="h-10 w-full border-border text-xs sm:w-[160px]">
             <SelectValue placeholder="Limite minimo" />
           </SelectTrigger>
           <SelectContent>
@@ -440,12 +440,12 @@ export default function PriceVariationPage() {
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
         <DialogContent className="max-w-4xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">Evolucao de Preco</DialogTitle>
+            <DialogTitle className="text-lg">Evolucao de Preco</DialogTitle>
             <p className="text-sm font-medium text-muted-foreground">{selectedProductName}</p>
           </DialogHeader>
 
           {selectedProductHistory.length === 0 ? (
-            <div className="py-8 text-center text-sm font-semibold text-muted-foreground">
+            <div className="py-8 text-center text-sm text-muted-foreground">
               Nenhum historico encontrado para este produto.
             </div>
           ) : (
@@ -494,7 +494,7 @@ export default function PriceVariationPage() {
                       className="flex items-center justify-between border border-border bg-muted p-3"
                     >
                       <div>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                        <p className="text-[10px] text-muted-foreground">
                           {format(new Date(history.created_at), 'dd/MM/yy HH:mm')}
                         </p>
                         <p className="text-xs text-muted-foreground">NF: {history.invoice_number || '---'}</p>
@@ -502,18 +502,18 @@ export default function PriceVariationPage() {
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           {hasOldPrice && (
-                            <p className="text-[10px] font-bold text-muted-foreground line-through">
+                            <p className="text-[10px] text-muted-foreground line-through">
                               {formatCurrency(history.old_price)}
                             </p>
                           )}
-                          <p className="text-sm font-bold text-foreground">
+                          <p className="text-sm text-foreground">
                             {formatCurrency(history.new_price)}
                           </p>
                         </div>
                         {hasOldPrice && (
                           <Badge
                             className={cn(
-                              'border-none px-2 py-0.5 text-[10px] font-bold',
+                              'border-none px-2 py-0.5 text-[10px]',
                               isIncrease ? 'bg-danger-muted text-destructive' : 'bg-success-muted text-success'
                             )}
                           >

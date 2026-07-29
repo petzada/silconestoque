@@ -25,10 +25,10 @@ function LockersPageContent() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="uniforme" className="text-xs font-bold">
+          <TabsTrigger value="uniforme" className="text-xs">
             Uniformes
           </TabsTrigger>
-          <TabsTrigger value="vestiario" className="text-xs font-bold">
+          <TabsTrigger value="vestiario" className="text-xs">
             Vestiário
           </TabsTrigger>
         </TabsList>

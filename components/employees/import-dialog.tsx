@@ -65,7 +65,7 @@ function MissingList({
 
   return (
     <div className="flex-1 space-y-2 border border-warning/40 bg-warning-muted p-3">
-      <p className="flex items-center gap-2 text-xs font-semibold text-warning">
+      <p className="flex items-center gap-2 text-xs text-warning">
         <AlertTriangle className="h-3.5 w-3.5" />
         {title}
       </p>
@@ -228,7 +228,7 @@ export function EmployeeImportDialog({
       <DialogContent className={cn('max-h-[90vh] overflow-y-auto', result ? 'max-w-2xl' : 'max-w-md')}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-4 w-4 text-primary" /> Importar colaboradores via CSV
+            <Upload className="h-4 w-4 text-foreground" /> Importar colaboradores via CSV
           </DialogTitle>
           <DialogDescription className="text-xs">
             Colunas obrigatórias: nome, setor, funcao — separadas por ponto e vírgula (;). O setor e a
@@ -248,7 +248,7 @@ export function EmployeeImportDialog({
             />
             <label htmlFor="employee-csv-upload" className="cursor-pointer">
               <Users className="mx-auto mb-2 h-10 w-10 text-muted-foreground" />
-              <p className="text-sm font-semibold text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {fileName || 'Clique para selecionar o arquivo'}
               </p>
               <p className="mt-1 text-[10px] text-muted-foreground">
@@ -263,14 +263,14 @@ export function EmployeeImportDialog({
                 <div className="flex flex-1 items-center gap-2 bg-success-muted p-3">
                   <CheckCircle2 className="h-5 w-5 text-success" />
                   <div>
-                    <p className="text-sm font-semibold text-success">{result.valid.length} válidos</p>
+                    <p className="text-sm text-success">{result.valid.length} válidos</p>
                     <p className="text-[10px] text-success">Prontos para importar</p>
                   </div>
                 </div>
                 <div className="flex flex-1 items-center gap-2 bg-danger-muted p-3">
                   <XCircle className="h-5 w-5 text-destructive" />
                   <div>
-                    <p className="text-sm font-semibold text-destructive">{result.errors.length} com erro</p>
+                    <p className="text-sm text-destructive">{result.errors.length} com erro</p>
                     <p className="text-[10px] text-destructive">Não serão importados</p>
                   </div>
                 </div>
@@ -296,7 +296,7 @@ export function EmployeeImportDialog({
               {result.errors.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-foreground">Erros por linha</p>
+                    <p className="text-xs text-foreground">Erros por linha</p>
                     <Button
                       type="button"
                       variant="outline"

@@ -41,7 +41,6 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { cn } from "@/lib/utils";
 import { drawPdfBrandHeader, PDF_HEAD_STYLES } from '@/lib/pdf';
 import type { PurchaseOrderItem, PurchaseOrderType, Category } from '@/lib/types';
 
@@ -140,11 +139,11 @@ export default function PurchaseOrdersPage() {
           <div className="flex items-center gap-2 border border-border bg-card p-1">
             <Filter className="ml-2 h-3.5 w-3.5 text-muted-foreground" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="h-8 w-[200px] border-none text-xs font-semibold shadow-none">
+              <SelectTrigger className="h-8 w-[200px] border-none text-xs shadow-none">
                 <SelectValue placeholder="Filtrar Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all" className="font-semibold">Todos os produtos</SelectItem>
+                <SelectItem value="all">Todos os produtos</SelectItem>
                 {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -161,7 +160,7 @@ export default function PurchaseOrdersPage() {
               <h2 className="text-display text-lg text-foreground">Sugestão Emergencial</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Itens abaixo do estoque mínimo de segurança.</p>
-            <Button className="w-full bg-destructive text-destructive-foreground hover:bg-destructive-active h-10 text-xs font-semibold" onClick={() => generateOrder('emergency')} disabled={isLoading}>
+            <Button className="w-full bg-destructive text-destructive-foreground hover:bg-destructive-active h-10 text-xs" onClick={() => generateOrder('emergency')} disabled={isLoading}>
               Gerar Lista de Críticos <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -171,11 +170,11 @@ export default function PurchaseOrdersPage() {
         <Card className="overflow-hidden py-0">
           <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-muted flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
+              <div className="w-10 h-10 bg-muted flex items-center justify-center text-foreground"><Calendar className="h-5 w-5" /></div>
               <h2 className="text-display text-lg text-foreground">Sugestão Mensal</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Reposição programada para atingir o estoque máximo.</p>
-            <Button className="w-full h-10 text-xs font-semibold" onClick={() => generateOrder('monthly')} disabled={isLoading}>
+            <Button className="w-full h-10 text-xs" onClick={() => generateOrder('monthly')} disabled={isLoading}>
               Gerar Reposição Total <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -185,34 +184,34 @@ export default function PurchaseOrdersPage() {
       {/* Preview Dialog: Compact */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className={cn('px-8 py-6', orderType === 'emergency' ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground')}>
-            <DialogTitle className="text-xl font-bold mb-1">Prévia da Sugestão</DialogTitle>
-            <p className="text-xs font-medium opacity-90">{orderItems.length} itens identificados para compra.</p>
+          <DialogHeader className="border-b border-border px-8 py-6">
+            <DialogTitle className="text-xl mb-1">Prévia da Sugestão</DialogTitle>
+            <p className="text-xs font-medium text-muted-foreground">{orderItems.length} itens identificados para compra.</p>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <Table>
               <TableHeader>
-                <TableRow className="border-border italic">
-                  <TableHead className="font-bold text-[10px] uppercase">Material</TableHead>
-                  <TableHead className="text-center font-bold text-[10px] uppercase">Saldo</TableHead>
-                  <TableHead className="text-center font-bold text-[10px] uppercase">Comprar</TableHead>
-                  <TableHead className="text-right font-bold text-[10px] uppercase">Estimado</TableHead>
+                <TableRow className="border-border">
+                  <TableHead>Material</TableHead>
+                  <TableHead className="text-center">Saldo</TableHead>
+                  <TableHead className="text-center">Comprar</TableHead>
+                  <TableHead className="text-right">Estimado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {orderItems.map(i => (
                   <TableRow key={i.product_id} className="border-border">
-                    <TableCell className="py-3"><span className="font-bold text-foreground text-sm">{i.product_name}</span></TableCell>
-                    <TableCell className="text-center text-xs font-bold text-muted-foreground">{i.current_qty}</TableCell>
-                    <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-foreground text-background text-xs font-bold">{i.order_qty}</span></TableCell>
-                    <TableCell className="text-right font-bold text-foreground text-sm">{formatCurrency(i.total_cost)}</TableCell>
+                    <TableCell className="py-3"><span className="text-foreground text-sm">{i.product_name}</span></TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">{i.current_qty}</TableCell>
+                    <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-foreground text-background text-xs">{i.order_qty}</span></TableCell>
+                    <TableCell className="text-right text-foreground text-sm">{formatCurrency(i.total_cost)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
           <div className="p-4 bg-muted flex justify-end gap-2 border-t">
-            <Button variant="ghost" className="h-10 text-xs font-bold" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button variant="ghost" className="h-10 text-xs" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             {orderItems.length > 0 && (
               <Button className="h-10 px-8 text-xs" onClick={generatePDF}>
                 <FileDown className="h-3.5 w-3.5 mr-2" /> Exportar PDF

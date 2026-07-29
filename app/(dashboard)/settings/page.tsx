@@ -23,7 +23,7 @@ export default function SettingsPage() {
                 <Database className="h-5 w-5 text-success" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-foreground">Integridade de Dados</CardTitle>
+                <CardTitle className="text-base text-foreground">Integridade de Dados</CardTitle>
                 <CardDescription className="text-xs">
                   Estoque e custo sao controlados automaticamente pelas movimentacoes.
                 </CardDescription>
@@ -32,7 +32,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-1 border border-border bg-surface-soft p-4">
-              <p className="text-sm font-bold text-foreground">Fluxo unico de atualizacao</p>
+              <p className="text-sm text-foreground">Fluxo unico de atualizacao</p>
               <p className="max-w-[620px] text-xs text-muted-foreground">
                 Esta tela nao executa recalculo manual de estoque para evitar sobrescrita indevida de saldos e custos.
                 Qualquer ajuste deve ocorrer por entrada, saida, exclusao de movimentacao ou exclusao do produto completo.
@@ -48,7 +48,7 @@ export default function SettingsPage() {
                 <ShieldCheck className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-foreground">Seguranca (Em breve)</CardTitle>
+                <CardTitle className="text-base text-foreground">Seguranca (Em breve)</CardTitle>
                 <CardDescription className="text-xs">Gerenciamento de acesso e logs.</CardDescription>
               </div>
             </div>

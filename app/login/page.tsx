@@ -67,7 +67,7 @@ export default function LoginPage() {
             <CardTitle className="text-display text-2xl text-foreground">
               Silcon Ambiental
             </CardTitle>
-            <CardDescription className="text-caption-uppercase text-[11px] text-muted-foreground">
+            <CardDescription className="text-[11px] text-muted-foreground">
               Sistema de Gestão de Estoque
             </CardDescription>
           </div>
