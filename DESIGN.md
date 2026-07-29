@@ -1,116 +1,129 @@
 ## Overview
 
-ClickHouse's marketing surface is the highest-contrast interface in the database / data-platform category. The base atmosphere is **near-pure black canvas** (`{colors.canvas}` — #0a0a0a) with **electric yellow** (`{colors.primary}` — #faff69) as the singular brand voltage. The yellow handles every primary CTA, every stat-callout number, every "GET STARTED" badge — used scarcely on individual elements but generously on full-bleed yellow CTA cards. White typography in confident weight-700 sans-serif anchors the editorial body.
+IBM's marketing system is a faithful application of **Carbon Design System** — IBM's open-source enterprise design system. The dominant surface is `{colors.canvas}` pure white with `{colors.surface-1}` light gray for elevation, charcoal `{colors.ink}` (#161616) for text, and IBM Blue `{colors.primary}` (#0f62fe) as the single brand accent.
 
-The yellow + black pairing is what makes ClickHouse instantly recognizable. Where Snowflake uses cool blue gradients and Databricks uses red + slate, ClickHouse leans hard into one electric yellow that does all the brand work. Code blocks, terminal output, and product UI fragments embed directly in dark `{colors.surface-card}` (#1a1a1a) cards across every page.
+The defining choice is **flat geometry**: every CTA, every card, every input, every container uses square corners (`{rounded.none}` 0px) with thin 1px borders. There are no rounded pills, no soft shadows, no atmospheric gradients. The system is engineered, not stylized.
 
-Type voice runs **Inter** at confident weights — 700 for display headlines (with negative letter-spacing -1 to -2.5px), 600 for sub-titles and buttons, 400 for body. The system has no display-serif counter-voice; everything is one geometric humanist sans, scaled and weighted for hierarchy.
+**IBM Plex Sans** carries the entire type hierarchy. Display sizes (76 / 60 / 42px) run at weight **300** — IBM's signature light display treatment that makes 76px feel calmer than competing brands' 700-weight display. Body type sits at weight 400 with `letter-spacing: 0.16px` (a Carbon precision detail) and line-height 1.50. The voice reads as careful, technical, and trustworthy.
+
+The system reaches for color rarely — IBM Blue marks links, primary CTAs, and the rare full-bleed CTA banner. Charcoal carries every other surface that isn't white. The result is enterprise gravitas without the enterprise stiffness: rigorous, light-weighted, and intentionally restrained.
 
 **Key Characteristics:**
-- Near-pure black canvas (`{colors.canvas}` — #0a0a0a) with white type. The system has no light-mode marketing surface.
-- Electric yellow primary (`{colors.primary}` — #faff69). Used on primary CTAs, large stat-callout numbers ("2.8k+", "74k+"), and full-bleed yellow CTA bands.
-- Inter at weight 700 for display, weight 600 for sub-titles + buttons, weight 400 for body. No serif counterpoint.
-- Dark surface cards (`{colors.surface-card}` — #1a1a1a) for feature cards, code windows, and product mockups. Cards barely lighter than canvas — color-block contrast is subtle.
-- Code blocks render in JetBrains Mono inside `{colors.surface-card}`. SQL syntax-highlighted in muted blues / yellows / grays.
-- Stat numbers in yellow + sans-700 + huge size carry the credibility moment ("779+", "2.8k+", "47k+" community / contributor / star counts).
-- Border radius is hierarchical: `{rounded.md}` (8px) for buttons, `{rounded.lg}` (12px) for content cards. No pill except in tag badges.
-- Section rhythm `{spacing.section}` (96px) between major editorial bands.
+- **Carbon Design System** — IBM's marketing chrome IS Carbon. Buttons are square, inputs are square-with-bottom-rule, corners stay at 0px.
+- **Light-weight display type**: Plex Sans at weight 300 for 42–76px headlines is the brand's typographic signature.
+- **One accent color**: `{colors.primary}` IBM Blue carries every link, primary CTA, and CTA banner. There is no second brand color.
+- White canvas + light gray (`{colors.surface-1}`) + charcoal (`{colors.ink}`) cover 95% of surfaces.
+- Footer inverts to charcoal (`{colors.inverse-canvas}` #161616) — the only dark surface above the page break.
+- Card hierarchy is carried by 1px hairlines and surface change, never by drop shadow.
+- `letter-spacing: 0.16px` on body is a Carbon precision detail — the small positive tracking is part of the brand voice.
+- Page rhythm: utility bar → top nav → hero with light-weight headline → feature card grid → customer logo marquee → enterprise feature row → training section → newsletter / sign-in CTA → dark footer.
 
 ## Colors
 
+> Source pages: ibm.com (home), /software/ai-productivity, /consulting, /products/cloud-pak-for-aiops, /products/bare-metal-servers, community.ibm.com.
+
 ### Brand & Accent
-- **Primary (Electric Yellow)** (`{colors.primary}` — #faff69): The signature brand color. All primary CTA backgrounds, large stat-callout numbers, full-bleed yellow CTA cards. The yellow is the brand.
-- **Primary Active** (`{colors.primary-active}` — #e6eb52): Press / hover-darker variant.
-- **Primary Disabled** (`{colors.primary-disabled}` — #3a3a1f): Desaturated dark-yellow on dark canvas.
+- **IBM Blue** ({colors.primary}): The single brand accent. Links, primary CTAs, CTA banner backgrounds, focus rings.
+- **Blue 60** ({colors.blue-60}): Hovered link state.
+- **Blue 80** ({colors.blue-80}): Pressed primary button.
+- **Blue Hover** ({colors.blue-hover}): Hover state for primary buttons.
 
 ### Surface
-- **Canvas** (`{colors.canvas}` — #0a0a0a): The default page floor. Near-pure black.
-- **Surface Soft** (`{colors.surface-soft}` — #121212): Section dividers, very-soft band tints.
-- **Surface Card** (`{colors.surface-card}` — #1a1a1a): Feature cards, code windows, product mockups, pricing tier cards.
-- **Surface Elevated** (`{colors.surface-elevated}` — #242424): Nested cards inside larger dark cards.
-- **Surface Yellow Band** (`{colors.surface-yellow-band}` — #faff69): The yellow CTA card / band fill — same hex as primary.
-- **Hairline** (`{colors.hairline}` — #2a2a2a): 1px borders on cards.
-- **Hairline Strong** (`{colors.hairline-strong}` — #3a3a3a): Heavier divider on input underlines and emphasis.
+- **Canvas** ({colors.canvas}): Default page background.
+- **Surface 1** ({colors.surface-1}): Light gray (#f4f4f4) — input fields, alternate-row stripes, subtle section bands.
+- **Surface 2** ({colors.surface-2}): Slightly darker gray (#e0e0e0) — disabled fields, hairline-as-fill for separators.
+- **Hairline** ({colors.hairline}): 1px borders on cards, inputs, dividers.
+- **Hairline Strong** ({colors.hairline-strong}): 1px charcoal underline on focused inputs (Carbon's signature focus treatment).
+- **Inverse Canvas** ({colors.inverse-canvas}): Charcoal #161616 — footer surface.
+- **Inverse Surface 1** ({colors.inverse-surface-1}): One step lighter than inverse canvas — footer column dividers, hovered footer items.
 
 ### Text
-- **Ink / On Dark** (`{colors.on-dark}` — #ffffff): All headline and primary text.
-- **Body** (`{colors.body}` — #cccccc): Default running-text color.
-- **Body Strong** (`{colors.body-strong}` — #e6e6e6): Emphasized paragraphs.
-- **Muted** (`{colors.muted}` — #888888): Footer links, captions, breadcrumbs.
-- **Muted Soft** (`{colors.muted-soft}` — #5a5a5a): Tertiary text — fine print.
-- **On Primary / On Yellow** (`{colors.on-primary}` / `{colors.on-yellow}` — #0a0a0a): Black text on yellow CTAs and yellow CTA bands. The high-contrast yellow + black combo is the brand action signal.
+- **Ink** ({colors.ink}): All headlines and emphasized body type — charcoal #161616.
+- **Ink Muted** ({colors.ink-muted}): Secondary type at #525252 — meta, sub-headlines, footer body.
+- **Ink Subtle** ({colors.ink-subtle}): Tertiary type at #8c8c8c — disabled, helper text, captions.
+- **Inverse Ink** ({colors.inverse-ink}): White on charcoal — footer headings.
+- **Inverse Ink Muted** ({colors.inverse-ink-muted}): Light gray on charcoal — footer body.
 
-### Semantic / Accent
-- **Accent Emerald** (`{colors.accent-emerald}` — #22c55e): Success states, "active" status indicators in product UI.
-- **Accent Rose** (`{colors.accent-rose}` — #ef4444): Error states, "down" indicators.
-- **Accent Blue** (`{colors.accent-blue}` — #3b82f6): Info states, code-syntax highlighting.
+### Semantic
+- **Success Green** ({colors.semantic-success}): Carbon green-50 — success states.
+- **Warning Yellow** ({colors.semantic-warning}): Carbon yellow-30 — warning states.
+- **Error Red** ({colors.semantic-error}): Carbon red-60 — error states; danger button background.
+- **Info Blue** ({colors.semantic-info}): Identical to primary — informational badges.
 
 ## Typography
 
 ### Font Family
-The system runs **Inter** for everything — display, body, navigation, buttons, captions. **JetBrains Mono** handles code blocks. The fallback stack walks `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`.
 
-The single-family approach is deliberate: Inter at weight 700 + 600 + 400 covers the entire hierarchy without needing a serif or display counter-voice. The geometric humanist character of Inter at confident bold weight gives ClickHouse a precise, engineered feel that matches the database's performance-first positioning.
+- **IBM Plex Sans** — IBM's open-source proprietary typeface (free for any use). Geometric, slightly humanist, designed specifically for enterprise UI. Fallback: `Helvetica Neue, Arial, sans-serif`.
+
+The same family carries display, body, and caption — there is no display + body pairing. Hierarchy is carried by **size + weight** rather than by family change. Plex Sans is also free / open-source under the SIL Open Font License — making it the easiest custom face on this list to substitute for in implementation.
 
 ### Hierarchy
 
 | Token | Size | Weight | Line Height | Letter Spacing | Use |
 |---|---|---|---|---|---|
-| `{typography.display-xl}` | 72px | 700 | 1.05 | -2.5px | Homepage h1 ("The leading database for AI") |
-| `{typography.display-lg}` | 56px | 700 | 1.1 | -2px | Section heads |
-| `{typography.display-md}` | 40px | 700 | 1.15 | -1.5px | Sub-section heads, CTA-band heads |
-| `{typography.display-sm}` | 32px | 700 | 1.2 | -1px | Card titles, pricing tier prices |
-| `{typography.title-lg}` | 24px | 700 | 1.3 | -0.3px | Pricing plan names, larger feature titles |
-| `{typography.title-md}` | 18px | 600 | 1.4 | 0 | Card titles, intro paragraphs |
-| `{typography.title-sm}` | 16px | 600 | 1.4 | 0 | Small card titles, list labels |
-| `{typography.stat-display}` | 56px | 700 | 1.0 | -1.5px | Stat callouts ("779+", "47k+") — ALWAYS yellow |
-| `{typography.body-md}` | 16px | 400 | 1.55 | 0 | Default running-text |
-| `{typography.body-sm}` | 14px | 400 | 1.55 | 0 | Footer body, fine-print |
-| `{typography.caption}` | 13px | 500 | 1.4 | 0 | Badge labels, captions |
-| `{typography.caption-uppercase}` | 12px | 600 | 1.4 | 1.5px | Section labels, "NEW" badges |
-| `{typography.code}` | 14px | 400 | 1.55 | 0 | Code blocks — JetBrains Mono |
-| `{typography.button}` | 14px | 600 | 1.0 | 0 | Standard button labels |
-| `{typography.nav-link}` | 14px | 500 | 1.4 | 0 | Top-nav menu items |
+| `{typography.display-xl}` | 76px | 300 | 1.17 | -0.5px | Largest hero headline |
+| `{typography.display-lg}` | 60px | 300 | 1.17 | -0.4px | Section opener headlines |
+| `{typography.display-md}` | 42px | 300 | 1.20 | 0 | Sub-section headlines, hero card title |
+| `{typography.headline}` | 32px | 400 | 1.25 | 0 | Card collection heading, FAQ category |
+| `{typography.card-title}` | 24px | 400 | 1.33 | 0 | Feature card title |
+| `{typography.subhead}` | 20px | 400 | 1.40 | 0 | Lead body next to display headlines |
+| `{typography.body-lg}` | 18px | 400 | 1.50 | 0 | Hero subhead, lead paragraphs |
+| `{typography.body}` | 16px | 400 | 1.50 | 0.16px | Default body |
+| `{typography.body-sm}` | 14px | 400 | 1.29 | 0.16px | Card body, footer columns |
+| `{typography.body-emphasis}` | 14px | 600 | 1.29 | 0.16px | Selected tab label, emphasized body line |
+| `{typography.caption}` | 12px | 400 | 1.33 | 0.32px | Captions, meta, utility bar |
+| `{typography.button}` | 14px | 400 | 1.29 | 0.16px | All button labels |
+| `{typography.eyebrow}` | 14px | 400 | 1.29 | 0.16px | Section eyebrows (Carbon avoids strong eyebrows; uses sentence case 14px) |
 
 ### Principles
-Display weights stay at 700 across all sizes. Negative letter-spacing (-1 to -2.5px) is essential — Inter at weight 700 without negative tracking reads as too wide / Apple-marketing. The tightened tracking gives ClickHouse the precise, engineered feel.
 
-Body and labels stay at weights 400 / 500 / 600. The hierarchy is built on size + weight, not on family contrast.
+- **Light-weight display is the brand voice.** Plex Sans at weight 300 for 76px headlines reads as quietly authoritative — switching to 700 would make it look like every other enterprise site.
+- **Carbon's `letter-spacing: 0.16px`** on body sizes is a precision detail. Don't remove it.
+- **No mono** on marketing surfaces (Plex Mono exists but lives in product surfaces only).
+- **Eyebrow typography uses sentence case 14px** — Carbon resists the all-caps tracked eyebrow common to other enterprise brands.
+- **Line-heights tighten on display, relax on body**: 1.17 at display-xl, 1.50 at body — proportional to size.
 
 ### Note on Font Substitutes
-Inter is open-source and the documented choice. **Söhne** is a close commercial alternative if licensed. **Geist** is another modern alternative.
+
+IBM Plex Sans is **free and open-source** (SIL OFL license) and available on Google Fonts. It is the recommended implementation. The Plex family also includes Plex Mono and Plex Serif if expanded typographic needs arise.
 
 ## Layout
 
 ### Spacing System
-- **Base unit:** 4px.
-- **Tokens:** `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
-- **Section padding:** `{spacing.section}` (96px) between major bands.
-- **Card internal padding:** `{spacing.xl}` (32px) for feature cards, pricing tiers; `{spacing.lg}` (24px) for code-window cards and event cards.
+
+- **Base unit**: 4px (Carbon's signature 4-pixel grid).
+- **Tokens (front matter)**: `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
+- Card interior padding: `{spacing.lg}` 24px on feature cards; `{spacing.xl}` 32px on product cards; `{spacing.xxl}` 48px on hero cards and CTA banners.
+- Button padding: 12px vertical · 16px horizontal — Carbon spec.
+- Form input padding: 11px vertical · 16px horizontal.
 
 ### Grid & Container
-- **Max content width:** ~1280px centered.
-- **Editorial body:** Single 12-column grid; hero often uses 7/5 split (h1 left, code mockup right).
-- **Feature card grids:** 3-up at desktop, 2-up at tablet, 1-up at mobile.
-- **Pricing grid:** 3-4 up at desktop, 1-up at mobile.
+
+- Carbon's 16-column grid at desktop, scaling to 8 / 4 columns at tablet / mobile.
+- Max content width sits around 1584px (Carbon's max-grid breakpoint).
+- Card grids are 4-up at desktop, 2-up at tablet, 1-up at mobile.
+- The customer logo marquee uses fixed-width tiles in a flex row, scrolling horizontally on smaller viewports.
 
 ### Whitespace Philosophy
-ClickHouse uses dense, slightly-compressed whitespace appropriate for a developer-tooling brand — generous enough to read editorially, tight enough to feel "engineering-grade" rather than "marketing-soft." Section rhythm at 96px is standard; card internal padding stays at 32px for feature cards.
+
+Carbon uses precise alignment to a 4-pixel grid as its whitespace system. Sections separate via thin gray rows (`{colors.surface-1}`) rather than via large vertical gaps. Content is dense by design — IBM's customers expect to see a lot on a page, not a lot of air.
 
 ## Elevation & Depth
 
 | Level | Treatment | Use |
 |---|---|---|
-| Flat | No shadow, no border | Body sections, top nav, hero |
-| Soft hairline | 1px `{colors.hairline}` border | Code-window cards, content cards |
-| Surface card | `{colors.surface-card}` background — no shadow | Feature cards, pricing tiers, event cards |
-| Yellow band | `{colors.primary}` background — no shadow | Full-bleed yellow CTA cards / bands |
+| 0 (flat) | No shadow, no border | Default for body type, hero text, footer body |
+| 1 (hairline) | 1px `{colors.hairline}` border on canvas | Feature cards, inputs, list items |
+| 2 (surface lift) | `{colors.surface-1}` background on canvas | Alternate-row banners, hovered cards |
+| 3 (focus ring) | 2px `{colors.primary}` outline + 1px `{colors.hairline-strong}` underline | Focused input, focused button |
 
-The system uses no drop shadows. Depth comes from the contrast between black canvas and `{colors.surface-card}` (a barely-lighter-than-canvas tone) — the contrast is subtle, more like an "engineering-grade dim panel" than an "elevated card."
+Carbon resists drop shadows on marketing — depth is carried by surface change and 1px hairlines. The exception is product / app surfaces (Carbon documents shadow tokens for elevated panels), but the marketing site barely uses them.
 
 ### Decorative Depth
-- Code-window cards carry their own internal product chrome — line numbers, syntax highlighting, status bars at the bottom — adding visual density without external shadows.
-- The yellow-on-black contrast does most of the elevation work for CTAs.
+
+- **Soft blue gradient backdrops** appear behind some hero illustrations — a faint blue-to-white wash that warms the canvas without competing with the headline.
+- **No atmospheric depth.** No spotlight cards, no pastel section blocks, no gradient panels.
 
 ## Shapes
 
@@ -118,95 +131,114 @@ The system uses no drop shadows. Depth comes from the contrast between black can
 
 | Token | Value | Use |
 |---|---|---|
-| `{rounded.xs}` | 4px | Reserved for badge accents |
-| `{rounded.sm}` | 6px | Small inline buttons |
-| `{rounded.md}` | 8px | Standard CTA buttons, text inputs |
-| `{rounded.lg}` | 12px | Content cards, code-window cards, pricing tiers |
-| `{rounded.pill}` | 9999px | Badge pills |
-| `{rounded.full}` | 9999px / 50% | Avatars, icon buttons |
+| `{rounded.none}` | 0px | Default — every button, card, input, container |
+| `{rounded.xs}` | 2px | Small badges (rare exception) |
+| `{rounded.sm}` | 4px | Avatar circles squared, dropdown menus |
+| `{rounded.md}` | 6px | (Used rarely; documented for completeness) |
+| `{rounded.lg}` | 8px | (Used rarely; documented for completeness) |
+| `{rounded.pill}` | 9999px | Status pills, badges in product UI (rare on marketing) |
+
+The brand commits to flat 0px corners. The other tokens exist for product / mobile surfaces but rarely surface on marketing.
+
+### Photography & Illustration Geometry
+
+- IBM uses photography (people, hardware, sports cars) and abstract illustration (geometric mesh, dotted patterns) interchangeably.
+- Image frames are flat — no rounded corners.
+- Customer logo tiles sit on `{rounded.none}` 0px tiles with thin 1px borders.
 
 ## Components
 
-### Top Navigation
-
-**`top-nav`** — Black nav bar pinned to top. 64px tall, `{colors.canvas}` background. Carries the ClickHouse logo + wordmark at left, primary horizontal menu (Product, Use Cases, Pricing, Resources, Customers) center-left, right-side cluster with "Sign in" + "Get Started" `{component.button-primary}` (yellow). Menu items in `{typography.nav-link}` (Inter 14px / 500).
-
 ### Buttons
 
-**`button-primary`** — The signature yellow CTA. Background `{colors.primary}` (#faff69), text `{colors.on-primary}` (black), type `{typography.button}` (Inter 14px / 600), padding 12px × 20px, height 40px, rounded `{rounded.md}` (8px). The yellow + black combination is iconic.
+**`button-primary`** — Blue solid CTA. The default primary across all pages.
+- Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.button}`, padding 12px 16px, rounded `{rounded.none}`.
+- Pressed state lives in `button-primary-pressed` (background shifts to `{colors.blue-80}`).
 
-**`button-secondary`** — Dark surface card button. Background `{colors.surface-card}`, text `{colors.on-dark}`, same shape as primary.
+**`button-secondary`** — Charcoal solid button — Carbon's "secondary" treatment.
+- Background `{colors.ink}`, text `{colors.inverse-ink}`, type `{typography.button}`, padding 12px 16px, rounded `{rounded.none}`.
 
-**`button-text-link`** — Inline text button, no background. Used for "Sign in" and inline link CTAs.
+**`button-tertiary`** — White button with blue 1px border + blue text. Used for tertiary CTAs.
+- Background `{colors.canvas}`, text `{colors.primary}`, type `{typography.button}`, rounded `{rounded.none}`, padding 12px 16px. (Border in implementation: 1px `{colors.primary}`.)
 
-**`text-link`** — Inline body links in `{colors.primary}` (yellow on dark). Underlined.
+**`button-ghost`** — Plain text + chevron, no background until hover.
+- Background `{colors.canvas}`, text `{colors.primary}`, type `{typography.button}`, rounded `{rounded.none}`, padding 12px 16px.
 
-**`button-icon-circular`** — 36 × 36 circular icon button on dark.
+**`button-danger`** — Carbon's destructive variant.
+- Background `{colors.semantic-error}`, text `{colors.on-primary}`, type `{typography.button}`, rounded `{rounded.none}`, padding 12px 16px.
 
 ### Cards & Containers
 
-**`hero-band`** — Black-canvas hero with 7-5 grid: h1 + sub-headline + button row on the left, code-window or product mockup on the right. Vertical padding `{spacing.section}` (96px).
+**`feature-card`** — Default feature highlight tile on the home and product pages.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.none}`, padding 24px. Stroked with 1px `{colors.hairline}`.
 
-**`hero-stat-card`** — Yellow stat-display numbers ("779+", "47k+") inline on the canvas. No card surface — just yellow text in `{typography.stat-display}` (56px / 700).
+**`feature-card-elevated`** — Same shape on `{colors.surface-1}` ground — used for "Recommended" cards in the latest-content carousel.
+- Background `{colors.surface-1}`, otherwise identical structure.
 
-**`feature-card-yellow`** — Full-bleed yellow card ("Built for every modern data challenge"). Background `{colors.primary}`, text `{colors.on-yellow}` (black), rounded `{rounded.lg}` (12px), padding `{spacing.xl}` (32px). The yellow card IS the visual emphasis.
+**`product-card`** — Larger product showcase tile.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.none}`, padding 32px.
 
-**`feature-card-dark`** — Standard dark feature card. Background `{colors.surface-card}`, text `{colors.on-dark}`, rounded `{rounded.lg}`, padding `{spacing.xl}` (32px).
+**`hero-card`** — Hero composition card with light-weight title, body, and CTA.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.display-md}`, rounded `{rounded.none}`, padding 48px.
 
-**`code-window-card`** — Dark card showing a SQL code block. Background `{colors.surface-card}`, code in JetBrains Mono with syntax highlighting, rounded `{rounded.lg}`, padding `{spacing.lg}` (24px). Often the hero's right-side artifact on developer-focused pages.
+**`cta-banner`** — Full-width blue CTA panel near the bottom of the page.
+- Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.headline}`, rounded `{rounded.none}`, padding 48px.
 
-**`product-mockup-card`** — Card showing actual ClickHouse product UI (query editor, dashboard, monitoring panel). Same shape as `{component.feature-card-dark}` but with embedded product chrome inside.
+**`resource-tile`** — Smaller article / case-study tile.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-sm}`, rounded `{rounded.none}`, padding 16px.
 
-**`pricing-tier-card`** — Standard tier card. Background `{colors.surface-card}`, rounded `{rounded.lg}`, padding `{spacing.xl}` (32px).
-
-**`pricing-tier-card-featured`** — The featured tier flips to `{colors.primary}` (yellow). The yellow surface IS the featured signal.
-
-**`stat-callout`** — Inline yellow stat numbers ("779+", "2.8k+", "47k+"). Transparent background, text `{colors.primary}`, type `{typography.stat-display}`. Used as a flat layout block, not a card with surface.
-
-**`events-card`** — Used on /company/events. Dark card with event title, date in `{typography.caption-uppercase}`, location, and a "Register" CTA. Rounded `{rounded.lg}`, padding `{spacing.lg}`.
-
-**`customer-logo-strip`** — Horizontal monochrome customer-logo strip. Background `{colors.canvas}`, logos in `{colors.muted}`, vertical padding `{spacing.xl}` (32px).
+**`customer-logo-tile`** — Single tile in the customer marquee on the home page (Ferrari, Pfizer, etc.).
+- Background `{colors.canvas}`, text `{colors.ink-muted}`, type `{typography.caption}`, rounded `{rounded.none}`, padding 24px. 1px hairline border.
 
 ### Inputs & Forms
 
-**`text-input`** — Dark text input. Background `{colors.surface-card}`, text `{colors.on-dark}`, rounded `{rounded.md}` (8px), padding 10px × 14px, height 40px.
+**`text-input`** + **`text-input-focused`** + **`text-input-error`** — Carbon's input chrome.
+- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.none}`, padding 11px 16px.
+- Focus state replaces the bottom 1px hairline with a 2px `{colors.primary}` underline (Carbon's signature focus treatment).
+- Error state adds 2px `{colors.semantic-error}` bottom underline.
 
-**`text-input-focused`** — Border thickens to `{colors.primary}` (yellow) for emphasis.
+**`newsletter-input`** — The "Stay connected" newsletter capture on the home page.
+- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.none}`, padding 11px 16px. Adjacent submit is `button-primary`.
 
-### Tags / Badges
+### Tabs
 
-**`badge-pill`** — Small dark pill label. Background `{colors.surface-card}`, text `{colors.on-dark}`, type `{typography.caption}`, rounded `{rounded.pill}`.
+**`product-tab`** + **`product-tab-selected`** — The horizontal tab strip on product pages and the home "Recommended" carousel.
+- Default: `{colors.canvas}` background, `{colors.ink-muted}` text, rounded `{rounded.none}`, padding 16px 20px. Bottom 1px hairline.
+- Selected: `{colors.canvas}` background, `{colors.ink}` text, `{typography.body-emphasis}` weight, bottom 2px `{colors.primary}` underline. Same padding / rounding.
 
-**`badge-yellow`** — Yellow pill for "NEW", "GET STARTED" emphasis. Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.caption-uppercase}`, rounded `{rounded.pill}`.
+### Navigation
 
-### Tab / Filter
+**`top-nav`** — Sticky white bar with the IBM logomark left, nav categories center, and search / sign-in icons right.
+- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-sm}`, height 48px. 1px bottom hairline.
 
-**`category-tab`** + **`category-tab-active`** — Dark tab navigation. Inactive: transparent + muted text. Active: surface-card background + on-dark text. Padding 8px × 14px, rounded `{rounded.md}`.
+**`utility-bar`** — Slim gray ribbon above the top nav with location switch, contact, search shortcuts.
+- Background `{colors.surface-1}`, text `{colors.ink-muted}`, type `{typography.caption}`, height 32px.
 
-### CTA / Footer
+### Footer
 
-**`cta-band-yellow`** — A pre-footer "Deploy your way" CTA band. Full yellow fill, black type, rounded `{rounded.lg}`, padding 64px. Carries an h2 in `{typography.display-md}` and a CTA — usually a black-button on the yellow surface.
-
-**`footer`** — Black footer that closes every page. Background `{colors.canvas}`, text `{colors.muted}`. 4-column link list at desktop covering Product / Use Cases / Resources / Company. Vertical padding 64px. The ClickHouse wordmark sits at the top in `{colors.on-dark}`.
+**`footer`** — Charcoal footer (`{colors.inverse-canvas}`) with the IBM wordmark left and 5–6 columns of caption-sized links. The only inverted surface above the page break.
+- Background `{colors.inverse-canvas}`, text `{colors.inverse-ink-muted}`, type `{typography.body-sm}`, padding 64px 32px.
 
 ## Do's and Don'ts
 
 ### Do
-- Anchor every page on the black canvas. The yellow + black pairing is the brand voltage.
-- Reserve `{colors.primary}` (yellow) for primary CTAs, stat-callout numbers, and full-bleed yellow CTA bands. The yellow's scarcity at the element level + abundance at the band level is what makes it powerful.
-- Use Inter at weight 700 for every display headline, with -1 to -2.5px letter-spacing.
-- Show actual SQL code blocks inside `{component.code-window-card}` — ClickHouse is a database; show the query, don't paint marketing illustrations of queries.
-- Use `{component.stat-callout}` numbers to establish credibility (community size, contributors, performance benchmarks). The yellow stat numbers are signature.
-- Anchor every band with `{spacing.section}` (96px) vertical rhythm.
+
+- Use `{rounded.none}` 0px on every CTA, card, input, and container. The flat-square aesthetic is the brand.
+- Pair Plex Sans weight 300 for display sizes (42px+) with weight 400 for body. Resist the urge to bold the headline.
+- Reserve `{colors.primary}` IBM Blue for primary CTAs, links, focused-input underlines, and CTA banner. Do not use it as a card background or eyebrow color.
+- Apply `letter-spacing: 0.16px` to body sizes. It's a Carbon precision detail and part of the typographic voice.
+- Use surface change (`canvas` → `surface-1`) and 1px hairlines for card hierarchy. Skip drop shadows.
+- Stick to sentence case for eyebrows and section labels — Carbon resists all-caps tracking.
+- Invert to `{colors.inverse-canvas}` only at the footer; the rest of the page stays light.
 
 ### Don't
-- Don't introduce a second brand color. ClickHouse is monochromatic + yellow.
-- Don't bold display weight beyond 700 or use weight 500 for headlines. The hierarchy depends on size, not on weight gradation.
-- Don't use yellow for body text or large surface fills outside of intentional yellow cards.
-- Don't use rounded buttons / pills outside of small badges. The standard button radius is 8px (md).
-- Don't repeat the same surface mode in two consecutive bands. Black canvas → dark feature card → yellow CTA card → black canvas → code-window card.
-- Don't replace SQL code mockups with abstract illustrations. The code IS the marketing voltage.
-- Don't add hover state styling beyond what the system already encodes.
+
+- Don't round corners on buttons, cards, or inputs. Even 4px rounded corners break the Carbon look.
+- Don't bold display headlines. Plex Sans at weight 300 is the brand voice; weight 700 makes it look generic.
+- Don't add atmospheric depth (gradient backdrops, drop shadows, atmospheric overlays) outside the documented soft-blue hero gradient.
+- Don't introduce a second brand color. IBM Blue is the only chromatic accent; status semantics use the documented green / yellow / red.
+- Don't replace IBM Plex Sans with Inter or Helvetica without preserving the `letter-spacing: 0.16px` and weight-300 display treatment.
+- Don't use pill-shaped buttons. Carbon uses square corners; pills read as a different brand.
+- Don't write all-caps tracked eyebrows. Carbon's eyebrows are sentence case at 14px.
 
 ## Responsive Behavior
 
@@ -214,42 +246,44 @@ The system uses no drop shadows. Depth comes from the contrast between black can
 
 | Name | Width | Key Changes |
 |---|---|---|
-| Mobile | < 768px | Hamburger nav; hero h1 72→36px; code-window-card stacks below; feature grids 1-up; pricing 1-up |
-| Tablet | 768–1024px | Top nav tightens; feature cards 2-up; pricing 2-up |
-| Desktop | 1024–1440px | Full top-nav; 3-up feature cards; 3-4 up pricing tiers |
-| Wide | > 1440px | Same as desktop with more breathing room; max content 1280px |
+| Max | 1584px | Carbon max grid; gutters expand |
+| Desktop-XL | 1312px | Default desktop layout |
+| Desktop | 1056px | Card grid 4-up maintained |
+| Tablet | 672px | Card grid 4-up → 2-up; nav becomes hamburger |
+| Mobile | 320px | Single-column; display-xl scales 76px → ~32px |
 
 ### Touch Targets
-- `{component.button-primary}` at minimum 40 × 40px.
-- `{component.button-icon-circular}` at exactly 36 × 36 — slightly under WCAG 44, visually centered.
-- `{component.text-input}` height is 40px.
+
+- Carbon spec: 48px minimum tap target. Buttons and inputs hold 48px on touch viewports.
+- Top-nav links grow from 36px to 48px tap height on touch.
+- Tab strip rows hold 48px tap height.
 
 ### Collapsing Strategy
-- Top nav collapses to hamburger at < 768px.
-- Hero 7-5 grid → single-column on mobile.
-- Feature card grids reduce columns rather than scaling.
-- Code-window cards retain font-size; horizontal scroll inside the card on mobile.
-- Pricing tier cards collapse 4 → 2 → 1; featured tier yellow stays distinct.
+
+- **Top nav**: links collapse to a hamburger overlay below 672px. Logomark and search icon stay on the bar.
+- **Utility bar**: hides below 672px to reclaim vertical space.
+- **Card grid**: 4-up → 2-up at 1056px → 1-up below 672px.
+- **Display type**: `{typography.display-xl}` 76px scales toward 42px on mobile while preserving the weight-300 treatment.
+- **Footer**: 6-column link grid → 3-column at tablet → 1-column at mobile.
 
 ### Image Behavior
-- Code blocks inside dark mockups stay at fixed font-size; horizontal scroll on mobile rather than wrapping.
-- Customer logos in monochrome strip retain native widths; row wraps on mobile.
+
+- Customer logos in the marquee maintain aspect ratio and may collapse to 2-row scroll below 672px.
+- Hero illustrations scale proportionally; below 672px they may stack above the headline rather than sit beside it.
 
 ## Iteration Guide
 
-1. Focus on ONE component at a time. Reference its YAML key (`{component.code-window-card}`, `{component.pricing-tier-card-featured}`).
-2. Variants of an existing component (`-active`, `-disabled`, `-focused`) live as separate entries.
-3. Use `{token.refs}` everywhere — never inline hex.
-4. Never document hover. Default and Active/Pressed states only.
-5. Display headlines stay Inter 700 with negative letter-spacing. Body stays Inter 400.
-6. The yellow + black pairing is the brand contract. Don't soften with secondary accents.
-7. When in doubt about emphasis: bigger Inter 700 before adding color.
+1. Focus on ONE component at a time and reference it by its `components:` token name.
+2. Default body to `{typography.body}` at weight 400 with `letter-spacing: 0.16px`. Don't remove the tracking.
+3. When introducing a new section, decide whether it sits on `{colors.canvas}` (default) or on `{colors.surface-1}` (alternate band). The two-surface rhythm is the rhythm.
+4. Run `npx @google/design.md lint DESIGN.md` after edits.
+5. Add new variants as separate component entries (`button-primary-pressed`, `text-input-error`, `text-input-focused`).
+6. Treat IBM Blue as scarce: links, primary CTA, CTA banner, focus underline. Anything beyond that is drift.
+7. Resist rounded corners. If a designer pushes for 4px rounding, the brand is shifting away from Carbon.
 
 ## Known Gaps
 
-- The exact yellow hex (#faff69) was sampled from the screenshot; ClickHouse may publish an official brand color slightly differently.
-- Inter weight axis values beyond 400 / 500 / 600 / 700 are not formalized — only the static weights observed are documented.
-- Animation and transition timings (code typewriter effects, stat counter animations) are not in scope.
-- Form validation states beyond `{component.text-input-focused}` are not extracted.
-- The actual ClickHouse Cloud product surface (query console, monitoring dashboards, table browser) shares some tokens with the marketing site but adds many product-specific components that are out of scope.
-- The customer logo strip's exact opacity / treatment varies — the muted gray is approximate.
+- IBM's product surfaces (cloud-pak, watson, datacap) have richer Carbon component usage (data tables, graph cells, breadcrumbs, contextual menus) that aren't present on the marketing pages inspected — those components live in Carbon's documentation rather than in the marketing extraction.
+- Form-field error and validation styling is documented in Carbon docs; the inspected pages didn't render error states.
+- Dark mode is documented in Carbon as Gray-100 theme but isn't exposed on these marketing pages — only the footer inverts. The full dark theme is a separate Carbon palette not extracted here.
+- The community.ibm.com sub-domain uses a different chrome (community-platform white-label) that approximates Carbon but isn't strict — the documented system applies to ibm.com proper.
