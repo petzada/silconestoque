@@ -22,7 +22,7 @@ export default function Home() {
       aria-live="polite"
       aria-label="Carregando"
     >
-      <div className="h-10 w-40 animate-pulse border border-border bg-card" />
+      <div className="h-10 w-40 animate-pulse border border-border bg-surface-elevated" />
       <span className="sr-only">Carregando...</span>
     </div>
   );

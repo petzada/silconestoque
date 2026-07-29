@@ -29,7 +29,13 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
+import {
+  drawPdfBrandHeader,
+  PDF_HEAD_STYLES,
+  PDF_ALTERNATE_ROW_STYLES,
+  PDF_BLACK,
+  PDF_WHITE,
+} from '@/lib/pdf';
 import type { Product, Category } from '@/lib/types';
 
 type UrgencyFilter = 'all' | 'zerado' | 'critico';
@@ -130,11 +136,11 @@ export default function ReplenishmentQueuePage() {
       const timestamp = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
 
       drawPdfBrandHeader(doc, 26);
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...PDF_WHITE);
       doc.setFontSize(15);
       doc.text('FILA DE REPOSICAO', 14, 17);
 
-      doc.setTextColor(10, 10, 10);
+      doc.setTextColor(...PDF_BLACK);
       doc.setFontSize(10);
       doc.text(`Gerado em: ${timestamp}`, 14, 34);
 

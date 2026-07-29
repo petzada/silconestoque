@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { useAuth } from '@/components/auth-provider';
+import { PageLoading } from '@/components/layout/page-loading';
 
 // Force Deployment Update (Build Verified)
 
@@ -23,11 +24,7 @@ export default function DashboardLayout({
   }, [isLoggedIn, isLoading, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Carregando...</div>
-      </div>
-    );
+    return <PageLoading label="Carregando..." />;
   }
 
   if (!isLoggedIn) {

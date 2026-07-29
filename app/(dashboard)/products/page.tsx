@@ -66,7 +66,14 @@ import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
+import {
+  drawPdfBrandHeader,
+  PDF_HEAD_STYLES,
+  PDF_ALTERNATE_ROW_STYLES,
+  PDF_BLACK,
+  PDF_WHITE,
+  PDF_RED,
+} from '@/lib/pdf';
 import type { Product, Category, PriceHistory } from '@/lib/types';
 
 const UNIT_OPTIONS = [
@@ -501,9 +508,9 @@ export default function ProductsPage() {
     doc.setFontSize(10);
     doc.text(`Total de linhas: ${(validationResult.valid.length + validationResult.errors.length)}`, 14, 45);
     doc.text(`Válidas: ${validationResult.valid.length}`, 14, 51);
-    doc.setTextColor(220, 38, 38);
+    doc.setTextColor(...PDF_RED);
     doc.text(`Com erro: ${validationResult.errors.length}`, 14, 57);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...PDF_BLACK);
 
     autoTable(doc, {
       startY: 65,
@@ -561,12 +568,12 @@ export default function ProductsPage() {
 
       const doc = new jsPDF();
       drawPdfBrandHeader(doc, 24);
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...PDF_WHITE);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.text('Relatório de Produtos por Categoria', 14, 15);
 
-      doc.setTextColor(10, 10, 10);
+      doc.setTextColor(...PDF_BLACK);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.text(`Categoria: ${selectedCategory?.name || 'Categoria'}`, 14, 32);

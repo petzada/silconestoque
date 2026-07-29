@@ -41,7 +41,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { drawPdfBrandHeader, PDF_HEAD_STYLES } from '@/lib/pdf';
+import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_BLACK, PDF_WHITE } from '@/lib/pdf';
 import type { PurchaseOrderItem, PurchaseOrderType, Category } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
@@ -107,11 +107,11 @@ export default function PurchaseOrdersPage() {
     try {
       const doc = new jsPDF();
       drawPdfBrandHeader(doc, 30);
-      doc.setTextColor(255);
+      doc.setTextColor(...PDF_WHITE);
       doc.setFontSize(18);
       doc.text('SILCON AMBIENTAL', 14, 20);
 
-      doc.setTextColor(0);
+      doc.setTextColor(...PDF_BLACK);
       doc.setFontSize(14);
       doc.text(orderType === 'emergency' ? 'SUGESTÃO EMERGENCIAL' : 'SUGESTÃO MENSAL', 14, 45);
 

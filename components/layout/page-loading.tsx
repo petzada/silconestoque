@@ -15,20 +15,20 @@ export function PageLoading({ label }: PageLoadingProps) {
       aria-label={label}
     >
       <div className="space-y-2">
-        <div className="h-8 w-48 animate-pulse bg-card" />
-        <div className="h-4 w-72 animate-pulse bg-card" />
+        <div className="h-8 w-48 animate-pulse bg-surface-elevated" />
+        <div className="h-4 w-72 animate-pulse bg-surface-elevated" />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-24 animate-pulse border border-border bg-card" />
+          <div key={index} className="h-24 animate-pulse border border-border bg-surface-elevated" />
         ))}
       </div>
       <div className="overflow-hidden border border-border bg-card">
-        <div className="h-12 animate-pulse border-b border-border bg-surface-soft" />
+        <div className="h-12 border-b border-border bg-surface-soft" />
         <div className="space-y-0 p-0">
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="flex h-8 items-center border-b border-border px-4 last:border-0">
-              <div className="h-4 w-full max-w-[60%] animate-pulse bg-surface-soft" />
+              <div className="h-4 w-full max-w-[60%] animate-pulse bg-surface-elevated" />
             </div>
           ))}
         </div>
