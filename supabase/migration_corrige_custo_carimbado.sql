@@ -1,6 +1,18 @@
 -- Silcon Ambiental - Migracao: Corrige custo carimbado em saidas historicas
 -- REVERSIVEL (cria tabela de backup). Rodar no SQL Editor do Supabase.
 --
+-- APLICADA EM PRODUCAO EM 2026-07-29.
+--
+-- Correcao PONTUAL de dado historico, nao uma regra permanente. Os passos 1 e 2
+-- so alcancam saidas anteriores a 2026-07-29 (ver corte nos WHERE). Reexecutar o
+-- arquivo e seguro por causa desse corte, mas nao ha motivo para faze-lo: o
+-- backup original e preservado por ON CONFLICT DO NOTHING e o UPDATE vira no-op.
+--
+-- NAO remova o corte de data para "corrigir" saidas novas. Elas sao congeladas
+-- pelo trigger freeze_exit_cost e podem divergir legitimamente do price_history,
+-- porque products.cost_price tambem muda ao excluir uma Entrada sem gerar
+-- registro de preco. Sem o corte, este arquivo passaria a destruir dado correto.
+--
 -- =====================================================================
 -- CONTEXTO E EVIDENCIA
 -- =====================================================================
@@ -112,6 +124,13 @@ JOIN LATERAL (
   LIMIT 1
 ) hist ON true
 WHERE m.type = 'OUT'
+  -- Corte historico: esta e uma correcao pontual do carimbo do backfill antigo,
+  -- nao uma regra permanente. Saidas registradas a partir daqui foram congeladas
+  -- pelo trigger freeze_exit_cost e sao legitimas mesmo quando divergem do
+  -- price_history (cost_price tambem muda ao excluir uma Entrada, sem gerar
+  -- registro de preco). Sem este corte, reexecutar o arquivo corromperia dados
+  -- corretos.
+  AND m.created_at < TIMESTAMPTZ '2026-07-29 00:00:00-03'
   AND m.unit_value IS NOT NULL
   AND m.unit_value IS DISTINCT FROM hist.preco_vigente_na_data
 ON CONFLICT (movement_id) DO NOTHING;
@@ -134,6 +153,9 @@ FROM (
     ) AS preco_vigente_na_data
   FROM movements m2
   WHERE m2.type = 'OUT'
+    -- Mesmo corte historico do PASSO 1: os dois conjuntos precisam ser
+    -- identicos, senao o backup deixa de cobrir tudo que foi alterado.
+    AND m2.created_at < TIMESTAMPTZ '2026-07-29 00:00:00-03'
     AND m2.unit_value IS NOT NULL
 ) hist
 WHERE m.id = hist.movement_id
