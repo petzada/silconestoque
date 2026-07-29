@@ -105,14 +105,23 @@ export default function DashboardPage() {
     setLoadError(null);
     try {
       const [productsRes, movementsRes, categoriesRes] = await Promise.all([
-        fetchAllRows(() =>
-          supabase.from('products').select('*, category:categories(*)').eq('is_active', true)
-        ),
+        // Sem `category:categories(*)`: o dashboard filtra produto por
+        // `category_id` e nunca lê `p.category`, então trazer a categoria
+        // aninhada em cada produto era payload puro.
+        fetchAllRows(() => supabase.from('products').select('*').eq('is_active', true)),
+        // O produto e a categoria aninhados vêm só com as colunas que os
+        // gráficos leem. Antes era `product:products(*, category:categories(*))`,
+        // que repetia o registro inteiro do produto e da categoria dentro de CADA
+        // movimentação — em alguns milhares de linhas isso vira megabytes de JSON
+        // redundante para calcular meia dúzia de totais.
         fetchAllRows(() =>
           supabase
             .from('movements')
-            .select('*, product:products(*, category:categories(*))')
+            .select('*, product:products(id, name, category_id, category:categories(id, name))')
             .order('created_at', { ascending: false })
+            // Desempate estável: sem uma segunda chave de ordenação, linhas com
+            // o mesmo instante podem trocar de página e ser puladas ou repetidas.
+            .order('id', { ascending: false })
         ),
         fetchAllRows(() => supabase.from('categories').select('*').order('name')),
       ]);
@@ -123,7 +132,11 @@ export default function DashboardPage() {
 
       setData({
         products: productsRes.data || [],
-        movements: movementsRes.data || [],
+        // O supabase-js infere relação aninhada como array quando o `select`
+        // lista colunas explicitamente; em runtime um vínculo muitos-para-um
+        // volta como objeto. Mesmo padrão de conversão já usado em
+        // `employees/page.tsx` para as retiradas.
+        movements: (movementsRes.data || []) as unknown as Movement[],
         categories: categoriesRes.data || [],
       });
     } catch (err) {

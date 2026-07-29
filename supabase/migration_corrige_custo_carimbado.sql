@@ -90,6 +90,13 @@ CREATE TABLE IF NOT EXISTS movements_unit_value_backup_20260729 (
   backup_em TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Qualquer tabela no schema public e exposta pela API do PostgREST. Esta e uma
+-- tabela operacional de backup, nao faz parte da aplicacao: habilitar RLS SEM
+-- criar policy nenhuma a torna inacessivel pela chave anon, mantendo-a
+-- normalmente legivel no SQL Editor (service role ignora RLS). Isto NAO muda o
+-- RLS das tabelas do sistema - ver ADR-0004.
+ALTER TABLE movements_unit_value_backup_20260729 ENABLE ROW LEVEL SECURITY;
+
 INSERT INTO movements_unit_value_backup_20260729 (movement_id, unit_value_anterior, unit_value_corrigido)
 SELECT
   m.id,

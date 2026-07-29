@@ -58,6 +58,7 @@ import {
   FileDown,
   CheckCircle2,
   XCircle,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -148,6 +149,8 @@ export default function ProductsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<'active' | 'inactive' | 'all'>('active');
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [validationResult, setValidationResult] = useState<CSVValidationResult | null>(null);
@@ -175,11 +178,13 @@ export default function ProductsPage() {
     setIsLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
+        // Traz ativos e desativados: a desativação precisa ter caminho de volta,
+        // senão vira porta de mão única. O filtro de status abaixo decide o que
+        // aparece na tabela (padrão: só ativos).
         fetchAllRows<Product>(() =>
           supabase
             .from('products')
             .select('*, category:categories(*)')
-            .eq('is_active', true)
             .order('name')
         ),
         supabase.from('categories').select('*').order('name'),
@@ -268,6 +273,20 @@ export default function ProductsPage() {
       setIsDeleting(false);
     }
   };
+
+  const handleReactivate = useCallback(async (product: Product) => {
+    setReactivatingId(product.id);
+    try {
+      const { error } = await supabase.from('products').update({ is_active: true }).eq('id', product.id);
+      if (error) throw error;
+      toast.success('Produto reativado com sucesso');
+      fetchData();
+    } catch {
+      toast.error('Erro ao reativar produto');
+    } finally {
+      setReactivatingId(null);
+    }
+  }, []);
 
   const handleDialogOpenChange = (open: boolean) => {
     if (!open && form.formState.isDirty) {
@@ -612,7 +631,11 @@ export default function ProductsPage() {
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku_code?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
-    return matchesSearch && matchesCategory;
+    const matchesStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'active' && p.is_active) ||
+      (filterStatus === 'inactive' && !p.is_active);
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const getStatus = (p: Product) => {
@@ -640,7 +663,17 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.name,
         cell: (product) => (
-          <TruncatedCell value={product.name} className="max-w-[300px] font-bold text-foreground" />
+          <div className="flex items-center gap-2">
+            <TruncatedCell
+              value={product.name}
+              className={cn('max-w-[300px] font-bold text-foreground', !product.is_active && 'opacity-50')}
+            />
+            {!product.is_active && (
+              <Badge variant="outline" className="shrink-0 rounded-md border-none bg-muted px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
+                DESATIVADO
+              </Badge>
+            )}
+          </div>
         ),
       },
       {
@@ -716,22 +749,37 @@ export default function ProductsPage() {
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              title="Desativar produto"
-              aria-label="Desativar produto"
-              className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
-              onClick={() => handleOpenDeleteDialog(product)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            {product.is_active ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title="Desativar produto"
+                aria-label="Desativar produto"
+                className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
+                onClick={() => handleOpenDeleteDialog(product)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title="Reativar produto"
+                aria-label="Reativar produto"
+                className="h-8 w-8 text-muted-foreground hover:bg-success-muted hover:text-success"
+                disabled={reactivatingId === product.id}
+                onClick={() => void handleReactivate(product)}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         ),
       },
     ],
-    [getStatus, handleOpenDeleteDialog, handleOpenDialog, handleOpenHistory]
+    [getStatus, handleOpenDeleteDialog, handleOpenDialog, handleOpenHistory, handleReactivate, reactivatingId]
   );
 
   if (isLoading) return <PageLoading label="Carregando catálogo..." />;
@@ -775,13 +823,23 @@ export default function ProductsPage() {
             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as typeof filterStatus)}>
+          <SelectTrigger className="w-full sm:w-[170px] h-10 border-border text-sm font-semibold">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent className="rounded-lg">
+            <SelectItem value="active" className="font-semibold">Ativos</SelectItem>
+            <SelectItem value="inactive">Desativados</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <DataTable
         data={filteredProducts}
         columns={columns}
         rowKey={(product) => product.id}
-        emptyMessage={searchTerm || filterCategory !== 'all' ? 'Nenhum produto encontrado para este filtro.' : 'Nenhum produto cadastrado.'}
+        emptyMessage={searchTerm || filterCategory !== 'all' || filterStatus !== 'active' ? 'Nenhum produto encontrado para este filtro.' : 'Nenhum produto cadastrado.'}
         defaultSort={{ key: 'name', direction: 'asc' }}
         initialPageSize={25}
       />

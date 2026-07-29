@@ -181,3 +181,41 @@ tocadas.
 2. O filtro de `is_initial_import` no dashboard permanece; apenas o efeito dele
    ficou visivel na linha de transparencia.
 3. ADR-0002 (custo congelado) intacto: valores vem de `movements.unit_value`.
+
+## Adendo Pos-Review (2026-07-29)
+
+### Lentidao em Dashboard e Movimentacoes
+A primeira versao de `fetchAllRows` paginava de forma **sequencial**: cada pagina
+de 1000 linhas so partia depois que a anterior voltava, somando a latencia de ida
+e volta de todas elas. Somado a isso, as consultas ainda pediam
+`product:products(*, category:categories(*))`, o que **repetia o registro inteiro
+do produto e da categoria dentro de cada movimentacao** — em alguns milhares de
+linhas, megabytes de JSON redundante para calcular meia duzia de totais.
+
+Correcoes:
+1. `fetchAllRows` passou a buscar a primeira pagina, derivar o passo real a partir
+   dela e so entao disparar as paginas seguintes em **paralelo** (janela de 4).
+2. Pagina inicial curta faz **uma sondagem** em vez de abrir janela paralela — sem
+   isso, toda tabela pequena pagaria 4 requisicoes vazias, ficando mais lenta que
+   antes da correcao.
+3. O passo vem do tamanho real da primeira pagina, nunca do valor pedido: se o
+   servidor impuser um `max-rows` menor que 1000, assumir 1000 voltaria a pular
+   linhas — exatamente o bug que a paginacao existe para evitar.
+4. Os `select` aninhados trazem so as colunas que a tela le.
+5. Ordenacao de desempate (`.order('id')`) nas consultas paginadas: sem uma segunda
+   chave, linhas com o mesmo instante podem trocar de pagina e ser puladas ou
+   duplicadas entre requisicoes.
+
+### Regressao Corrigida: Produto Desativado Sem Volta
+A exclusao logica foi introduzida sem caminho de retorno — o `select` da tela de
+Produtos filtrava `is_active = true`, entao um produto desativado por engano
+sumia sem forma de recuperar pela interface (porta de mao unica). A tela de
+Colaboradores ja resolvia isso e serviu de modelo: agora Produtos carrega ativos
+e desativados, tem filtro de status (padrao: Ativos), marca a linha desativada e
+oferece acao de reativar.
+
+### Nota de Seguranca
+`movements_unit_value_backup_20260729` fica no schema `public` e seria exposta
+pela API do PostgREST. A migracao habilita RLS **sem policy** nessa tabela, o que
+a torna inacessivel pela chave anon e mantem acesso normal pelo SQL Editor. Nao
+altera o RLS das tabelas do sistema (ADR-0004).

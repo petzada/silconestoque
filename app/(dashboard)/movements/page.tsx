@@ -162,11 +162,19 @@ export default function MovementsPage() {
     setIsLoading(true);
     try {
       const [movementsRes, productsRes, categoriesRes, employeesRes] = await Promise.all([
-        fetchAllRows<Movement>(() =>
+        // O produto e a categoria aninhados vêm só com as colunas que a tabela
+        // exibe e os filtros usam. Antes era `product:products(*, category:categories(*))`,
+        // que repetia o registro completo em cada linha do histórico.
+        fetchAllRows(() =>
           supabase
             .from('movements')
-            .select('*, product:products(*, category:categories(*)), employee:employees(id, full_name)')
+            .select(
+              '*, product:products(id, name, category_id, category:categories(id, name)), employee:employees(id, full_name)'
+            )
             .order('created_at', { ascending: false })
+            // Desempate estável: sem uma segunda chave de ordenação, linhas com
+            // o mesmo instante podem trocar de página e ser puladas ou repetidas.
+            .order('id', { ascending: false })
         ),
         supabase
           .from('products')
@@ -182,7 +190,10 @@ export default function MovementsPage() {
       if (categoriesRes.error) throw categoriesRes.error;
       if (employeesRes.error) throw employeesRes.error;
 
-      setMovements(movementsRes.data || []);
+      // O supabase-js infere relação aninhada como array quando o `select` lista
+      // colunas explicitamente; em runtime um vínculo muitos-para-um volta como
+      // objeto. Mesmo padrão de conversão já usado nas retiradas do colaborador.
+      setMovements((movementsRes.data || []) as unknown as Movement[]);
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
       setEmployees(employeesRes.data || []);
