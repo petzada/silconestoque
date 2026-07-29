@@ -197,16 +197,16 @@ export function LockerSheet({
     if (!locker || !selectedAssignment || !transferEmployeeId) return;
     setIsTransferring(true);
     try {
-      const { error: releaseError } = await supabase
-        .from('locker_assignments')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('id', selectedAssignment.id);
-      if (releaseError) throw releaseError;
-
-      const { error: assignError } = await supabase
-        .from('locker_assignments')
-        .insert({ locker_id: locker.id, employee_id: transferEmployeeId });
-      if (assignError) throw assignError;
+      // RPC transacional: encerra a ocupação atual e cria a nova na mesma
+      // transação. Se o INSERT falhar (colaborador já tem armário do tipo,
+      // desligado, ou armário inativo), o UPDATE de encerramento é revertido
+      // junto — o ocupante original não fica sem armário por uma falha alheia.
+      const { error } = await supabase.rpc('transfer_locker_assignment', {
+        p_assignment_id: selectedAssignment.id,
+        p_locker_id: locker.id,
+        p_employee_id: transferEmployeeId,
+      });
+      if (error) throw error;
 
       toast.success('Armário transferido com sucesso');
       setIsTransferMode(false);

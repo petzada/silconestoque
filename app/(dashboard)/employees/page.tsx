@@ -176,13 +176,19 @@ export default function EmployeesPage() {
   const fetchData = useCallback(async () => {
     try {
       const [employeesRes, departmentsRes, rolesRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select(
-            '*, department:departments(*), role:roles(*), locker_assignments!left(id, started_at, ended_at, locker:lockers(id, kind, number, size))'
-          )
-          .is('locker_assignments.ended_at', null)
-          .order('full_name'),
+        // Acima do teto do PostgREST (1000 linhas), esta lista alimentava
+        // `existingNames` (pré-checagem de duplicidade da importação) cega ao
+        // que estivesse na cauda da paginação. fetchAllRows pagina até esgotar.
+        fetchAllRows(() =>
+          supabase
+            .from('employees')
+            .select(
+              '*, department:departments(*), role:roles(*), locker_assignments!left(id, started_at, ended_at, locker:lockers(id, kind, number, size))'
+            )
+            .is('locker_assignments.ended_at', null)
+            .order('full_name')
+            .order('id', { ascending: true })
+        ),
         supabase.from('departments').select('*').order('name'),
         supabase.from('roles').select('*').order('name'),
       ]);
@@ -273,18 +279,15 @@ export default function EmployeesPage() {
 
     setIsOffboarding(true);
     try {
-      const { error: employeeError } = await supabase
-        .from('employees')
-        .update({ is_active: false })
-        .eq('id', employeeToOffboard.id);
-      if (employeeError) throw employeeError;
-
-      const { error: assignmentError } = await supabase
-        .from('locker_assignments')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('employee_id', employeeToOffboard.id)
-        .is('ended_at', null);
-      if (assignmentError) throw assignmentError;
+      // RPC transacional: is_active=false e o encerramento das ocupações
+      // abertas viram uma única transação. Antes, se a segunda escrita
+      // falhasse, o colaborador ficava desligado segurando o armário — e o
+      // armário deixava de ser liberável, pois o colaborador sai de
+      // `activeEmployees` (locker-utils.ts).
+      const { error } = await supabase.rpc('deactivate_employee', {
+        p_employee_id: employeeToOffboard.id,
+      });
+      if (error) throw error;
 
       toast.success('Colaborador desligado com sucesso');
       setIsOffboardDialogOpen(false);
@@ -322,6 +325,9 @@ export default function EmployeesPage() {
           .eq('type', 'OUT')
           .eq('employee_id', employeeId)
           .order('created_at', { ascending: false })
+          // Desempate estável: sem uma segunda chave, retiradas no mesmo
+          // instante podem ser puladas ou repetidas entre páginas do range().
+          .order('id', { ascending: false })
       );
       if (error) throw error;
       setWithdrawals((data as unknown as WithdrawalRow[]) || []);

@@ -158,6 +158,18 @@ export default function MovementsPage() {
     void fetchData();
   }, []);
 
+  // O campo de preço só é exibido quando type === 'IN' e a NF tem conteúdo
+  // (ver o bloco condicional mais abaixo, em torno de "invoiceNumber?.trim()").
+  // react-hook-form não desregistra o campo ao desmontá-lo, então um valor
+  // digitado antes ficava retido: trocar para OUT, ou apagar a NF e digitar
+  // outra, reexibia (ou submetia) um preço de um contexto anterior. Zera o
+  // campo sempre que ele deixa de ser exibido.
+  useEffect(() => {
+    if (movementType !== 'IN' || !invoiceNumber?.trim()) {
+      form.setValue('unit_value', undefined);
+    }
+  }, [movementType, invoiceNumber, form]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -254,13 +266,19 @@ export default function MovementsPage() {
     saveLockRef.current = true;
     setIsSaving(true);
     try {
+      // Normaliza a NF uma única vez e usa o mesmo valor nas duas decisões.
+      // Antes, unit_value checava o campo sem trim e invoice_number com trim:
+      // uma NF preenchida só com espaços gravava o preço com NF NULL, e o
+      // trigger handle_price_change (que exige os dois) nunca disparava —
+      // mas o valor entrava nos totais mesmo assim.
+      const trimmedInvoiceNumber = values.type === 'IN' ? values.invoice_number?.trim() || '' : '';
       const movementData = {
         product_id: values.product_id,
         type: values.type,
         quantity: values.quantity,
         entity_name: values.entity_name?.trim() || null,
-        unit_value: values.type === 'IN' && values.invoice_number ? values.unit_value || null : null,
-        invoice_number: values.type === 'IN' ? values.invoice_number?.trim() || null : null,
+        unit_value: trimmedInvoiceNumber ? values.unit_value || null : null,
+        invoice_number: trimmedInvoiceNumber || null,
         employee_id: values.type === 'OUT' ? values.employee_id || null : null,
       };
 

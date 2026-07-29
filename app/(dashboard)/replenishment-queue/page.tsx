@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -57,9 +57,20 @@ export default function ReplenishmentQueuePage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // fetchAllRows: acima do teto do PostgREST (1000 linhas), a fila ficava
+      // cega à cauda do catálogo — produtos zerados/críticos fora da primeira
+      // página simplesmente não apareciam, sem erro nenhum.
       const [productsRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('*, category:categories(*)').eq('is_active', true),
-        supabase.from('categories').select('*').order('name'),
+        fetchAllRows<Product>(() =>
+          supabase
+            .from('products')
+            .select('*, category:categories(*)')
+            .eq('is_active', true)
+            .order('id', { ascending: true })
+        ),
+        fetchAllRows<Category>(() =>
+          supabase.from('categories').select('*').order('name').order('id', { ascending: true })
+        ),
       ]);
 
       if (productsRes.error) throw productsRes.error;

@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import type { Employee, Locker, LockerKind, Department, Role } from '@/lib/types';
 
 // ---------- Types ----------
@@ -65,20 +65,30 @@ export function friendlyDbError(error: unknown, fallback: string): string {
 export async function fetchLockersData(
   kind: LockerKind
 ): Promise<{ lockers: LockerRow[]; employees: EmployeeOption[] }> {
+  // fetchAllRows: acima do teto do PostgREST (1000 linhas), a lista de
+  // colaboradores ativos alimenta a checagem de "já tem armário" na
+  // atribuição/transferência — cega além do teto, ela deixaria de barrar
+  // duplicidade e de listar todo mundo disponível no combobox.
   const [lockersRes, employeesRes] = await Promise.all([
-    supabase
-      .from('lockers')
-      .select(
-        '*, locker_assignments!left(id, started_at, ended_at, employee:employees(id, full_name, department:departments(name), role:roles(name)))'
-      )
-      .eq('kind', kind)
-      .is('locker_assignments.ended_at', null)
-      .order('number'),
-    supabase
-      .from('employees')
-      .select('id, full_name, department:departments(name), role:roles(name)')
-      .eq('is_active', true)
-      .order('full_name'),
+    fetchAllRows<LockerRow>(() =>
+      supabase
+        .from('lockers')
+        .select(
+          '*, locker_assignments!left(id, started_at, ended_at, employee:employees(id, full_name, department:departments(name), role:roles(name)))'
+        )
+        .eq('kind', kind)
+        .is('locker_assignments.ended_at', null)
+        .order('number')
+        .order('id', { ascending: true })
+    ),
+    fetchAllRows(() =>
+      supabase
+        .from('employees')
+        .select('id, full_name, department:departments(name), role:roles(name)')
+        .eq('is_active', true)
+        .order('full_name')
+        .order('id', { ascending: true })
+    ),
   ]);
 
   if (lockersRes.error) throw lockersRes.error;

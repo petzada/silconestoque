@@ -82,14 +82,24 @@ function formatCurrency(value: number | null): string {
   }).format(value);
 }
 
-const productFormSchema = z.object({
-  name: z.string().trim().min(2, 'Informe o nome do produto com pelo menos 2 caracteres.'),
-  sku_code: z.string().optional(),
-  unit: z.enum(['unidade', 'caixa', 'pacote']),
-  category_id: z.string().min(1, 'Selecione uma categoria.'),
-  min_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
-  max_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
-});
+const productFormSchema = z
+  .object({
+    name: z.string().trim().min(2, 'Informe o nome do produto com pelo menos 2 caracteres.'),
+    sku_code: z.string().optional(),
+    unit: z.enum(['unidade', 'caixa', 'pacote']),
+    category_id: z.string().min(1, 'Selecione uma categoria.'),
+    min_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
+    max_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
+  })
+  .superRefine((values, ctx) => {
+    if (values.max_stock < values.min_stock) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['max_stock'],
+        message: 'Estoque máximo não pode ser menor que o mínimo.',
+      });
+    }
+  });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
@@ -121,6 +131,45 @@ type ProductPdfRow = {
   minStock: number;
   maxStock: number;
 };
+
+// parseFloat('12,50') devolve 12: o parser nativo para no separador decimal
+// BR. O CSV de importação é ';'-delimitado (locale BR), então a perda de
+// centavos é sistemática. Trata tanto "1.234,56" (milhar + decimal BR)
+// quanto "1234.56" (decimal já no formato aceito por Number). Retorna null
+// para campo vazio, distinto de um zero legítimo.
+function parseBrazilianNumber(raw: string | undefined | null): number | null {
+  if (raw === undefined || raw === null) return null;
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+
+  const cleaned = trimmed.replace(/[^\d,.\-]/g, '');
+  if (cleaned === '' || cleaned === '-') return null;
+
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+
+  let normalized: string;
+  if (hasComma && hasDot) {
+    // "1.234,56": pontos são separador de milhar, vírgula é o decimal.
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    // "12,50": vírgula é o separador decimal.
+    normalized = cleaned.replace(',', '.');
+  } else {
+    // "1234.56" ou inteiro puro: já está no formato aceito por Number.
+    normalized = cleaned;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// Variante inteira (quantidade): mesmo parser, truncado. Campo vazio vira 0
+// (mantém o comportamento existente para saldo inicial não informado).
+function parseBrazilianInt(raw: string | undefined | null): number {
+  const parsed = parseBrazilianNumber(raw);
+  return parsed === null ? 0 : Math.trunc(parsed);
+}
 
 function slugifyCategoryName(value: string): string {
   return (
@@ -181,13 +230,23 @@ export default function ProductsPage() {
         // Traz ativos e desativados: a desativação precisa ter caminho de volta,
         // senão vira porta de mão única. O filtro de status abaixo decide o que
         // aparece na tabela (padrão: só ativos).
+        // Desempate estável obrigatório: products.name não tem UNIQUE
+        // (schema.sql:60-73), então ordenar só por nome deixa a ordem ambígua
+        // entre produtos homônimos e o range() do fetchAllRows pode pular ou
+        // repetir linhas acima do teto de 1000.
         fetchAllRows<Product>(() =>
           supabase
             .from('products')
             .select('*, category:categories(*)')
             .order('name')
+            .order('id', { ascending: true })
         ),
-        supabase.from('categories').select('*').order('name'),
+        // fetchAllRows: esta lista alimenta o dedupe de categorias na
+        // importação (categoryIdByName) — acima do teto do PostgREST ela
+        // ficaria cega a categorias existentes e recriaria duplicatas.
+        fetchAllRows<Category>(() =>
+          supabase.from('categories').select('*').order('name').order('id', { ascending: true })
+        ),
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -237,6 +296,9 @@ export default function ProductsPage() {
           .select('*')
           .eq('product_id', product.id)
           .order('created_at', { ascending: false })
+          // Desempate estável: sem uma segunda chave, variações no mesmo
+          // instante podem ser puladas ou repetidas entre páginas do range().
+          .order('id', { ascending: false })
       );
 
       if (error) throw error;
@@ -322,9 +384,11 @@ export default function ProductsPage() {
       };
 
       if (editingProduct) {
-        await supabase.from('products').update(productData).eq('id', editingProduct.id);
+        const { error } = await supabase.from('products').update(productData).eq('id', editingProduct.id);
+        if (error) throw error;
       } else {
-        await supabase.from('products').insert({ ...productData, current_qty: 0 });
+        const { error } = await supabase.from('products').insert({ ...productData, current_qty: 0 });
+        if (error) throw error;
       }
 
       toast.success(editingProduct ? 'Atualizado' : 'Criado');
@@ -396,8 +460,8 @@ export default function ProductsPage() {
 
         const unit = row.unidade?.toLowerCase() || 'unidade';
         const validUnit = ['unidade', 'caixa', 'pacote'].includes(unit) ? unit : 'unidade';
-        const initialQty = parseInt(row.estoque || row.quantidade || row.qty || '0') || 0;
-        const costPrice = parseFloat(row.custo || row.cost_price || '0') || null;
+        const initialQty = parseBrazilianInt(row.estoque || row.quantidade || row.qty);
+        const costPrice = parseBrazilianNumber(row.custo || row.cost_price);
 
         valid.push({ row, categoryName, initialQty, costPrice, validUnit });
       }
@@ -560,11 +624,21 @@ export default function ProductsPage() {
     try {
       // Categorias que ainda não existem são criadas a partir do próprio CSV
       // (comparação por nome, ignorando maiúsculas/minúsculas, para não
-      // duplicar uma categoria já cadastrada com grafia diferente).
+      // duplicar uma categoria já cadastrada com grafia diferente). O dedupe
+      // precisa ser feito pela chave normalizada, e não pelo texto bruto: um
+      // CSV com "EPIs" e "epis" gerava duas linhas distintas em missingNames
+      // (Set compara por igualdade exata) e o INSERT em lote as criava como
+      // duas categorias — uma delas órfã do agrupamento do dashboard, que
+      // chaveia por nome. Mantém apenas a primeira grafia vista por chave.
       const categoryIdByName = new Map(categories.map((c) => [c.name.toLowerCase().trim(), c.id]));
-      const missingCategoryNames = Array.from(
-        new Set(validationResult.valid.map((item) => item.categoryName))
-      ).filter((name) => !categoryIdByName.has(name.toLowerCase().trim()));
+      const firstSeenNameByNormalized = new Map<string, string>();
+      for (const item of validationResult.valid) {
+        const normalized = item.categoryName.toLowerCase().trim();
+        if (!categoryIdByName.has(normalized) && !firstSeenNameByNormalized.has(normalized)) {
+          firstSeenNameByNormalized.set(normalized, item.categoryName);
+        }
+      }
+      const missingCategoryNames = Array.from(firstSeenNameByNormalized.values());
 
       if (missingCategoryNames.length > 0) {
         const { data: newCategories, error: categoryError } = await supabase
@@ -580,19 +654,31 @@ export default function ProductsPage() {
           const categoryId = categoryIdByName.get(item.categoryName.toLowerCase().trim());
           if (!categoryId) throw new Error('Categoria não encontrada');
 
-          const { data: newProduct } = await supabase.from('products').insert({
-            name: item.row.nome,
-            sku_code: item.row.sku || item.row.codigo || null,
-            unit: item.validUnit,
-            category_id: categoryId,
-            current_qty: 0,
-            min_stock: parseInt(item.row.minimo || item.row.min_stock || '0') || 0,
-            max_stock: parseInt(item.row.maximo || item.row.max_stock || '0') || 0,
-            cost_price: item.costPrice,
-          }).select().single();
+          const { data: newProduct, error: productError } = await supabase
+            .from('products')
+            .insert({
+              name: item.row.nome,
+              sku_code: item.row.sku || item.row.codigo || null,
+              unit: item.validUnit,
+              category_id: categoryId,
+              current_qty: 0,
+              min_stock: parseInt(item.row.minimo || item.row.min_stock || '0') || 0,
+              max_stock: parseInt(item.row.maximo || item.row.max_stock || '0') || 0,
+              cost_price: item.costPrice,
+            })
+            .select()
+            .single();
 
+          if (productError) {
+            throw new Error(`Falha ao criar produto "${item.row.nome}": ${productError.message}`);
+          }
+
+          // Produto criado sem a movimentação de saldo inicial conta como
+          // erro, não sucesso: antes, o resultado deste insert era descartado
+          // e `imported++` rodava de qualquer forma, mesmo quando a
+          // movimentação falhava e o saldo nunca era estabelecido.
           if (item.initialQty > 0 && newProduct) {
-            await supabase.from('movements').insert({
+            const { error: movementError } = await supabase.from('movements').insert({
               product_id: newProduct.id,
               type: 'IN',
               quantity: item.initialQty,
@@ -600,11 +686,19 @@ export default function ProductsPage() {
               unit_value: item.costPrice,
               is_initial_import: true,
             });
+
+            if (movementError) {
+              throw new Error(
+                `Produto "${item.row.nome}" foi criado, mas a movimentação de saldo inicial falhou: ${movementError.message}`
+              );
+            }
           }
 
           imported++;
-        } catch {
+        } catch (error: unknown) {
           errors++;
+          const message = error instanceof Error ? error.message : 'Erro desconhecido ao importar linha';
+          console.error(`Falha ao importar "${item.row.nome}": ${message}`);
         }
       }
 

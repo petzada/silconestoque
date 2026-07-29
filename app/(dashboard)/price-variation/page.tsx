@@ -90,6 +90,9 @@ export default function PriceVariationPage() {
             .from('price_history')
             .select('*, product:products(*, category:categories(*))')
             .order('created_at', { ascending: false })
+            // Desempate estável: sem uma segunda chave, variações no mesmo
+            // instante podem ser puladas ou repetidas entre páginas do range().
+            .order('id', { ascending: false })
         ),
         supabase.from('categories').select('*').order('name'),
       ]);
