@@ -64,7 +64,7 @@ function MissingList({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex-1 space-y-2 rounded-lg border border-warning/40 bg-warning-muted p-3">
+    <div className="flex-1 space-y-2 border border-warning/40 bg-warning-muted p-3">
       <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
         <AlertTriangle className="h-3.5 w-3.5" />
         {title}
@@ -237,7 +237,7 @@ export function EmployeeImportDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          <div className="rounded-lg border-2 border-dashed border-border bg-muted p-4 text-center">
+          <div className="border border-border bg-surface-soft p-4 text-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -260,14 +260,14 @@ export function EmployeeImportDialog({
           {result && (
             <div className="space-y-3">
               <div className="flex gap-3">
-                <div className="flex flex-1 items-center gap-2 rounded-lg bg-success-muted p-3">
+                <div className="flex flex-1 items-center gap-2 bg-success-muted p-3">
                   <CheckCircle2 className="h-5 w-5 text-success" />
                   <div>
                     <p className="text-sm font-semibold text-success">{result.valid.length} válidos</p>
                     <p className="text-[10px] text-success">Prontos para importar</p>
                   </div>
                 </div>
-                <div className="flex flex-1 items-center gap-2 rounded-lg bg-destructive/10 p-3">
+                <div className="flex flex-1 items-center gap-2 bg-danger-muted p-3">
                   <XCircle className="h-5 w-5 text-destructive" />
                   <div>
                     <p className="text-sm font-semibold text-destructive">{result.errors.length} com erro</p>
@@ -307,7 +307,7 @@ export function EmployeeImportDialog({
                       <FileDown className="h-3.5 w-3.5" /> Exportar PDF
                     </Button>
                   </div>
-                  <div className="max-h-[220px] overflow-y-auto rounded-lg border border-border">
+                  <div className="max-h-[220px] overflow-y-auto border border-border">
                     <Table>
                       <TableHeader>
                         <TableRow>

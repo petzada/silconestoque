@@ -390,8 +390,8 @@ export default function MovementsPage() {
           <Badge
             variant="outline"
             className={cn(
-              'rounded-md border-none px-2 py-0 text-xs font-bold',
-              movement.type === 'IN' ? 'bg-success-muted text-success' : 'bg-destructive/10 text-destructive'
+              'border-none px-2 py-0 text-xs font-bold',
+              movement.type === 'IN' ? 'bg-success-muted text-success' : 'bg-danger-muted text-destructive'
             )}
           >
             {movement.type === 'IN' ? '+' : '-'}
@@ -460,7 +460,7 @@ export default function MovementsPage() {
             size="icon"
             title="Excluir movimentacao"
             aria-label="Excluir movimentacao"
-            className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
+            className="h-8 w-8 text-destructive/70 hover:bg-danger-muted"
             onClick={() => openDeleteDialog(movement)}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -489,7 +489,7 @@ export default function MovementsPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="border-destructive/30 text-destructive hover:bg-danger-muted hover:text-destructive"
               onClick={() => openDialog('OUT')}
             >
               <ArrowUpCircle className="h-4 w-4" /> Registrar Saida
@@ -498,7 +498,7 @@ export default function MovementsPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5">
+      <div className="flex flex-col gap-2 border border-border bg-card p-2.5">
         <div className="flex flex-col items-center gap-2 sm:flex-row">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -520,13 +520,13 @@ export default function MovementsPage() {
             className="shrink-0"
           >
             <TabsList className="h-10 bg-muted p-1">
-              <TabsTrigger value="all" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground">
+              <TabsTrigger value="all" className="h-8 px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground">
                 TODAS
               </TabsTrigger>
-              <TabsTrigger value="IN" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger value="IN" className="h-8 px-4 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 ENTRADAS
               </TabsTrigger>
-              <TabsTrigger value="OUT" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
+              <TabsTrigger value="OUT" className="h-8 px-4 text-xs font-bold data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
                 SAIDAS
               </TabsTrigger>
             </TabsList>
@@ -541,7 +541,7 @@ export default function MovementsPage() {
             <SelectTrigger className="h-10 w-[150px] border-border text-xs font-bold">
               <SelectValue placeholder="Mes" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos os meses</SelectItem>
               {MONTHS.map((month) => (
                 <SelectItem key={month.value} value={month.value}>
@@ -558,7 +558,7 @@ export default function MovementsPage() {
             <SelectTrigger className="h-10 w-[130px] border-border text-xs font-bold">
               <SelectValue placeholder="Ano" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos os anos</SelectItem>
               {availableYears.map((year) => (
                 <SelectItem key={year} value={year}>
@@ -575,7 +575,7 @@ export default function MovementsPage() {
             <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
@@ -592,7 +592,7 @@ export default function MovementsPage() {
             <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
               <SelectValue placeholder="Colaborador" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos os colaboradores</SelectItem>
               {employeeFilterOptions.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
@@ -667,7 +667,7 @@ export default function MovementsPage() {
                             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[min(450px,90vw)] min-w-[280px] rounded-lg p-0 overflow-hidden">
+                        <PopoverContent className="w-[min(450px,90vw)] min-w-[280px] p-0 overflow-hidden">
                           <Command>
                             <CommandInput placeholder="Digite para buscar..." className="h-10 text-sm" />
                             <CommandList>
@@ -751,7 +751,7 @@ export default function MovementsPage() {
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[min(320px,90vw)] p-0 rounded-lg overflow-hidden" align="start">
+                              <PopoverContent className="w-[min(320px,90vw)] p-0 overflow-hidden" align="start">
                                 <Command shouldFilter>
                                   <CommandInput
                                     placeholder="Buscar colaborador..."
@@ -893,7 +893,7 @@ export default function MovementsPage() {
                     'h-10 px-8 font-semibold',
                     movementType === 'IN'
                       ? 'bg-primary text-primary-foreground hover:bg-primary-active'
-                      : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                      : 'bg-destructive text-destructive-foreground hover:bg-destructive-active'
                   )}
                   disabled={isSaving}
                 >

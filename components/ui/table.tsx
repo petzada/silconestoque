@@ -44,7 +44,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "bg-muted/50 border-t font-medium [&>tr]:last:border-b-0",
+        "bg-surface-soft border-t font-medium [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -57,7 +57,11 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        // Three distinguishable states, none of them alpha (V10/E.14): normal
+        // is transparent, hover is --accent (solid hover-highlight), selected
+        // is --surface-elevated (one step darker than hover, so a selected
+        // row stays visibly different even when the cursor is over it).
+        "hover:bg-accent data-[state=selected]:bg-surface-elevated border-b transition-colors",
         className
       )}
       {...props}

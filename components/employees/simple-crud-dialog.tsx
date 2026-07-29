@@ -196,7 +196,7 @@ export function SimpleCrudDialog({
               items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                  className="flex items-center justify-between gap-2 border border-border px-3 py-2"
                 >
                   {editingId === item.id ? (
                     <>
@@ -248,7 +248,7 @@ export function SimpleCrudDialog({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
                         title="Excluir"
                         aria-label="Excluir"
                         onClick={() => openDeleteDialog(item)}

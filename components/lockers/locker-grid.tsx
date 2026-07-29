@@ -83,7 +83,7 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
         </Card>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2 border border-border bg-card p-2.5 sm:flex-row sm:items-center">
         <div className="relative w-full flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -122,7 +122,7 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
       </div>
 
       {filteredLockers.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card py-16 text-center text-sm text-muted-foreground">
+        <div className="border border-border bg-card py-16 text-center text-sm text-muted-foreground">
           {lockers.length === 0 ? 'Nenhum armário cadastrado.' : 'Nenhum armário encontrado para este filtro.'}
         </div>
       ) : (
@@ -136,9 +136,17 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
                 type="button"
                 onClick={() => onSelectLocker(locker)}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1.5 rounded-lg border p-3 text-center transition-colors',
-                  status === 'occupied' && 'border-primary/40 bg-primary/5 hover:bg-primary/10',
-                  status === 'free' && 'border-dashed border-border bg-card hover:bg-muted/50',
+                  'flex flex-col items-center justify-center gap-1.5 border p-3 text-center transition-colors',
+                  // Occupied uses the info surface (pale blue, static) instead
+                  // of the old primary-tinted alpha fill — IBM Blue stays
+                  // scarce (V2/V6) and this isn't an interactive element.
+                  // Hover reuses --accent, the one universal solid hover
+                  // token, same as every other hoverable surface in the app.
+                  status === 'occupied' && 'border-primary/40 bg-info-muted hover:bg-accent',
+                  // Free lockers used a dashed border to read as "empty slot";
+                  // Etapa 2 (V12) reserves dashed/2px for focus and error, so
+                  // this becomes a plain hairline like every other card.
+                  status === 'free' && 'border-border bg-card hover:bg-accent',
                   status === 'inactive' && 'border-border bg-muted opacity-50 hover:opacity-70'
                 )}
               >

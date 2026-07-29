@@ -27,13 +27,13 @@ function LockersPageContent() {
         <TabsList className="h-10 bg-muted p-1">
           <TabsTrigger
             value="uniforme"
-            className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="h-8 px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Uniformes
           </TabsTrigger>
           <TabsTrigger
             value="vestiario"
-            className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground"
+            className="h-8 px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Vestiário
           </TabsTrigger>

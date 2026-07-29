@@ -82,10 +82,12 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
-      {/* Mobile overlay */}
+      {/* Mobile overlay: solid, no atmospheric blur effect (DESIGN.md forbids
+          it) and no pure black (rgba(22,22,22,.5) over --foreground). */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ backgroundColor: 'rgba(22, 22, 22, 0.5)' }}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -100,7 +102,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden bg-muted shrink-0">
+          <div className="flex items-center justify-center w-9 h-9 overflow-hidden bg-muted shrink-0">
             <Image src="/logo.png" alt="Silcon Logo" width={36} height={36} className="object-contain" />
           </div>
           <div className="min-w-0">
@@ -133,7 +135,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                       onClick={() => setMobileOpen(false)}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        'group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors',
                         isActive
                           ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
@@ -164,7 +166,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             title="Configurações"
             aria-label="Configurações"
             className={cn(
-              'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+              'inline-flex h-9 w-9 items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
               pathname === '/settings'
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                 : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -178,7 +180,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             onClick={logout}
             title="Sair"
             aria-label="Sair"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+            className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-danger-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -188,7 +190,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             onClick={onToggleCollapse}
             title="Recolher menu"
             aria-label="Recolher menu"
-            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
             <PanelLeftClose className="h-4 w-4" />
           </button>

@@ -267,7 +267,7 @@ export default function PriceVariationPage() {
             <Badge
               className={cn(
                 'border-none px-2 py-0.5 text-[10px] font-bold uppercase',
-                isIncrease ? 'bg-destructive/15 text-destructive' : 'bg-success-muted text-success'
+                isIncrease ? 'bg-danger-muted text-destructive' : 'bg-success-muted text-success'
               )}
             >
               {isIncrease ? (
@@ -317,7 +317,7 @@ export default function PriceVariationPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
@@ -329,7 +329,7 @@ export default function PriceVariationPage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <TrendingUp className="h-5 w-5 text-warning" />
             </div>
             <div>
@@ -341,7 +341,7 @@ export default function PriceVariationPage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <CalendarRange className="h-5 w-5 text-success" />
             </div>
             <div>
@@ -352,7 +352,7 @@ export default function PriceVariationPage() {
         </Card>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-2.5">
+      <div className="border border-border bg-card p-2.5">
         <div className="grid grid-cols-1 gap-2 xl:grid-cols-5">
           <div className="relative xl:col-span-2">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -368,7 +368,7 @@ export default function PriceVariationPage() {
             <SelectTrigger className="h-10 border-border text-xs font-bold">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
@@ -385,7 +385,7 @@ export default function PriceVariationPage() {
             <SelectTrigger className="h-10 border-border text-xs font-bold">
               <SelectValue placeholder="Direcao" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="increases">Aumentos</SelectItem>
               <SelectItem value="decreases">Reducoes</SelectItem>
@@ -396,7 +396,7 @@ export default function PriceVariationPage() {
             <SelectTrigger className="h-10 border-border text-xs font-bold">
               <SelectValue placeholder="Limite minimo" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               {THRESHOLD_OPTIONS.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}%
@@ -453,7 +453,7 @@ export default function PriceVariationPage() {
             </div>
           ) : (
             <div className="space-y-4 pt-2">
-              <div className="h-[260px] rounded-lg border border-border bg-card p-3">
+              <div className="h-[260px] border border-border bg-card p-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -494,7 +494,7 @@ export default function PriceVariationPage() {
                   return (
                     <div
                       key={history.id}
-                      className="flex items-center justify-between rounded-lg border border-border bg-muted p-3"
+                      className="flex items-center justify-between border border-border bg-muted p-3"
                     >
                       <div>
                         <p className="text-[10px] font-bold uppercase text-muted-foreground">
@@ -517,7 +517,7 @@ export default function PriceVariationPage() {
                           <Badge
                             className={cn(
                               'border-none px-2 py-0.5 text-[10px] font-bold',
-                              isIncrease ? 'bg-destructive/15 text-destructive' : 'bg-success-muted text-success'
+                              isIncrease ? 'bg-danger-muted text-destructive' : 'bg-success-muted text-success'
                             )}
                           >
                             {isIncrease ? (

@@ -137,13 +137,13 @@ export default function PurchaseOrdersPage() {
         title="Sugestões de Compra"
         description="Sugestões de compra emergenciais e programadas"
         actions={
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1">
+          <div className="flex items-center gap-2 border border-border bg-card p-1">
             <Filter className="ml-2 h-3.5 w-3.5 text-muted-foreground" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="h-8 w-[200px] border-none text-xs font-semibold shadow-none">
                 <SelectValue placeholder="Filtrar Categoria" />
               </SelectTrigger>
-              <SelectContent className="rounded-lg">
+              <SelectContent>
                 <SelectItem value="all" className="font-semibold">Todos os produtos</SelectItem>
                 {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
@@ -157,11 +157,11 @@ export default function PurchaseOrdersPage() {
         <Card className="overflow-hidden py-0">
           <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-muted rounded-md flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+              <div className="w-9 h-9 bg-muted flex items-center justify-center text-destructive"><AlertTriangle className="h-5 w-5" /></div>
               <h2 className="text-display text-lg text-foreground">Sugestão Emergencial</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Itens abaixo do estoque mínimo de segurança.</p>
-            <Button className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 text-xs font-semibold rounded-md" onClick={() => generateOrder('emergency')} disabled={isLoading}>
+            <Button className="w-full bg-destructive text-destructive-foreground hover:bg-destructive-active h-10 text-xs font-semibold" onClick={() => generateOrder('emergency')} disabled={isLoading}>
               Gerar Lista de Críticos <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -171,11 +171,11 @@ export default function PurchaseOrdersPage() {
         <Card className="overflow-hidden py-0">
           <div className="p-6 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-muted rounded-md flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
+              <div className="w-9 h-9 bg-muted flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
               <h2 className="text-display text-lg text-foreground">Sugestão Mensal</h2>
             </div>
             <p className="text-xs text-muted-foreground font-medium mb-6 flex-1">Reposição programada para atingir o estoque máximo.</p>
-            <Button className="w-full h-10 text-xs font-semibold rounded-md" onClick={() => generateOrder('monthly')} disabled={isLoading}>
+            <Button className="w-full h-10 text-xs font-semibold" onClick={() => generateOrder('monthly')} disabled={isLoading}>
               Gerar Reposição Total <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -204,7 +204,7 @@ export default function PurchaseOrdersPage() {
                   <TableRow key={i.product_id} className="border-border">
                     <TableCell className="py-2.5"><span className="font-bold text-foreground text-sm">{i.product_name}</span></TableCell>
                     <TableCell className="text-center text-xs font-bold text-muted-foreground">{i.current_qty}</TableCell>
-                    <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-foreground text-background rounded-md text-xs font-bold">{i.order_qty}</span></TableCell>
+                    <TableCell className="text-center"><span className="inline-block px-2.5 py-1 bg-foreground text-background text-xs font-bold">{i.order_qty}</span></TableCell>
                     <TableCell className="text-right font-bold text-foreground text-sm">{formatCurrency(i.total_cost)}</TableCell>
                   </TableRow>
                 ))}

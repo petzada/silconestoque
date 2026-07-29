@@ -56,7 +56,7 @@ export default function QuizPainelPage() {
           </Link>
 
           <div className="mt-16 flex flex-col items-center text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-card border border-border">
+            <div className="flex size-16 items-center justify-center bg-card border border-border">
               <Lock className="size-7 text-primary" />
             </div>
             <h1 className="text-display mt-6 text-[24px] text-foreground">
@@ -75,11 +75,11 @@ export default function QuizPainelPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Senha"
               autoFocus
-              className="h-12 w-full rounded-md border border-input bg-card px-4 text-center text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:tracking-normal placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/30"
+              className="h-12 w-full border border-input bg-card px-4 text-center text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:tracking-normal placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/30"
             />
             <button
               type="submit"
-              className="flex h-12 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active"
+              className="flex h-12 items-center justify-center gap-2 bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active"
             >
               Acessar
             </button>
@@ -212,7 +212,7 @@ function ManagerPanel() {
               type="button"
               onClick={load}
               disabled={loading}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 text-[14px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className="flex h-10 items-center justify-center gap-1.5 border border-border bg-card px-3 text-[14px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
               Atualizar
@@ -221,7 +221,7 @@ function ManagerPanel() {
               type="button"
               onClick={handleExportPdf}
               disabled={exporting || responses.length === 0}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-md bg-primary px-4 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:opacity-50"
+              className="flex h-10 items-center justify-center gap-1.5 bg-primary px-4 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:opacity-50"
             >
               {exporting ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -255,7 +255,7 @@ function ManagerPanel() {
               Carregando respostas...
             </div>
           ) : responses.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border py-16 text-center text-[14px] text-muted-foreground">
+            <div className="border border-border bg-surface-soft py-16 text-center text-[14px] text-muted-foreground">
               Nenhuma resposta registrada ainda.
             </div>
           ) : (
@@ -288,7 +288,7 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="border border-border bg-card p-4">
       <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
         {icon}
         {label}
@@ -311,11 +311,11 @@ function ResponseRow({
 }) {
   const pct = Math.round((r.score / r.total) * 100);
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div className="overflow-hidden border border-border bg-card">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50"
+        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-accent"
       >
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-semibold text-foreground">

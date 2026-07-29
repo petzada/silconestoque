@@ -746,7 +746,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.sku_code || '',
         cell: (product) => (
-          <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-bold text-muted-foreground">
+          <span className="bg-muted px-2 py-1 font-mono text-xs font-bold text-muted-foreground">
             {product.sku_code || '---'}
           </span>
         ),
@@ -763,7 +763,7 @@ export default function ProductsPage() {
               className={cn('max-w-[300px] font-bold text-foreground', !product.is_active && 'opacity-50')}
             />
             {!product.is_active && (
-              <Badge variant="outline" className="shrink-0 rounded-md border-none bg-muted px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
+              <Badge variant="outline" className="shrink-0 border-none bg-muted px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
                 DESATIVADO
               </Badge>
             )}
@@ -850,7 +850,7 @@ export default function ProductsPage() {
                 size="icon"
                 title="Desativar produto"
                 aria-label="Desativar produto"
-                className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
+                className="h-8 w-8 text-destructive/70 hover:bg-danger-muted"
                 onClick={() => handleOpenDeleteDialog(product)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -898,7 +898,7 @@ export default function ProductsPage() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 rounded-lg border border-border">
+      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 border border-border">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -912,7 +912,7 @@ export default function ProductsPage() {
           <SelectTrigger className="w-full sm:w-[220px] h-10 border-border text-sm font-semibold">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
-          <SelectContent className="rounded-lg">
+          <SelectContent>
             <SelectItem value="all" className="font-semibold">Todas as categorias</SelectItem>
             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
@@ -921,7 +921,7 @@ export default function ProductsPage() {
           <SelectTrigger className="w-full sm:w-[170px] h-10 border-border text-sm font-semibold">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="rounded-lg">
+          <SelectContent>
             <SelectItem value="active" className="font-semibold">Ativos</SelectItem>
             <SelectItem value="inactive">Desativados</SelectItem>
             <SelectItem value="all">Todos</SelectItem>
@@ -982,7 +982,7 @@ export default function ProductsPage() {
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <SelectTrigger className="h-10 border-border bg-muted"><SelectValue /></SelectTrigger>
-                          <SelectContent className="rounded-lg">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                          <SelectContent>{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -999,7 +999,7 @@ export default function ProductsPage() {
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger className="h-10 border-border bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent className="rounded-lg">{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </FormControl>
                     <FormMessage className="text-xs" />
@@ -1081,7 +1081,7 @@ export default function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div className="p-4 border-2 border-dashed border-border bg-muted text-center">
+            <div className="p-4 border border-border bg-surface-soft text-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1106,14 +1106,14 @@ export default function ProductsPage() {
             {validationResult && (
               <div className="space-y-3">
                 <div className="flex gap-3">
-                  <div className="flex-1 p-3 bg-success-muted rounded-lg flex items-center gap-2">
+                  <div className="flex-1 p-3 bg-success-muted flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
                       <p className="text-sm font-bold text-success">{validationResult.valid.length} válidos</p>
                       <p className="text-[10px] text-success">Prontos para importar</p>
                     </div>
                   </div>
-                  <div className="flex-1 p-3 bg-destructive/10 rounded-lg flex items-center gap-2">
+                  <div className="flex-1 p-3 bg-danger-muted flex items-center gap-2">
                     <XCircle className="h-5 w-5 text-destructive" />
                     <div>
                       <p className="text-sm font-bold text-destructive">{validationResult.errors.length} com erro</p>
@@ -1123,10 +1123,10 @@ export default function ProductsPage() {
                 </div>
 
                 {validationResult.errors.length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-destructive/10 px-3 py-2 flex items-center justify-between">
+                  <div className="border overflow-hidden">
+                    <div className="bg-danger-muted px-3 py-2 flex items-center justify-between">
                       <span className="text-xs font-bold text-destructive">Linhas com Erro</span>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-destructive hover:bg-destructive/15" onClick={exportErrorsPDF}>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-destructive hover:bg-danger-muted" onClick={exportErrorsPDF}>
                         <FileDown className="h-3 w-3 mr-1" /> Exportar PDF
                       </Button>
                     </div>
@@ -1197,7 +1197,7 @@ export default function ProductsPage() {
                   const variation = h.old_price ? ((h.new_price - h.old_price) / h.old_price) * 100 : 0;
                   const isIncrease = variation > 0;
                   return (
-                    <div key={h.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div key={h.id} className="flex items-center justify-between p-3 bg-muted">
                       <div>
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">NF: {h.invoice_number || '---'}</p>
@@ -1208,7 +1208,7 @@ export default function ProductsPage() {
                           <p className="text-sm font-bold text-foreground">{formatCurrency(h.new_price)}</p>
                         </div>
                         {h.old_price && (
-                          <Badge className={cn("font-bold text-[10px] h-6 px-2 border-none", isIncrease ? "bg-destructive/15 text-destructive" : "bg-success-muted text-success")}>
+                          <Badge className={cn("font-bold text-[10px] h-6 px-2 border-none", isIncrease ? "bg-danger-muted text-destructive" : "bg-success-muted text-success")}>
                             {isIncrease ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                             {Math.abs(variation).toFixed(0)}%
                           </Badge>

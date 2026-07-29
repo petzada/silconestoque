@@ -485,7 +485,7 @@ export default function EmployeesPage() {
                 size="icon"
                 title="Desligar colaborador"
                 aria-label="Desligar colaborador"
-                className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
                 onClick={() => openOffboardDialog(employee)}
               >
                 <UserX className="h-4 w-4" />
@@ -550,7 +550,7 @@ export default function EmployeesPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2 border border-border bg-card p-2.5 sm:flex-row sm:items-center">
         <div className="relative w-full flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

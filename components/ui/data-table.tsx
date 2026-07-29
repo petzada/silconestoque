@@ -142,7 +142,7 @@ export function DataTable<T>({
   };
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-border bg-card', className)}>
+    <div className={cn('overflow-hidden border border-border bg-card', className)}>
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-semibold text-muted-foreground">
           {sortedData.length} {sortedData.length === 1 ? 'registro' : 'registros'}
@@ -153,7 +153,7 @@ export function DataTable<T>({
           </label>
           <select
             id="table-page-size"
-            className="h-8 rounded-md border border-border bg-card px-2 text-xs font-semibold text-foreground"
+            className="h-8 border border-border bg-card px-2 text-xs font-semibold text-foreground"
             value={pageSize}
             onChange={(event) => {
               setPage(1);
@@ -208,7 +208,7 @@ export function DataTable<T>({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'inline-flex items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       column.align === 'right' && 'ml-auto'
                     )}
                     onClick={() => handleSort(column)}
@@ -236,7 +236,7 @@ export function DataTable<T>({
             </TableRow>
           ) : (
             paginatedData.map((row) => (
-              <TableRow key={rowKey(row)} className="group border-border hover:bg-muted/40">
+              <TableRow key={rowKey(row)} className="group border-border hover:bg-accent">
                 {columns.map((column) => (
                   <TableCell
                     key={`${rowKey(row)}-${column.key}`}

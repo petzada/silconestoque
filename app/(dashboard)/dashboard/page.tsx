@@ -346,7 +346,7 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Visão geral do estoque e consumo por categoria"
         actions={
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1.5">
+          <div className="flex items-center gap-1 border border-border bg-card p-1.5">
             <Filter className="ml-2 h-4 w-4 text-muted-foreground" />
             <Select value={filterMonth} onValueChange={setFilterMonth}>
               <SelectTrigger className="h-8 w-[130px] border-none bg-transparent text-xs font-semibold shadow-none">
@@ -383,7 +383,7 @@ export default function DashboardPage() {
         {kpis.map((kpi, idx) => (
           <Card key={idx} className="gap-0 py-0 overflow-hidden">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-11 h-11 rounded-md bg-muted flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 bg-muted flex items-center justify-center shrink-0">
                 <kpi.icon className={cn("h-5 w-5", kpi.color)} />
               </div>
               <div className="min-w-0">
@@ -429,7 +429,7 @@ export default function DashboardPage() {
                   <Bar
                     dataKey="value"
                     fill="var(--brand)"
-                    radius={[0, 4, 4, 0]}
+                    radius={0}
                     barSize={18}
                     label={{
                       position: 'right',
@@ -474,9 +474,9 @@ export default function DashboardPage() {
                     <span className="text-xs font-medium text-muted-foreground w-[140px] truncate" title={item.name}>
                       {item.name.length > 18 ? `${item.name.substring(0, 18)}...` : item.name}
                     </span>
-                    <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+                    <div className="flex-1 h-5 bg-muted overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-primary transition-[width]"
+                        className="h-full bg-primary transition-[width]"
                         style={{
                           width: `${(item.value / financeStats.maxProductValue) * 100}%`,
                         }}

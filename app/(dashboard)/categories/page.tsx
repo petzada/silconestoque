@@ -190,7 +190,7 @@ export default function CategoriesPage() {
               size="icon"
               title="Excluir categoria"
               aria-label="Excluir categoria"
-              className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
               onClick={() => openDeleteDialog(category)}
             >
               <Trash2 className="h-4 w-4" />

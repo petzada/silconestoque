@@ -213,7 +213,7 @@ export default function ReplenishmentQueuePage() {
           <Badge
             className={cn(
               'border-none px-2 py-0.5 text-xs font-bold',
-              item.current_qty === 0 ? 'bg-destructive/15 text-destructive' : 'bg-warning-muted text-warning'
+              item.current_qty === 0 ? 'bg-danger-muted text-destructive' : 'bg-warning-muted text-warning'
             )}
           >
             {item.current_qty}
@@ -302,7 +302,7 @@ export default function ReplenishmentQueuePage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <PackageSearch className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
@@ -314,7 +314,7 @@ export default function ReplenishmentQueuePage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <Inbox className="h-5 w-5 text-destructive" />
             </div>
             <div>
@@ -326,7 +326,7 @@ export default function ReplenishmentQueuePage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <ShieldAlert className="h-5 w-5 text-warning" />
             </div>
             <div>
@@ -337,7 +337,7 @@ export default function ReplenishmentQueuePage() {
         </Card>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-2.5">
+      <div className="border border-border bg-card p-2.5">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -353,7 +353,7 @@ export default function ReplenishmentQueuePage() {
             <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
@@ -367,7 +367,7 @@ export default function ReplenishmentQueuePage() {
             <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[180px]">
               <SelectValue placeholder="Urgencia" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="zerado">Zerado</SelectItem>
               <SelectItem value="critico">Critico</SelectItem>

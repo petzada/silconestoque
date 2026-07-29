@@ -52,6 +52,8 @@
   --color-primary: var(--primary);
   --color-primary-active: var(--primary-active);
   --color-primary-disabled: var(--primary-disabled);
+  --color-destructive-active: var(--destructive-active);
+  --color-success-active: var(--success-active);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -143,9 +145,11 @@
      scale steps, just a different step than DESIGN.md's prose names. */
   --destructive: #da1e28; /* colors.semantic-error — Carbon red-60 (matches DESIGN.md exactly) */
   --destructive-foreground: #ffffff;
+  --destructive-active: #a2191f; /* Carbon red-70 — solid hover/pressed step, replaces the old hover:bg-destructive/90 alpha (V10: no alpha surfaces) */
 
   --success: #198038; /* Carbon green-60, not green-50: green-50 + white text = 3.35:1, fails AA. green-60 + white = 5.02:1. Also the exact green already locked for the V1 alert palette */
   --success-foreground: #ffffff;
+  --success-active: #0e6027; /* Carbon green-70 — solid hover step, replaces hover:bg-success/90 alpha */
   --success-muted: #defbe6; /* Carbon green-10 */
   --warning: #ba4e00; /* Carbon orange-60, not yellow-30: yellow-30 as standalone text/icon on white = 1.68:1 (near-invisible); orange-60 = 5.03:1. yellow-30 is reserved for icon-on-dark-fill use Carbon never exposes here */
   --warning-foreground: #ffffff;

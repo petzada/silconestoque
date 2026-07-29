@@ -170,7 +170,7 @@ function WelcomeScreen({
 
       <div className="mt-6 flex flex-col items-center text-center">
         <div
-          className="flex size-20 items-center justify-center rounded-full text-white"
+          className="flex size-20 items-center justify-center text-white"
           style={{ backgroundColor: ACCENT }}
         >
           <HardHat className="size-10" strokeWidth={2} />
@@ -207,7 +207,7 @@ function WelcomeScreen({
             onChange={(e) => onName(e.target.value)}
             placeholder="Ex.: Maria da Silva"
             autoComplete="name"
-            className="h-12 w-full rounded-md border border-neutral-300 bg-white px-4 text-base text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus-visible:border-[#0B576F] focus-visible:ring-[3px] focus-visible:ring-[#0B576F]/30"
+            className="h-12 w-full border border-neutral-300 bg-white px-4 text-base text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus-visible:border-[#0B576F] focus-visible:ring-[3px] focus-visible:ring-[#0B576F]/30"
           />
         </Field>
         <Field label="Setor / Área">
@@ -215,14 +215,14 @@ function WelcomeScreen({
             value={sector}
             onChange={(e) => onSector(e.target.value)}
             placeholder="Ex.: Operação, Administrativo, Logística"
-            className="h-12 w-full rounded-md border border-neutral-300 bg-white px-4 text-base text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus-visible:border-[#0B576F] focus-visible:ring-[3px] focus-visible:ring-[#0B576F]/30"
+            className="h-12 w-full border border-neutral-300 bg-white px-4 text-base text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus-visible:border-[#0B576F] focus-visible:ring-[3px] focus-visible:ring-[#0B576F]/30"
           />
         </Field>
 
         <button
           type="submit"
           disabled={!canStart}
-          className="mt-2 flex h-12 items-center justify-center gap-2 rounded-md text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+          className="mt-2 flex h-12 items-center justify-center gap-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
           style={{ backgroundColor: ACCENT }}
         >
           Iniciar Quiz
@@ -294,9 +294,9 @@ function QuizScreen({
           Segurança
         </span>
       </div>
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+      <div className="mt-3 h-2 w-full overflow-hidden bg-neutral-200">
         <div
-          className="h-full rounded-full transition-all duration-300 ease-out"
+          className="h-full transition-all duration-300 ease-out"
           style={{ width: `${progress}%`, backgroundColor: ACCENT }}
         />
       </div>
@@ -316,7 +316,7 @@ function QuizScreen({
               type="button"
               onClick={() => onSelect(opt.key)}
               className={cn(
-                'flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all',
+                'flex w-full items-center gap-3 border p-4 text-left transition-all',
                 !active && 'border-neutral-200 bg-white hover:border-neutral-300'
               )}
               style={
@@ -327,7 +327,7 @@ function QuizScreen({
             >
               <span
                 className={cn(
-                  'flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold transition-colors',
+                  'flex size-8 shrink-0 items-center justify-center text-sm font-bold transition-colors',
                   !active && 'bg-neutral-100 text-neutral-600'
                 )}
                 style={active ? { backgroundColor: ACCENT, color: '#fff' } : undefined}
@@ -348,13 +348,13 @@ function QuizScreen({
       </div>
 
       {/* Navegação fixa no rodapé (bottom-nav) */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95">
         <div className="mx-auto flex w-full max-w-md items-center gap-3 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onBack}
             disabled={index === 0 || submitting}
-            className="flex h-12 items-center justify-center gap-1.5 rounded-md border border-neutral-300 bg-white px-4 text-[15px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-12 items-center justify-center gap-1.5 border border-neutral-300 bg-white px-4 text-[15px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-40"
           >
             <ArrowLeft className="size-5" />
             Voltar
@@ -363,7 +363,7 @@ function QuizScreen({
             type="button"
             onClick={onNext}
             disabled={!selected || submitting}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-12 flex-1 items-center justify-center gap-2 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
             style={{ backgroundColor: ACCENT }}
           >
             {submitting ? (
@@ -418,7 +418,7 @@ function ResultScreen({
     <div className="flex flex-1 flex-col pb-28">
       <div className="flex flex-col items-center text-center">
         <div
-          className="flex size-16 items-center justify-center rounded-full text-white"
+          className="flex size-16 items-center justify-center text-white"
           style={{ backgroundColor: ACCENT }}
         >
           <CheckCircle2 className="size-8" strokeWidth={2} />
@@ -430,7 +430,7 @@ function ResultScreen({
           Valeu, {firstName}! {message}
         </p>
 
-        <div className="mt-6 w-full rounded-lg border border-neutral-200 bg-white p-6">
+        <div className="mt-6 w-full border border-neutral-200 bg-white p-6">
           <div className="text-caption-uppercase text-[11px] text-neutral-500">
             Sua pontuação
           </div>
@@ -459,7 +459,7 @@ function ResultScreen({
             return (
               <div
                 key={q.id}
-                className="rounded-lg border border-neutral-200 bg-white p-4"
+                className="border border-neutral-200 bg-white p-4"
               >
                 <div className="flex items-start gap-2">
                   {correct ? (
@@ -486,12 +486,12 @@ function ResultScreen({
       </div>
 
       {/* Ação fixa no rodapé (bottom-nav) */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95">
         <div className="mx-auto w-full max-w-md px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onRestart}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white text-[15px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100"
+            className="flex h-12 w-full items-center justify-center gap-2 border border-neutral-300 bg-white text-[15px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100"
           >
             <RotateCcw className="size-5" />
             Responder como outro colaborador

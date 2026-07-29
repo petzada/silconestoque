@@ -445,7 +445,7 @@ export default function FollowUpPage() {
             const orders = sol.purchase_orders || [];
 
             return (
-              <div key={sol.id} className="bg-card rounded-lg border border-border overflow-hidden">
+              <div key={sol.id} className="bg-card border border-border overflow-hidden">
                 {/* Row header */}
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : sol.id)}
@@ -470,9 +470,9 @@ export default function FollowUpPage() {
 
                 {/* Expanded content */}
                 {isExpanded && (
-                  <div className="border-t border-border px-5 py-4 bg-muted/50">
+                  <div className="border-t border-border px-5 py-4 bg-surface-soft">
                     {/* Solicitation card */}
-                    <div className="bg-card rounded-lg border border-border p-4 mb-4">
+                    <div className="bg-card border border-border p-4 mb-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-2">
                           <div>
@@ -493,7 +493,7 @@ export default function FollowUpPage() {
                           size="icon"
                           title="Excluir solicitacao"
                           aria-label="Excluir solicitacao"
-                          className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                          className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-danger-muted"
                           onClick={() => {
                             setDeleteTarget({ type: 'solicitation', id: sol.id });
                             setDeleteConfirmOpen(true);
@@ -525,7 +525,7 @@ export default function FollowUpPage() {
                       </div>
 
                       {orders.length === 0 ? (
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                        <div className="border border-border bg-surface-soft p-6 text-center">
                           <p className="text-sm text-muted-foreground mb-2">Nenhum pedido de compra adicionado</p>
                           <Button
                             size="sm"
@@ -552,7 +552,7 @@ export default function FollowUpPage() {
                               <div
                                 key={po.id}
                                 className={cn(
-                                  'group relative rounded-lg border p-4 transition-all',
+                                  'group relative border p-4 transition-all',
                                   hasReceipt
                                     ? 'bg-success-muted border-success/30'
                                     : 'bg-accent border-primary/30'
@@ -564,7 +564,7 @@ export default function FollowUpPage() {
                                   size="icon"
                                   title={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
                                   aria-label={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
-                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-destructive/70 hover:text-destructive hover:bg-danger-muted"
                                   onClick={() => {
                                     if (hasReceipt && receipt) {
                                       handleDeleteReceipt(receipt.id, sol.id);
@@ -764,7 +764,7 @@ export default function FollowUpPage() {
             <Button
               onClick={handleCreateReceipt}
               disabled={isSubmitting}
-              className="w-full bg-success hover:bg-success/90 h-9 text-xs font-bold text-success-foreground"
+              className="w-full bg-success hover:bg-success-active h-9 text-xs font-bold text-success-foreground"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -792,7 +792,7 @@ export default function FollowUpPage() {
               Cancelar
             </Button>
             <Button
-              className="flex-1 h-9 text-xs font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              className="flex-1 h-9 text-xs font-bold bg-destructive hover:bg-destructive-active text-destructive-foreground"
               onClick={confirmDelete}
             >
               Excluir
