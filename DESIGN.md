@@ -287,3 +287,94 @@ The brand commits to flat 0px corners. The other tokens exist for product / mobi
 - Form-field error and validation styling is documented in Carbon docs; the inspected pages didn't render error states.
 - Dark mode is documented in Carbon as Gray-100 theme but isn't exposed on these marketing pages — only the footer inverts. The full dark theme is a separate Carbon palette not extracted here.
 - The community.ibm.com sub-domain uses a different chrome (community-platform white-label) that approximates Carbon but isn't strict — the documented system applies to ibm.com proper.
+
+## Resolved Tokens (implementation appendix)
+
+This file has no front matter, and the body above references ~25 `{...}` tokens with no value defined anywhere in the document — only 6 hex codes appear literally in the prose (`#0f62fe`, `#f4f4f4`, `#e0e0e0`, `#161616`, `#525252`, `#8c8c8c`). This section resolves every token referenced above against the **official Carbon token packages**, installed and inspected directly in `node_modules` (no value below is invented or guessed):
+
+- `@carbon/colors@11.54.0` — raw color scales (`gray`, `blue`, `green`, `red`, `yellow`, `purple`, `cyan`, `teal`, `magenta`, `orange`)
+- `@carbon/themes@11.77.0` — the compiled **White** theme object (`require('@carbon/themes').white`), which is Carbon's own mapping of semantic roles (`textPrimary`, `layer01`, `borderSubtle00`, ...) onto those raw scale values
+- `@carbon/type@11.63.0` — named type styles (`body01`, `caption01`, `heading03`, ...) and `fontFamilies` / `fontWeights`
+- `@carbon/layout@11.55.0` — the `spacing01`–`spacing13` scale
+
+Where a `{...}` token in the body above has no exact match in these packages, that is stated explicitly below rather than guessed.
+
+### Colors
+
+| Token | Value | Carbon source |
+|---|---|---|
+| `{colors.canvas}` | `#ffffff` | `@carbon/themes` white theme, `background` |
+| `{colors.surface-1}` | `#f4f4f4` | white theme `layer01` (= `@carbon/colors` `gray10`) |
+| `{colors.surface-2}` | `#e0e0e0` | white theme `layerAccent01` (= `gray20`) |
+| `{colors.hairline}` | `#e0e0e0` | white theme `borderSubtle00` (= `gray20`) |
+| `{colors.hairline-strong}` | `#8d8d8d` | white theme `borderStrong01` (= `gray50`) |
+| `{colors.ink}` | `#161616` | white theme `textPrimary` (= `gray100`) |
+| `{colors.ink-muted}` | `#525252` | white theme `textSecondary` (= `gray70`) |
+| `{colors.ink-subtle}` | `#6f6f6f` | white theme `textHelper` (= `gray60`) — **not** the `#8c8c8c` this file's prose states literally; see "Flagged discrepancies" below (V5) |
+| `{colors.inverse-ink}` | `#ffffff` | white theme `textInverse` |
+| `{colors.primary}` | `#0f62fe` | white theme `interactive` / `linkPrimary` / `borderInteractive` / `focus` (all agree) = `@carbon/colors` `blue60` |
+| `{colors.on-primary}` | `#ffffff` | white theme `textOnColor` |
+| `{colors.blue-60}` | `#0f62fe` | `@carbon/colors` `blue60` — **identical to `{colors.primary}`**; see discrepancy note |
+| `{colors.blue-80}` | `#002d9c` | `@carbon/colors` `blue80` |
+| `{colors.semantic-success}` | `#24a148` | `@carbon/colors` `green50` (= white theme `supportSuccess`) |
+| `{colors.semantic-warning}` | `#f1c21b` | `@carbon/colors` `yellow30` (= white theme `supportWarning`) |
+| `{colors.semantic-error}` | `#da1e28` | `@carbon/colors` `red60` (= white theme `supportError`) |
+| `{colors.semantic-info}` | `#0043ce` | white theme `supportInfo` = `@carbon/colors` `blue70` — prose claims "identical to primary" (`#0f62fe`); the actual White-theme token is one step darker. See discrepancy note |
+
+Additional values used by the plan's locked decisions (V1/V4), pulled from the same packages and confirmed to match the plan's literal hex codes exactly:
+
+- Chart data-viz series (`--chart-1..5`, V1): `purple70 #6929c4`, `cyan50 #1192e8`, `teal70 #005d5d`, `magenta70 #9f1853`, `red50 #fa4d56` — all from `@carbon/colors`
+- Alert/status states (V1): `red60 #da1e28`, `orange40 #ff832b`, `yellow30 #f1c21b`, `green60 #198038` — all from `@carbon/colors`
+- Badge pair (V4 example): `green10 #defbe6` / `green70 #0e6027` — from `@carbon/colors.green`
+
+### Typography
+
+| Token | DESIGN.md spec | Carbon source | Match |
+|---|---|---|---|
+| `{typography.body}` | 16px/400/1.50/0.16px | `@carbon/type` `body02` = `{16px, 400, 1.5, letterSpacing: 0}` | Size/weight/line-height match; **letter-spacing does not** — see discrepancy note |
+| `{typography.body-sm}` | 14px/400/1.29/0.16px | `body01` / `bodyCompact01` = `{14px, 400, 1.2857, 0.16px}` | Exact |
+| `{typography.body-emphasis}` | 14px/600/1.29/0.16px | `headingCompact01` = `{14px, 600, 1.2857, 0.16px}` | Exact |
+| `{typography.caption}` | 12px/400/1.33/0.32px | `caption01` / `label01` = `{12px, 400, 1.3333, 0.32px}` | Exact |
+| `{typography.button}` | 14px/400/1.29/0.16px | No dedicated `button` export in `@carbon/type` (Carbon defines button label type in component-level Sass, not shipped in this token package) — value is identical to `body01`/`bodyCompact01` | Same value as `body-sm`, no distinct named token |
+| `{typography.eyebrow}` | 14px/400/1.29/0.16px | Same as above — no distinct `eyebrow` export; value matches `body01` | Same value as `body-sm`, no distinct named token |
+| `{typography.subhead}` | 20px/400/1.40/0 | `heading03` = `{20px, 400, 1.4, 0}` | Exact |
+| `{typography.card-title}` | 24px/400/1.33/0 | No named token at 24px — Carbon's heading scale jumps `heading03` (20px) → `heading04`/`productiveHeading04` (28px). 24px is a valid step in `@carbon/type`'s `scale` array (`[…18,20,24,28…]`) but ships no dedicated semantic style there | No exact named-token match |
+| `{typography.headline}` | 32px/400/1.25/0 | `heading05` / `productiveHeading05` = `{32px, 400, 1.25, 0}` | Exact |
+| `{typography.body-lg}` | 18px/400/1.50/0 | No named token at 18px — 18 is a valid `scale` step but has no dedicated style export | No exact named-token match |
+| `{typography.display-md}` | 42px/300/1.20/0 | `display01` base = `{42px, 300, 1.19, 0}` | Effectively exact (1.19 ≈ 1.20) |
+| `{typography.display-lg}` | 60px/300/1.17/-0.4px | `display01` at `xlg` breakpoint = `{60px, 300, 1.17}`, letter-spacing 0 (not -0.4px) | Out of scope for this app per plan §1 ("o que não se aplica") — resolved here only for documentation completeness |
+| `{typography.display-xl}` | 76px/300/1.17/-0.5px | `display01` at `max` breakpoint = `{76px, 300, 1.13}`, letter-spacing 0 | Out of scope for this app per plan §1; line-height/letter-spacing don't match exactly even as reference |
+
+Font family and weight source: `@carbon/type` `fontFamilies.sans` = `'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, '.SFNSText-Regular', sans-serif`; `fontFamilies.mono` = `'IBM Plex Mono', 'Menlo', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Courier, monospace`; `fontWeights` = `{ light: 300, regular: 400, semibold: 600 }`.
+
+### Spacing
+
+| Token | Value | Carbon source (`@carbon/layout`) |
+|---|---|---|
+| `{spacing.xxs}` | 4px | `spacing02` (0.25rem) |
+| `{spacing.xs}` | 8px | `spacing03` (0.5rem) |
+| `{spacing.sm}` | 12px | `spacing04` (0.75rem) |
+| `{spacing.md}` | 16px | `spacing05` (1rem) |
+| `{spacing.lg}` | 24px | `spacing06` (1.5rem) |
+| `{spacing.xl}` | 32px | `spacing07` (2rem) |
+| `{spacing.xxl}` | 48px | `spacing09` (3rem) — `spacing08` (40px/2.5rem) exists in the package but isn't part of this file's named scale |
+| `{spacing.section}` | 96px | `spacing12` (6rem) |
+
+All eight match the package exactly.
+
+### Border radius
+
+| Token | Value | Carbon source |
+|---|---|---|
+| `{rounded.none}` | 0px | Not a package export — Carbon's flat-geometry convention is a design rule ("every corner is square"), not a shipped token. No package value needed |
+| `{rounded.xs}` / `{rounded.sm}` / `{rounded.md}` / `{rounded.lg}` / `{rounded.pill}` | 2 / 4 / 6 / 8 / 9999px | **Not found in any of the four installed packages.** `@carbon/colors`, `@carbon/themes`, `@carbon/type`, and `@carbon/layout` export no radius/border-radius token at all (grepped all four for `radius`/`round`: zero matches). These five values are conventional (4px-grid-aligned) placeholders, not Carbon-sourced — flagged here rather than presented as verified |
+
+### Flagged discrepancies (do not silently resolve)
+
+- **`{colors.inverse-canvas}`**: the prose in `## Overview` (line 16) and `## Colors` (line 37) states this is "charcoal #161616." The actual Carbon White-theme token for an inverted surface *within* a light theme is `backgroundInverse = #393939` (`gray80`), not `gray100`. `#161616` is Carbon's Gray 100 *theme background* — a separate, unextracted theme (see this file's own "Known Gaps"), not the White theme's inverse-surface token. **Not used by this app** — V3 keeps the sidebar light and no footer is being built, so this token has no call site in Etapas 0–1.
+- **`{colors.inverse-surface-1}`**: closest match is `backgroundInverseHover = #474747`; there is no token literally named "one step lighter than inverse-canvas." Also unused in this app for the same reason as above.
+- **`{colors.inverse-ink-muted}`**: no corresponding token exists in the White theme object at all (checked every `*Inverse*` key it exports). Unresolved. Also unused in this app.
+- **`{colors.blue-60}`**: the prose (line 27) describes it as "hovered link state," but in Carbon's actual 10–100 color scale, `blue-60` **is** `#0f62fe` — the same value as `{colors.primary}`. The real hover-link value is `linkPrimaryHover` in the White theme, which resolves to `blue-70 #0043ce`. Treat the prose label as a naming error in this file, not as a second color.
+- **`{colors.blue-hover}`** (line 29, "hover state for primary buttons"): **unresolved**. Carbon's historically documented hover-primary value only exists as a v10 SCSS/type-declaration artifact (`@carbon/themes/lib/v10/*.d.ts` ships the type but the v11 package installed here — 11.77.0 — has no runtime JS export for it; it would require `@carbon/styles` Sass, which is deliberately not installed per this refactor's architecture decision in the plan §0). Do not invent a value for this token; where a hover state is needed, use the resolved `blue-70 #0043ce` instead.
+- **`{colors.semantic-info}`**: prose (line 51) says "identical to primary." The White theme's actual `supportInfo` token is `#0043ce` (`blue-70`), one step darker than primary — Carbon deliberately keeps passive "info" status visually distinct from interactive blue.
+- **`{typography.body}` letter-spacing**: this file specifies 0.16px at 16px body (lines 72, 228, and repeated in Do's/Don'ts). Carbon's own 16px token (`body02`/`bodyLong02`) ships with `letter-spacing: 0`. The 0.16px positive-tracking value is real Carbon data, but it belongs to the **14px** tokens (`body01`, `bodyCompact01`, `label02`), not 16px. This file generalizes a 14px detail onto 16px body text. Etapa 1's instructions explicitly lock `letter-spacing: 0.16px` on the body regardless — implemented as instructed, flagged here for the record.
