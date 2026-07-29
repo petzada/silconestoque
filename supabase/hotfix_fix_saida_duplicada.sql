@@ -99,6 +99,15 @@ CREATE TRIGGER trigger_update_product_qty
   FOR EACH ROW
   EXECUTE FUNCTION update_product_quantity();
 
+-- Recria tambem o freeze_exit_cost (ADR-0002): o bloco DO $$ acima dropa
+-- TODOS os triggers de movements, e sem recria-lo aqui rodar este hotfix de
+-- novo volta a derrubar o congelamento de custo da saida (unit_value fica
+-- NULL em toda saida nova, ver migration_integridade_historico.sql).
+CREATE TRIGGER trigger_freeze_exit_cost
+  BEFORE INSERT ON movements
+  FOR EACH ROW
+  EXECUTE FUNCTION freeze_exit_cost();
+
 CREATE TRIGGER trigger_handle_price_change
   AFTER INSERT ON movements
   FOR EACH ROW

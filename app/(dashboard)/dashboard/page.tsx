@@ -3,9 +3,10 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 // Force UI Update
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ import {
   Inbox,
   Filter,
   Package,
+  RotateCw,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
@@ -69,6 +71,7 @@ export default function DashboardPage() {
     categories: [] as Category[],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const currentDate = new Date();
   const [filterMonth, setFilterMonth] = useState<string>(String(currentDate.getMonth()));
@@ -76,12 +79,22 @@ export default function DashboardPage() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const availableYears = useMemo(() => {
-    const years = [];
-    for (let i = 0; i < 3; i++) {
-      years.push(String(currentDate.getFullYear() - i));
+    const yearsInData = new Set(
+      data.movements.map(m => new Date(m.created_at).getFullYear())
+    );
+
+    // Garante que o ano atual e o ano selecionado sempre apareçam, mesmo sem dados.
+    yearsInData.add(currentDate.getFullYear());
+    const parsedFilterYear = parseInt(filterYear);
+    if (!Number.isNaN(parsedFilterYear)) {
+      yearsInData.add(parsedFilterYear);
     }
-    return years;
-  }, []);
+
+    return Array.from(yearsInData)
+      .sort((a, b) => b - a)
+      .map(y => String(y));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.movements, filterYear]);
 
   useEffect(() => {
     fetchData();
@@ -89,19 +102,33 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [productsRes, movementsRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('*, category:categories(*)').eq('is_active', true),
-        supabase.from('movements').select('*, product:products(*, category:categories(*))').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').order('name'),
+        fetchAllRows(() =>
+          supabase.from('products').select('*, category:categories(*)').eq('is_active', true)
+        ),
+        fetchAllRows(() =>
+          supabase
+            .from('movements')
+            .select('*, product:products(*, category:categories(*))')
+            .order('created_at', { ascending: false })
+        ),
+        fetchAllRows(() => supabase.from('categories').select('*').order('name')),
       ]);
+
+      if (productsRes.error || movementsRes.error || categoriesRes.error) {
+        throw productsRes.error || movementsRes.error || categoriesRes.error;
+      }
 
       setData({
         products: productsRes.data || [],
         movements: movementsRes.data || [],
         categories: categoriesRes.data || [],
       });
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido ao consultar o banco de dados.';
+      setLoadError(message);
       toast.error('Erro ao carregar dados do dashboard');
     } finally {
       setIsLoading(false);
@@ -112,6 +139,18 @@ export default function DashboardPage() {
   const financeStats = useMemo(() => {
     const selectedMonth = parseInt(filterMonth);
     const selectedYear = parseInt(filterYear);
+
+    // Todas as movimentações do período (mês/ano), ANTES de excluir import inicial.
+    // Usado só para a linha de transparência abaixo dos KPIs — explica por que um
+    // período pode aparecer zerado (sem movimentação, sem valor unitário, ou tudo
+    // import inicial) em vez de deixar os três casos visualmente idênticos.
+    const periodMovements = data.movements.filter(m => {
+      const d = new Date(m.created_at);
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    });
+    const initialImportCount = periodMovements.filter(m => m.is_initial_import).length;
+    const nonInitialPeriodMovements = periodMovements.filter(m => !m.is_initial_import);
+    const noUnitValueCount = nonInitialPeriodMovements.filter(m => !m.unit_value || m.unit_value === 0).length;
 
     // Filtrar movimentações: mês/ano E excluir is_initial_import
     let filteredMovements = data.movements.filter(m => {
@@ -181,7 +220,10 @@ export default function DashboardPage() {
       productListData,
       maxProductValue,
       countIns: ins.length,
-      countOuts: outs.length
+      countOuts: outs.length,
+      periodTotal: periodMovements.length,
+      initialImportCount,
+      noUnitValueCount,
     };
   }, [data, filterMonth, filterYear, filterCategory]);
 
@@ -221,8 +263,65 @@ export default function DashboardPage() {
     },
   ];
 
+  // Linha de transparência: explica por que um período pode aparecer zerado nos
+  // KPIs — sem movimentação, sem valor unitário gravado, ou tudo import inicial
+  // (excluído de propósito). Evita que os três cenários pareçam idênticos.
+  const transparencyText = (() => {
+    if (financeStats.periodTotal === 0) {
+      return 'Nenhuma movimentação registrada neste período.';
+    }
+
+    const parts: string[] = [
+      financeStats.periodTotal === 1
+        ? '1 movimentação no período'
+        : `${financeStats.periodTotal} movimentações no período`,
+    ];
+
+    if (financeStats.noUnitValueCount > 0) {
+      parts.push(
+        financeStats.noUnitValueCount === 1
+          ? '1 sem valor unitário'
+          : `${financeStats.noUnitValueCount} sem valor unitário`
+      );
+    }
+
+    if (financeStats.initialImportCount > 0) {
+      parts.push(
+        financeStats.initialImportCount === 1
+          ? '1 de importação inicial (não contabilizada)'
+          : `${financeStats.initialImportCount} de importação inicial (não contabilizadas)`
+      );
+    }
+
+    return parts.join(' · ');
+  })();
+
   if (isLoading) {
     return <PageLoading label="Analisando dados do estoque..." />;
+  }
+
+  if (loadError) {
+    return (
+      <PageContainer>
+        <PageHeader
+          title="Dashboard"
+          description="Visão geral do estoque e consumo por categoria"
+        />
+        <Card>
+          <CardContent className="p-10 flex flex-col items-center justify-center gap-3 text-center">
+            <AlertTriangle className="h-10 w-10 text-danger" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Não foi possível carregar os dados do dashboard</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-md">{loadError}</p>
+            </div>
+            <Button onClick={fetchData} size="sm" className="mt-2 gap-1.5">
+              <RotateCw className="h-3.5 w-3.5" />
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </PageContainer>
+    );
   }
 
   return (
@@ -282,6 +381,8 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <p className="text-xs text-muted-foreground -mt-2 px-1">{transparencyText}</p>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Gráfico de Barras: Gasto por Categoria */}

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -162,10 +162,12 @@ export default function MovementsPage() {
     setIsLoading(true);
     try {
       const [movementsRes, productsRes, categoriesRes, employeesRes] = await Promise.all([
-        supabase
-          .from('movements')
-          .select('*, product:products(*, category:categories(*)), employee:employees(id, full_name)')
-          .order('created_at', { ascending: false }),
+        fetchAllRows<Movement>(() =>
+          supabase
+            .from('movements')
+            .select('*, product:products(*, category:categories(*)), employee:employees(id, full_name)')
+            .order('created_at', { ascending: false })
+        ),
         supabase
           .from('products')
           .select('*, category:categories(*)')

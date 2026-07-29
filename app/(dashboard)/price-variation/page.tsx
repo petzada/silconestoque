@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -85,10 +85,12 @@ export default function PriceVariationPage() {
     setIsLoading(true);
     try {
       const [priceHistoryRes, categoriesRes] = await Promise.all([
-        supabase
-          .from('price_history')
-          .select('*, product:products(*, category:categories(*))')
-          .order('created_at', { ascending: false }),
+        fetchAllRows<PriceHistory>(() =>
+          supabase
+            .from('price_history')
+            .select('*, product:products(*, category:categories(*))')
+            .order('created_at', { ascending: false })
+        ),
         supabase.from('categories').select('*').order('name'),
       ]);
 

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -315,12 +315,14 @@ export default function EmployeesPage() {
   const fetchWithdrawals = useCallback(async (employeeId: string) => {
     setIsLoadingWithdrawals(true);
     try {
-      const { data, error } = await supabase
-        .from('movements')
-        .select('id, created_at, quantity, product:products(name)')
-        .eq('type', 'OUT')
-        .eq('employee_id', employeeId)
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchAllRows(() =>
+        supabase
+          .from('movements')
+          .select('id, created_at, quantity, product:products(name)')
+          .eq('type', 'OUT')
+          .eq('employee_id', employeeId)
+          .order('created_at', { ascending: false })
+      );
       if (error) throw error;
       setWithdrawals((data as unknown as WithdrawalRow[]) || []);
     } catch {

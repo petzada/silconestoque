@@ -6,7 +6,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -175,13 +175,18 @@ export default function ProductsPage() {
     setIsLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
-        supabase
-          .from('products')
-          .select('*, category:categories(*)')
-          .eq('is_active', true)
-          .order('name'),
+        fetchAllRows<Product>(() =>
+          supabase
+            .from('products')
+            .select('*, category:categories(*)')
+            .eq('is_active', true)
+            .order('name')
+        ),
         supabase.from('categories').select('*').order('name'),
       ]);
+
+      if (productsRes.error) throw productsRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
 
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
@@ -221,11 +226,13 @@ export default function ProductsPage() {
     setSelectedProductForHistory(product);
     setIsHistoryDialogOpen(true);
     try {
-      const { data, error } = await supabase
-        .from('price_history')
-        .select('*')
-        .eq('product_id', product.id)
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchAllRows<PriceHistory>(() =>
+        supabase
+          .from('price_history')
+          .select('*')
+          .eq('product_id', product.id)
+          .order('created_at', { ascending: false })
+      );
 
       if (error) throw error;
       setPriceHistory(data || []);
@@ -244,18 +251,19 @@ export default function ProductsPage() {
 
     setIsDeleting(true);
     try {
-      await supabase.from('price_history').delete().eq('product_id', productToDelete.id);
-      await supabase.from('movements').delete().eq('product_id', productToDelete.id);
-      const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('id', productToDelete.id);
 
       if (error) throw error;
 
-      toast.success('Produto excluído com sucesso');
+      toast.success('Produto desativado com sucesso');
       setIsDeleteDialogOpen(false);
       setProductToDelete(null);
       fetchData();
     } catch {
-      toast.error('Erro ao excluir produto');
+      toast.error('Erro ao desativar produto');
     } finally {
       setIsDeleting(false);
     }
@@ -712,8 +720,8 @@ export default function ProductsPage() {
               type="button"
               variant="ghost"
               size="icon"
-              title="Excluir produto"
-              aria-label="Excluir produto"
+              title="Desativar produto"
+              aria-label="Desativar produto"
               className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
               onClick={() => handleOpenDeleteDialog(product)}
             >
@@ -900,10 +908,10 @@ export default function ProductsPage() {
       <ConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-        title="Confirmar Exclusao"
-        description={`Esta acao ira excluir o produto "${productToDelete?.name || ''}" e todas as suas movimentacoes associadas.`}
+        title="Desativar Produto"
+        description={`O produto "${productToDelete?.name || ''}" será desativado e deixará de aparecer nas listagens. O histórico de movimentações e de preços será preservado.`}
         onConfirm={handleDeleteProduct}
-        confirmLabel="Excluir"
+        confirmLabel="Desativar produto"
         cancelLabel="Cancelar"
         isLoading={isDeleting}
       />
