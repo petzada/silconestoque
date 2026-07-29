@@ -21,12 +21,22 @@ tabelas, funções, triggers e índices no estado final, incluindo o que hoje
 vive em `migration_chapas_armarios.sql`, `migration_colaboradores_csv.sql`,
 `migration_fase2_solicitante.sql`, `migration_categorias_produtos.sql`,
 `migration_custo_congelado_saida.sql` (só a parte de trigger — o backfill
-foi neutralizado, ver §2), `migration_quiz_seguranca.sql` e
-`migration_fase0_integridade.sql`. Depois disso, rode só
-`migration_fase1_higiene.sql` (que cria e popula `schema_migrations`) e
-pronto — não rode as migrations históricas listadas em §2 por cima, elas
-regridem nada, mas são redundantes e não fazem parte do caminho de
-instalação nova.
+foi neutralizado, ver §2), `migration_quiz_seguranca.sql`,
+`migration_fase0_integridade.sql` e `migration_fase3_analitico.sql`
+(`movements.department_id` + trigger de carimbo + índices + os 5 RPCs de
+dashboard; `dashboard_stats` já não existe neste arquivo — ver §2, linha 13).
+Depois disso, rode só `migration_fase1_higiene.sql` (que cria e popula
+`schema_migrations`) e pronto — não rode as migrations históricas listadas
+em §2 por cima, elas regridem nada, mas são redundantes e não fazem parte do
+caminho de instalação nova.
+
+Gap conhecido, mesmo padrão de `migration_fase0_integridade.sql`: como
+`migration_fase3_analitico.sql` não faz parte do caminho oficial de
+instalação nova acima, um banco novo nunca ganha a linha correspondente em
+`schema_migrations` a menos que alguém rode o arquivo manualmente também
+(ele é idempotente — `ADD COLUMN IF NOT EXISTS`, `CREATE OR REPLACE
+FUNCTION` — então rodá-lo sobre um `schema.sql` já aplicado é seguro e vira
+só bookkeeping, sem repetir nenhum efeito).
 
 Exceção conhecida: `migration_corrige_custo_carimbado.sql` é uma correção
 pontual de dado (não de schema) e não tem equivalente em `schema.sql` — não
@@ -42,7 +52,7 @@ afirmação.
 
 | # | Arquivo | O que faz | Status declarado | Fonte |
 |---|---|---|---|---|
-| 1 | `schema.sql` | Bootstrap: sectors, categories, products, movements, price_history, config, RLS, follow_up_*, `dashboard_stats`. Desde esta fase, também absorve todo o resto da tabela abaixo (ver §1). | Base — sempre "aplicado" em qualquer instalação existente | commits `be02c33`…`c5747b8` |
+| 1 | `schema.sql` | Bootstrap: sectors, categories, products, movements, price_history, config, RLS, follow_up_*. Desde esta fase, também absorve todo o resto da tabela abaixo (ver §1). Tinha a view `dashboard_stats`, removida por #13. | Base — sempre "aplicado" em qualquer instalação existente | commits `be02c33`…`c5747b8` |
 | 2 | `hotfix_fix_saida_duplicada.sql` | Corrige débito duplicado em saídas; normaliza triggers de `movements` para uma única fonte de verdade. | Aplicado (ambiente afetado, Fev/2026) | commit `8bca315`, 2026-02-19 |
 | 3 | `migration_chapas_armarios.sql` | Cria `roles`, `employees` (com `sector_id`, depois trocado — ver #5), `lockers`, `locker_assignments` + triggers de guarda. | Aplicado | commit `1e90ab1`, 2026-07-13 |
 | 4 | `migration_fase2_solicitante.sql` | Adiciona `movements.employee_id`. Depende de `employees` (#3). | Aplicado | commit `10e9413`, 2026-07-13 |
@@ -54,8 +64,9 @@ afirmação.
 | 10 | `migration_corrige_custo_carimbado.sql` | Corrige retroativamente as saídas que o backfill de #7 carimbou de forma imprecisa. Reversível (tabela de backup). Tem corte de data (`< 2026-07-29`). | **Declarado explicitamente "APLICADA EM PRODUCAO EM 2026-07-29" no próprio arquivo.** | commits `db1d87a`, `2757135`, `215013c` |
 | 11 | `migration_fase0_integridade.sql` | RPCs `transfer_locker_assignment`/`deactivate_employee`; `CHECK (max_stock >= min_stock)`; `reconcile_product_on_delete` exigindo NF na entrada restaurada; índice único case-insensitive em `categories` (com consolidação de duplicatas). | **PENDENTE — ainda não aplicada.** Registra-se sozinha em `schema_migrations` ao final. Enquanto não rodar, os RPCs não existem e a transferência de armário e o desligamento de colaborador **quebram na UI**, porque o front-end desta leva já chama `.rpc(...)`. | commit `9cb9ab4`, 2026-07-29 |
 | 12 | `migration_fase1_higiene.sql` | Remove `reverse_movement_on_delete` morta; torna o seed de `config` idempotente (**aborta se houver duplicata — resolução manual, ver o aviso no arquivo**); cria e popula `schema_migrations`. | **PENDENTE — ainda não aplicada.** | — |
+| 13 | `migration_fase3_analitico.sql` | Carimba `movements.department_id` (trigger `stamp_movement_department` + backfill com o setor atual do colaborador, ver aviso de aproximação no próprio arquivo); índices `(product_id, created_at)` e `(department_id, created_at)`; remove a view morta `dashboard_stats`; cria os 5 RPCs de dashboard (`dashboard_operacao`, `dashboard_analise_kpis`, `dashboard_serie`, `dashboard_dimensao`, `dashboard_destaques`). | **PENDENTE — ainda não aplicada.** Registra-se sozinha em `schema_migrations` ao final. Enquanto não rodar num banco existente, os RPCs não existem — qualquer tela que passe a chamá-los (Fase 4) quebra. | commit desta leva, 2026-07-29 |
 
-> **As duas pendentes (#11 e #12) são desta mesma leva de trabalho e nenhum banco as tem ainda.** A ordem entre elas não importa: ambas criam `schema_migrations` com `CREATE TABLE IF NOT EXISTS` e se registram sozinhas. O #12 **não** dá por aplicada a #11 — se `schema_migrations` não listar a fase 0 depois de você rodar as duas, é porque a fase 0 não rodou.
+> **As três pendentes (#11, #12 e #13) são desta mesma leva de trabalho e nenhum banco as tem ainda.** A ordem entre elas não importa para #11/#12 (ambas criam `schema_migrations` com `CREATE TABLE IF NOT EXISTS` e se registram sozinhas); #13 depende apenas de #11 (Fase 0) e da Fase 1 já estarem no banco — não de #12 especificamente, já que ela também cria `schema_migrations` de forma idempotente. Se `schema_migrations` não listar a fase 0/1/3 depois de rodar as três, é porque a respectiva fase não rodou.
 
 `diagnostico_movimentacoes.sql` não está na tabela acima: é somente leitura
 (nenhum UPDATE/DELETE), usado para investigar, não uma migration. Não se

@@ -4,9 +4,9 @@
 -- SNAPSHOT — este arquivo é o bootstrap de instalação nova E reflete o estado
 -- final do banco depois de aplicar, em produção, as migrations históricas de
 -- supabase/ (chapas & armários, colaboradores/CSV, categorias de produto,
--- custo congelado na saída, quiz, Fase 0 de integridade). Ver
--- supabase/README.md para a ordem canônica de cada arquivo, o que já foi
--- absorvido aqui e o que NUNCA deve ser re-executado.
+-- custo congelado na saída, quiz, Fase 0 de integridade, Fase 3 fundação
+-- analítica). Ver supabase/README.md para a ordem canônica de cada arquivo,
+-- o que já foi absorvido aqui e o que NUNCA deve ser re-executado.
 --
 -- Uma instalação NOVA só precisa rodar este arquivo. As migrations
 -- históricas (migration_*.sql, hotfix_*.sql) documentam como a produção
@@ -210,6 +210,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_active_assignment_per_employee_kind
 -- =====================
 -- employee_id (migration_fase2_solicitante.sql): colaborador solicitante na
 -- Saída. Nullable — nem toda saída tem colaborador atrelado.
+-- department_id (migration_fase3_analitico.sql): carimbo do setor do
+-- colaborador NO MOMENTO da movimentação (ver trigger
+-- stamp_movement_department, abaixo). Existe porque employees.department_id
+-- é escalar mutável sem histórico — sem este carimbo, mover uma pessoa de
+-- setor reescreveria retroativamente o consumo por setor de todos os meses
+-- anteriores. Nullable: linhas sem employee_id (solicitante avulso/nome
+-- livre) ficam com department_id NULL e agrupam como "Sem solicitante" nos
+-- RPCs de dashboard.
 CREATE TABLE IF NOT EXISTS movements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -223,10 +231,22 @@ CREATE TABLE IF NOT EXISTS movements (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Instalação nova a partir deste schema.sql já nasce com a coluna acima; o
+-- ADD COLUMN IF NOT EXISTS é o que torna a re-execução deste arquivo, e a
+-- aplicação de migration_fase3_analitico.sql sobre um banco mais antigo,
+-- idempotentes.
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id);
+
 CREATE INDEX IF NOT EXISTS idx_movements_product ON movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_movements_type ON movements(type);
 CREATE INDEX IF NOT EXISTS idx_movements_created ON movements(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_movements_employee ON movements(employee_id);
+-- migration_fase3_analitico.sql: forma de toda query de replay do ledger de
+-- um produto (cobertura em dias, série de consumo) e de consumo por setor
+-- com filtro de período. idx_movements_created (só created_at) não atende
+-- filtro composto.
+CREATE INDEX IF NOT EXISTS idx_movements_product_created ON movements(product_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_movements_department_created ON movements(department_id, created_at);
 
 -- =====================
 -- PRICE HISTORY TABLE
@@ -398,6 +418,38 @@ CREATE TRIGGER trigger_freeze_exit_cost
   FOR EACH ROW
   EXECUTE FUNCTION freeze_exit_cost();
 
+-- 1c. Stamp movement department (migration_fase3_analitico.sql, D10 do
+-- plano de dashboard). Copia employees.department_id para a movimentação no
+-- momento do INSERT, quando há employee_id e department_id ainda não foi
+-- informado — mesma lógica de "congelar no momento do fato" que
+-- freeze_exit_cost já aplica ao custo (ADR-0002).
+--
+-- ORDEM DE DISPARO: BEFORE INSERT dispara em ordem alfabética do NOME DO
+-- TRIGGER quando há mais de um no mesmo evento. "trigger_freeze_exit_cost"
+-- vem antes de "trigger_stamp_movement_department" ('f' < 's'), então
+-- freeze_exit_cost roda primeiro — mas isso é irrelevante aqui: este
+-- trigger só lê NEW.employee_id (imutável, já veio do INSERT) e
+-- NEW.department_id (só grava se ainda NULL), nunca toca unit_value/type,
+-- que é tudo que freeze_exit_cost usa. Não há dependência de dado entre os
+-- dois em nenhuma ordem; o nome foi escolhido para não insinuar uma.
+CREATE OR REPLACE FUNCTION stamp_movement_department()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.employee_id IS NOT NULL AND NEW.department_id IS NULL THEN
+    SELECT department_id INTO NEW.department_id
+    FROM employees
+    WHERE id = NEW.employee_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_stamp_movement_department ON movements;
+CREATE TRIGGER trigger_stamp_movement_department
+  BEFORE INSERT ON movements
+  FOR EACH ROW
+  EXECUTE FUNCTION stamp_movement_department();
+
 -- 2. Handle Price Change
 CREATE OR REPLACE FUNCTION handle_price_change()
 RETURNS TRIGGER AS $$
@@ -528,6 +580,22 @@ WHERE NOT EXISTS (
   WHERE m.product_id = p.id
 )
 AND p.current_qty <> 0;
+
+-- 4b. Backfill de movements.department_id (migration_fase3_analitico.sql,
+-- one-time correction on apply — mesmo padrão do item 4 acima). Só toca
+-- linhas com department_id ainda NULL, então é seguro re-executar.
+--
+-- ASSUNÇÃO REGISTRADA (D10 do plano de dashboard): department_id = setor
+-- ATUAL do colaborador, não o setor de quando a saída ocorreu. Isso CONGELA
+-- a distorção já existente em vez de perpetuá-la via JOIN ao vivo. Números
+-- de consumo por setor para movimentações anteriores a esta migration são
+-- APROXIMADOS; a partir dela, o trigger trigger_stamp_movement_department
+-- garante que são fiéis.
+UPDATE movements m
+SET department_id = e.department_id
+FROM employees e
+WHERE m.employee_id = e.id
+  AND m.department_id IS NULL;
 
 -- 5. Locker assignment: preenche locker_kind e bloqueia armário/colaborador inativo.
 CREATE OR REPLACE FUNCTION set_locker_assignment_kind()
@@ -768,13 +836,532 @@ CREATE POLICY "Allow all" ON follow_up_receipts FOR ALL USING (true);
 -- =====================
 -- VIEWS
 -- =====================
--- LEGADO: view morta, nenhum código lê `dashboard_stats` (será substituída
--- pelos RPCs da Fase 3 do plano de dashboard). Ainda conta produtos
--- inativos — não usar como referência para "crítico"/"zerado" em código
--- novo. Fora de escopo desta fase mexer nela.
+-- REMOVIDA em migration_fase3_analitico.sql: `dashboard_stats` era view
+-- morta (nenhum código a lia), contava produtos INATIVOS (sem
+-- `is_active = true`) e divergia tanto das telas quanto das definições
+-- normativas de CONTEXT.md para Zerado/Item Crítico. Substituída pelos RPCs
+-- abaixo — dashboard_operacao cobre zerados/críticos/estáveis com a
+-- definição correta, sempre sobre produtos ativos. Ver supabase/README.md.
 DROP VIEW IF EXISTS dashboard_stats;
-CREATE OR REPLACE VIEW dashboard_stats AS
-SELECT
-  (SELECT COUNT(*) FROM products WHERE current_qty < min_stock AND current_qty > 0) as critical_products,
-  (SELECT COUNT(*) FROM products WHERE current_qty = 0) as zero_stock,
-  (SELECT COALESCE(SUM(current_qty * COALESCE(cost_price, 0)), 0) FROM products) as total_inventory_cost;
+
+-- =====================
+-- RPCs ANALÍTICOS (migration_fase3_analitico.sql — Fase 3 do plano de
+-- dashboard, docs/superpowers/plans/2026-07-29-dashboard-home-plan.md §5)
+-- =====================
+-- SECURITY INVOKER, STABLE, GRANT EXECUTE TO anon. Parâmetros com prefixo
+-- p_. Formato de retorno documentado no comentário de cada função — ver
+-- migration_fase3_analitico.sql para a justificativa completa de cada
+-- decisão de modelagem (is_active nas agregações históricas, filtro de
+-- p_department_id, ordem dos destaques etc.), reproduzida aqui de forma
+-- resumida.
+
+-- 9. dashboard_operacao — foto instantânea (ignora período), devolve JSONB:
+-- { zerados, criticos, estaveis, total_ativos, cobertura_abaixo_15_dias,
+--   top_urgencia: [...], cobertura_criticos: [...], pedidos_atraso: [...] }
+CREATE OR REPLACE FUNCTION dashboard_operacao(p_category_id UUID DEFAULT NULL)
+RETURNS JSONB
+SECURITY INVOKER
+LANGUAGE sql
+STABLE
+AS $$
+  WITH produtos_filtrados AS (
+    SELECT p.*
+    FROM products p
+    WHERE p.is_active = true
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+  ),
+  consumo_90d AS (
+    SELECT m.product_id, SUM(m.quantity)::numeric AS qty_90d
+    FROM movements m
+    WHERE m.type = 'OUT'
+      AND m.created_at >= (NOW() - INTERVAL '90 days')
+    GROUP BY m.product_id
+  ),
+  cobertura AS (
+    SELECT
+      pf.id AS product_id,
+      pf.name AS product_name,
+      pf.sku_code,
+      pf.current_qty,
+      CASE
+        WHEN COALESCE(c.qty_90d, 0) = 0 THEN NULL -- sem consumo => cobertura infinita
+        ELSE pf.current_qty / (c.qty_90d / 90.0)
+      END AS cobertura_dias
+    FROM produtos_filtrados pf
+    LEFT JOIN consumo_90d c ON c.product_id = pf.id
+  ),
+  contagens AS (
+    SELECT
+      COUNT(*) FILTER (WHERE current_qty = 0) AS zerados,
+      COUNT(*) FILTER (WHERE current_qty < min_stock AND current_qty > 0) AS criticos,
+      -- Faixas mutuamente exclusivas: CONTEXT.md define Zerado como "uma
+      -- faixa propria". Sem o `current_qty > 0`, um produto com min_stock = 0
+      -- e current_qty = 0 contaria em zerados E em estaveis, e a soma passaria
+      -- de total_ativos, quebrando o "% do catalogo em risco".
+      COUNT(*) FILTER (WHERE current_qty >= min_stock AND current_qty > 0) AS estaveis,
+      COUNT(*) AS total_ativos
+    FROM produtos_filtrados
+  ),
+  urgencia AS (
+    SELECT
+      pf.id AS product_id,
+      pf.name AS product_name,
+      pf.sku_code,
+      pf.current_qty,
+      pf.min_stock,
+      CASE WHEN pf.current_qty = 0 THEN 'zerado' ELSE 'critico' END AS faixa,
+      CASE
+        WHEN pf.current_qty = 0 THEN NULL
+        ELSE (pf.min_stock - pf.current_qty)::numeric / NULLIF(pf.min_stock, 0)
+      END AS deficit_relativo
+    FROM produtos_filtrados pf
+    WHERE pf.current_qty = 0 OR (pf.current_qty < pf.min_stock AND pf.current_qty > 0)
+  ),
+  top_urgencia AS (
+    SELECT * FROM urgencia
+    ORDER BY (current_qty = 0) DESC, deficit_relativo DESC NULLS LAST, product_name ASC
+    LIMIT 10
+  ),
+  top_cobertura AS (
+    SELECT * FROM cobertura
+    WHERE cobertura_dias IS NOT NULL
+    ORDER BY cobertura_dias ASC, product_name ASC
+    LIMIT 15
+  ),
+  pedidos_atraso AS (
+    SELECT
+      po.id AS po_id,
+      po.po_number,
+      po.supplier_name,
+      po.estimated_delivery,
+      (CURRENT_DATE - po.estimated_delivery) AS dias_atraso
+    FROM follow_up_purchase_orders po
+    LEFT JOIN follow_up_receipts r ON r.purchase_order_id = po.id
+    WHERE po.estimated_delivery IS NOT NULL
+      AND po.estimated_delivery < CURRENT_DATE
+      AND r.id IS NULL
+  )
+  SELECT jsonb_build_object(
+    'zerados', contagens.zerados,
+    'criticos', contagens.criticos,
+    'estaveis', contagens.estaveis,
+    'total_ativos', contagens.total_ativos,
+    'cobertura_abaixo_15_dias',
+      (SELECT COUNT(*) FROM cobertura WHERE cobertura_dias IS NOT NULL AND cobertura_dias < 15),
+    'top_urgencia',
+      COALESCE(
+        (SELECT jsonb_agg(to_jsonb(t) ORDER BY (t.current_qty = 0) DESC, t.deficit_relativo DESC NULLS LAST, t.product_name ASC)
+         FROM top_urgencia t),
+        '[]'::jsonb
+      ),
+    'cobertura_criticos',
+      COALESCE(
+        (SELECT jsonb_agg(to_jsonb(t) ORDER BY t.cobertura_dias ASC, t.product_name ASC) FROM top_cobertura t),
+        '[]'::jsonb
+      ),
+    'pedidos_atraso',
+      COALESCE(
+        (SELECT jsonb_agg(to_jsonb(t) ORDER BY t.dias_atraso DESC) FROM pedidos_atraso t),
+        '[]'::jsonb
+      )
+  )
+  FROM contagens;
+$$;
+
+GRANT EXECUTE ON FUNCTION dashboard_operacao(UUID) TO anon;
+
+-- 10. dashboard_analise_kpis — TABLE de 1 linha: consumo/compras/nº de
+-- movimentações do período e do período anterior equivalente, lado a lado,
+-- mais valor_imobilizado (snapshot, sem par anterior). Bucketização de dia
+-- sempre via (created_at AT TIME ZONE 'America/Sao_Paulo')::date.
+CREATE OR REPLACE FUNCTION dashboard_analise_kpis(
+  p_from DATE,
+  p_to DATE,
+  p_category_id UUID DEFAULT NULL,
+  p_department_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  consumo_atual NUMERIC,
+  consumo_anterior NUMERIC,
+  compras_atual NUMERIC,
+  compras_anterior NUMERIC,
+  movimentacoes_atual BIGINT,
+  movimentacoes_anterior BIGINT,
+  valor_imobilizado NUMERIC
+)
+SECURITY INVOKER
+LANGUAGE sql
+STABLE
+AS $$
+  WITH periodo AS (
+    SELECT
+      p_from AS from_atual,
+      p_to AS to_atual,
+      p_from - (p_to - p_from + 1) AS from_anterior,
+      p_from - 1 AS to_anterior
+  ),
+  movimentos_filtrados AS (
+    SELECT
+      m.type,
+      m.quantity,
+      m.unit_value,
+      m.invoice_number,
+      COALESCE(m.is_initial_import, false) AS is_initial_import,
+      (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia_local
+    FROM movements m
+    JOIN products p ON p.id = m.product_id
+    WHERE (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND (p_department_id IS NULL OR m.department_id = p_department_id)
+  ),
+  atual AS (
+    SELECT
+      COALESCE(SUM(quantity * unit_value) FILTER (WHERE type = 'OUT' AND NOT is_initial_import), 0) AS consumo,
+      COALESCE(SUM(quantity * unit_value) FILTER (WHERE type = 'IN' AND NOT is_initial_import AND invoice_number IS NOT NULL), 0) AS compras,
+      COUNT(*) AS movs
+    FROM movimentos_filtrados, periodo
+    WHERE dia_local BETWEEN periodo.from_atual AND periodo.to_atual
+  ),
+  anterior AS (
+    SELECT
+      COALESCE(SUM(quantity * unit_value) FILTER (WHERE type = 'OUT' AND NOT is_initial_import), 0) AS consumo,
+      COALESCE(SUM(quantity * unit_value) FILTER (WHERE type = 'IN' AND NOT is_initial_import AND invoice_number IS NOT NULL), 0) AS compras,
+      COUNT(*) AS movs
+    FROM movimentos_filtrados, periodo
+    WHERE dia_local BETWEEN periodo.from_anterior AND periodo.to_anterior
+  ),
+  imobilizado AS (
+    SELECT COALESCE(SUM(current_qty * cost_price), 0) AS valor
+    FROM products
+    WHERE is_active = true
+      AND (p_category_id IS NULL OR category_id = p_category_id)
+  )
+  SELECT
+    atual.consumo,
+    anterior.consumo,
+    -- NULL, nao 0, quando ha filtro de setor: Entradas nunca carregam
+    -- department_id, entao "compras deste setor" e uma pergunta que nao
+    -- existe, nao uma compra de valor zero. Zero viraria KPI mentiroso.
+    CASE WHEN p_department_id IS NULL THEN atual.compras END,
+    CASE WHEN p_department_id IS NULL THEN anterior.compras END,
+    atual.movs,
+    anterior.movs,
+    imobilizado.valor
+  FROM atual, anterior, imobilizado;
+$$;
+
+GRANT EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) TO anon;
+
+-- 11. dashboard_serie — buckets DIÁRIOS de consumo/compras via
+-- generate_series (dia sem movimento vem com 0, nunca some).
+CREATE OR REPLACE FUNCTION dashboard_serie(
+  p_from DATE,
+  p_to DATE,
+  p_category_id UUID DEFAULT NULL,
+  p_department_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  dia DATE,
+  consumo NUMERIC,
+  compras NUMERIC
+)
+SECURITY INVOKER
+LANGUAGE sql
+STABLE
+AS $$
+  WITH dias AS (
+    SELECT generate_series(p_from, p_to, INTERVAL '1 day')::date AS dia
+  ),
+  movimentos AS (
+    SELECT
+      (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia_local,
+      m.type,
+      m.quantity,
+      m.unit_value,
+      m.invoice_number,
+      COALESCE(m.is_initial_import, false) AS is_initial_import
+    FROM movements m
+    JOIN products p ON p.id = m.product_id
+    WHERE (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND (p_department_id IS NULL OR m.department_id = p_department_id)
+      AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN p_from AND p_to
+  )
+  SELECT
+    dias.dia,
+    COALESCE(SUM(movimentos.quantity * movimentos.unit_value) FILTER (
+      WHERE movimentos.type = 'OUT' AND NOT movimentos.is_initial_import
+    ), 0) AS consumo,
+    COALESCE(SUM(movimentos.quantity * movimentos.unit_value) FILTER (
+      WHERE movimentos.type = 'IN' AND NOT movimentos.is_initial_import AND movimentos.invoice_number IS NOT NULL
+    ), 0) AS compras
+  FROM dias
+  LEFT JOIN movimentos ON movimentos.dia_local = dias.dia
+  GROUP BY dias.dia
+  ORDER BY dias.dia;
+$$;
+
+GRANT EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) TO anon;
+
+-- 12. dashboard_dimensao — consumo (só OUT) por 'categoria'|'setor'|'produto',
+-- com valor do período anterior, ordenado desc, limitado a p_limit. 'setor'
+-- NULL agrupa como 'Sem solicitante'. p_dim inválido levanta RAISE
+-- EXCEPTION em português.
+CREATE OR REPLACE FUNCTION dashboard_dimensao(
+  p_from DATE,
+  p_to DATE,
+  p_dim TEXT,
+  p_category_id UUID DEFAULT NULL,
+  p_department_id UUID DEFAULT NULL,
+  p_limit INT DEFAULT 10
+)
+RETURNS TABLE (
+  dim_id UUID,
+  dim_label TEXT,
+  consumo_atual NUMERIC,
+  consumo_anterior NUMERIC
+)
+SECURITY INVOKER
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_from_anterior DATE;
+  v_to_anterior DATE;
+BEGIN
+  IF p_dim NOT IN ('categoria', 'setor', 'produto') THEN
+    RAISE EXCEPTION 'Dimensão inválida: %. Use ''categoria'', ''setor'' ou ''produto''.', p_dim;
+  END IF;
+
+  v_to_anterior := p_from - 1;
+  v_from_anterior := p_from - (p_to - p_from + 1);
+
+  IF p_dim = 'categoria' THEN
+    RETURN QUERY
+    WITH movimentos AS (
+      SELECT
+        c.id AS d_id,
+        c.name AS d_label,
+        m.quantity,
+        m.unit_value,
+        (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia_local
+      FROM movements m
+      JOIN products p ON p.id = m.product_id
+      JOIN categories c ON c.id = p.category_id
+      WHERE m.type = 'OUT'
+        AND NOT COALESCE(m.is_initial_import, false)
+        AND (p_category_id IS NULL OR p.category_id = p_category_id)
+        AND (p_department_id IS NULL OR m.department_id = p_department_id)
+        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN v_from_anterior AND p_to
+    )
+    SELECT
+      mv.d_id,
+      mv.d_label,
+      COALESCE(SUM(mv.quantity * mv.unit_value) FILTER (WHERE mv.dia_local BETWEEN p_from AND p_to), 0),
+      COALESCE(SUM(mv.quantity * mv.unit_value) FILTER (WHERE mv.dia_local BETWEEN v_from_anterior AND v_to_anterior), 0)
+    FROM movimentos mv
+    GROUP BY mv.d_id, mv.d_label
+    ORDER BY 3 DESC
+    LIMIT p_limit;
+
+  ELSIF p_dim = 'setor' THEN
+    RETURN QUERY
+    WITH movimentos AS (
+      SELECT
+        d.id AS d_id,
+        COALESCE(d.name, 'Sem solicitante') AS d_label,
+        m.quantity,
+        m.unit_value,
+        (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia_local
+      FROM movements m
+      JOIN products p ON p.id = m.product_id
+      LEFT JOIN departments d ON d.id = m.department_id
+      WHERE m.type = 'OUT'
+        AND NOT COALESCE(m.is_initial_import, false)
+        AND (p_category_id IS NULL OR p.category_id = p_category_id)
+        AND (p_department_id IS NULL OR m.department_id = p_department_id)
+        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN v_from_anterior AND p_to
+    )
+    SELECT
+      mv.d_id,
+      mv.d_label,
+      COALESCE(SUM(mv.quantity * mv.unit_value) FILTER (WHERE mv.dia_local BETWEEN p_from AND p_to), 0),
+      COALESCE(SUM(mv.quantity * mv.unit_value) FILTER (WHERE mv.dia_local BETWEEN v_from_anterior AND v_to_anterior), 0)
+    FROM movimentos mv
+    GROUP BY mv.d_id, mv.d_label
+    ORDER BY 3 DESC
+    LIMIT p_limit;
+
+  ELSE -- 'produto'
+    RETURN QUERY
+    WITH movimentos AS (
+      SELECT
+        p.id AS d_id,
+        p.name AS d_label,
+        m.quantity,
+        m.unit_value,
+        (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia_local
+      FROM movements m
+      JOIN products p ON p.id = m.product_id
+      WHERE m.type = 'OUT'
+        AND NOT COALESCE(m.is_initial_import, false)
+        AND (p_category_id IS NULL OR p.category_id = p_category_id)
+        AND (p_department_id IS NULL OR m.department_id = p_department_id)
+        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN v_from_anterior AND p_to
+    )
+    SELECT
+      mv.d_id,
+      mv.d_label,
+      COALESCE(SUM(mv.quantity * mv.unit_value) FILTER (WHERE mv.dia_local BETWEEN p_from AND p_to), 0),
+      COALESCE(SUM(mv.quantity * mv.unit_value) FILTER (WHERE mv.dia_local BETWEEN v_from_anterior AND v_to_anterior), 0)
+    FROM movimentos mv
+    GROUP BY mv.d_id, mv.d_label
+    ORDER BY 3 DESC
+    LIMIT p_limit;
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) TO anon;
+
+-- 13. dashboard_destaques — TABLE(tipo, texto, valor), 0 a 4 linhas na ordem
+-- fixa: maior_alta_custo, setor_acima_media, categoria_maior_share (todos
+-- omitidos se não houver dado qualificado no período), encalhe (sempre
+-- presente, mesmo com valor 0).
+CREATE OR REPLACE FUNCTION dashboard_destaques(
+  p_from DATE,
+  p_to DATE,
+  p_category_id UUID DEFAULT NULL,
+  p_department_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  tipo TEXT,
+  texto TEXT,
+  valor NUMERIC
+)
+SECURITY INVOKER
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_baseline_from DATE;
+  v_baseline_to DATE;
+  v_dias_periodo INT;
+BEGIN
+  v_dias_periodo := (p_to - p_from + 1);
+  v_baseline_to := p_from - 1;
+  v_baseline_from := (p_from - INTERVAL '3 months')::date;
+
+  -- 1. Maior alta percentual de custo (price_history)
+  RETURN QUERY
+  SELECT
+    'maior_alta_custo'::text,
+    format('%s teve alta de %s%% no custo no período', pr.name, round(pct.variacao * 100, 1)),
+    round(pct.variacao * 100, 1)
+  FROM (
+    SELECT ph.product_id, (ph.new_price - ph.old_price) / ph.old_price AS variacao
+    FROM price_history ph
+    JOIN products p ON p.id = ph.product_id
+    WHERE ph.old_price IS NOT NULL
+      AND ph.old_price > 0
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND (ph.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN p_from AND p_to
+    ORDER BY (ph.new_price - ph.old_price) / ph.old_price DESC, ph.created_at DESC, ph.id
+    LIMIT 1
+  ) pct
+  JOIN products pr ON pr.id = pct.product_id;
+
+  -- 2. Setor com consumo mais acima da própria média dos 3 meses anteriores
+  RETURN QUERY
+  WITH consumo_atual_setor AS (
+    SELECT
+      m.department_id,
+      SUM(m.quantity * m.unit_value) AS consumo
+    FROM movements m
+    JOIN products p ON p.id = m.product_id
+    WHERE m.type = 'OUT'
+      AND NOT COALESCE(m.is_initial_import, false)
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND (p_department_id IS NULL OR m.department_id = p_department_id)
+      AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN p_from AND p_to
+    GROUP BY m.department_id
+  ),
+  consumo_baseline_setor AS (
+    SELECT
+      m.department_id,
+      SUM(m.quantity * m.unit_value) / 90.0 AS consumo_medio_dia
+    FROM movements m
+    JOIN products p ON p.id = m.product_id
+    WHERE m.type = 'OUT'
+      AND NOT COALESCE(m.is_initial_import, false)
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND (p_department_id IS NULL OR m.department_id = p_department_id)
+      AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN v_baseline_from AND v_baseline_to
+    GROUP BY m.department_id
+  ),
+  comparativo AS (
+    SELECT
+      ca.department_id,
+      (ca.consumo - (cb.consumo_medio_dia * v_dias_periodo))
+        / NULLIF(cb.consumo_medio_dia * v_dias_periodo, 0) AS variacao
+    FROM consumo_atual_setor ca
+    JOIN consumo_baseline_setor cb ON cb.department_id IS NOT DISTINCT FROM ca.department_id
+    WHERE cb.consumo_medio_dia > 0
+    ORDER BY variacao DESC, ca.department_id NULLS LAST
+    LIMIT 1
+  )
+  SELECT
+    'setor_acima_media'::text,
+    format('%s consumiu %s%% acima da própria média dos últimos 3 meses', COALESCE(d.name, 'Sem solicitante'), round(c.variacao * 100, 1)),
+    round(c.variacao * 100, 1)
+  FROM comparativo c
+  LEFT JOIN departments d ON d.id = c.department_id
+  WHERE c.variacao > 0;
+
+  -- 3. Categoria com maior share do consumo do período
+  RETURN QUERY
+  WITH consumo_categoria AS (
+    SELECT
+      c.id AS category_id,
+      c.name AS category_name,
+      SUM(m.quantity * m.unit_value) AS consumo
+    FROM movements m
+    JOIN products p ON p.id = m.product_id
+    JOIN categories c ON c.id = p.category_id
+    WHERE m.type = 'OUT'
+      AND NOT COALESCE(m.is_initial_import, false)
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND (p_department_id IS NULL OR m.department_id = p_department_id)
+      AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN p_from AND p_to
+    GROUP BY c.id, c.name
+  ),
+  total AS (
+    SELECT SUM(consumo) AS total_consumo FROM consumo_categoria
+  )
+  SELECT
+    'categoria_maior_share'::text,
+    format('%s concentra %s%% do consumo do período', cc.category_name, round((cc.consumo / NULLIF(t.total_consumo, 0)) * 100, 1)),
+    round((cc.consumo / NULLIF(t.total_consumo, 0)) * 100, 1)
+  FROM consumo_categoria cc
+  CROSS JOIN total t
+  WHERE t.total_consumo > 0
+  ORDER BY cc.consumo DESC, cc.category_id
+  LIMIT 1;
+
+  -- 4. Encalhe: produtos ativos sem movimento há 90+ dias (referência: p_to)
+  RETURN QUERY
+  SELECT
+    'encalhe'::text,
+    format('%s produto(s) ativo(s) sem movimentação há mais de 90 dias', COUNT(*)),
+    COUNT(*)::numeric
+  FROM products p
+  WHERE p.is_active = true
+    AND (p_category_id IS NULL OR p.category_id = p_category_id)
+    AND NOT EXISTS (
+      SELECT 1 FROM movements m
+      WHERE m.product_id = p.id
+        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date > (p_to - 90)
+        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= p_to
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) TO anon;
