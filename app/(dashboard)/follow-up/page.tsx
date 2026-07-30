@@ -31,12 +31,27 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type {
   FollowUpSolicitation,
+  FollowUpPurchaseOrder,
   FollowUpReceipt,
   FollowUpStatus,
   SolicitationFormData,
   PurchaseOrderFormData,
   ReceiptFormData,
 } from '@/lib/types';
+
+/**
+ * Linha crua de `follow_up_solicitations` com os pedidos de compra embutidos,
+ * como a consulta `select('*, purchase_orders:follow_up_purchase_orders(*)')`
+ * devolve: os pedidos ainda **sem** `receipt`, porque os recebimentos vêm numa
+ * segunda consulta e são costurados depois.
+ *
+ * Existe para tipar esse passo intermediário em vez de usar `any`, que
+ * escondia justamente a diferença entre o formato cru e o `FollowUpSolicitation`
+ * final — a distinção que faz o merge abaixo ser necessário.
+ */
+type SolicitationRow = Omit<FollowUpSolicitation, 'purchase_orders'> & {
+  purchase_orders: Omit<FollowUpPurchaseOrder, 'receipt'>[] | null;
+};
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -139,7 +154,10 @@ export default function FollowUpPage() {
       return;
     }
 
-    const sols = solsData || [];
+    // `as unknown as`: o supabase-js infere o embed aninhado de forma mais
+    // frouxa do que o formato real em runtime. Mesmo padrao de conversao ja
+    // usado em movements/page.tsx e employees/page.tsx.
+    const sols = (solsData ?? []) as unknown as SolicitationRow[];
 
     // Step 2: Collect all PO IDs and fetch their receipts separately
     const allPoIds: string[] = [];
@@ -167,11 +185,11 @@ export default function FollowUpPage() {
     }
 
     // Step 3: Merge receipts into purchase orders
-    const merged: FollowUpSolicitation[] = sols.map((sol: any) => ({
+    const merged: FollowUpSolicitation[] = sols.map((sol) => ({
       ...sol,
-      purchase_orders: (sol.purchase_orders || []).map((po: any) => ({
+      purchase_orders: (sol.purchase_orders ?? []).map((po) => ({
         ...po,
-        receipt: receiptsMap[po.id] || [],
+        receipt: receiptsMap[po.id] ?? [],
       })),
     }));
 
@@ -205,7 +223,8 @@ export default function FollowUpPage() {
       }
 
       // Compute status by checking receipts separately
-      const poIds: string[] = (solData.purchase_orders || []).map((po: any) => po.id);
+      const solRow = solData as unknown as SolicitationRow;
+      const poIds: string[] = (solRow.purchase_orders ?? []).map((po) => po.id);
       let newStatus: FollowUpStatus = 'pendente';
 
       if (poIds.length > 0) {

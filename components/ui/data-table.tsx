@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -126,16 +126,21 @@ export function DataTable<T>({
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
 
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
+  // Página efetiva, derivada no render em vez de corrigida por um effect.
+  //
+  // Quando um filtro encolhe a lista, a página guardada pode deixar de existir.
+  // Antes isso era corrigido com `setPage` dentro de um `useEffect`, o que
+  // dispara um render em cascata — e, no frame entre o primeiro render e a
+  // correção, a tabela aparecia vazia. Derivar o valor resolve os dois: não há
+  // segundo render e nunca existe um estado intermediário inválido. O estado
+  // guardado continua sendo a intenção do usuário; `currentPage` é o que essa
+  // intenção significa para os dados que existem agora.
+  const currentPage = Math.min(page, totalPages);
 
   const paginatedData = useMemo(() => {
-    const start = (page - 1) * pageSize;
+    const start = (currentPage - 1) * pageSize;
     return sortedData.slice(start, start + pageSize);
-  }, [page, pageSize, sortedData]);
+  }, [currentPage, pageSize, sortedData]);
 
   const handleSort = (column: DataTableColumn<T>) => {
     if (!column.sortable) return;
@@ -191,21 +196,24 @@ export function DataTable<T>({
             size="sm"
             variant="outline"
             className="h-8 text-xs font-semibold"
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            disabled={page <= 1}
+            // Navega a partir da página EFETIVA, não da guardada: se a lista
+            // encolheu, "Anterior" precisa recuar em relação ao que está na
+            // tela, senão o primeiro clique parece não fazer nada.
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
           >
             Anterior
           </Button>
           <span className="min-w-[90px] text-center text-xs font-semibold text-muted-foreground">
-            Página {page} de {totalPages}
+            Página {currentPage} de {totalPages}
           </span>
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="h-8 text-xs font-semibold"
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            disabled={page >= totalPages}
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
           >
             Proxima
           </Button>
