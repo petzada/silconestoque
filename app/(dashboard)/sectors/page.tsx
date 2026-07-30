@@ -64,6 +64,14 @@ export default function SectorsPage() {
     },
   });
 
+  // Leitura DURANTE O RENDER, de propósito — não mova para dentro do handler.
+  // `form.formState` é um Proxy: ler `isDirty` no render é o que registra a
+  // assinatura e faz o react-hook-form re-renderizar quando o valor muda. Lido
+  // apenas dentro de um callback, o Proxy devolve o snapshot inicial (`false`)
+  // para sempre, e o guarda de "descartar alterações não salvas" nunca dispara
+  // — foi exatamente o que acontecia aqui, verificado em browser.
+  const { isDirty } = form.formState;
+
   useEffect(() => {
     void fetchDepartments();
   }, []);
@@ -99,7 +107,7 @@ export default function SectorsPage() {
   };
 
   const handleDialogOpenChange = (open: boolean) => {
-    if (!open && form.formState.isDirty) {
+    if (!open && isDirty) {
       // Estado de abertura é controlado por este componente: no caminho
       // sujo não fechamos de imediato, esperamos a confirmação e só então
       // resetamos e fechamos.

@@ -373,8 +373,13 @@ export default function ProductsPage() {
     setIsDialogOpen(false);
   };
 
+  // Leitura em render (NÃO dentro do handler): é o que assina o Proxy do
+  // formState e mantém `isDirty` atualizado. Ver o comentário longo em
+  // app/(dashboard)/sectors/page.tsx e a §10.2 do plano de 2026-07-30.
+  const { isDirty } = form.formState;
+
   const handleDialogOpenChange = (open: boolean) => {
-    if (!open && form.formState.isDirty) {
+    if (!open && isDirty) {
       // Estado de abertura é controlado por este componente: no caminho
       // sujo não fechamos de imediato, esperamos a confirmação e só então
       // resetamos e fechamos.

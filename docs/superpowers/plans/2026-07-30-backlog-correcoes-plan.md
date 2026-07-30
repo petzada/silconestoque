@@ -2,7 +2,7 @@
 
 **Data:** 2026-07-30
 **Origem:** backlog da §9 + riscos assumidos da §7 de `2026-07-29-dashboard-home-plan.md`, re-verificados linha a linha no código de `main` (`7b0f7e7`).
-**Status:** executado parcialmente em 2026-07-30 — Etapas 0b, 1 (sem verificação em browser), 2, 3 e 4 concluídas; Etapa 0a **não** executada (sem acesso a banco nesta sessão), continua bloqueando as migrations pendentes. Ver §10, "Resultado da execução".
+**Status:** executado em 2026-07-30 — Etapas 0b, 1, 2, 3, 4 e 5 concluídas, com a verificação em browser da Etapa 1 feita e passando (39/39 em três telas). Etapa 0a **não** executada: aplicar migration exige o SQL Editor do Supabase, e não há credencial de banco nesta máquina (nem `.env`, nem CLI linkado, nem variável de ambiente) — segue bloqueando as migrations pendentes. Ver §10, "Resultado da execução".
 **Planos irmãos:** `2026-07-29-dashboard-home-plan.md`, `2026-07-29-refactor-visual-carbon-plan.md`
 
 ---
@@ -174,9 +174,9 @@ Etapa 5   Documentação (§7, ADR-0002, ADR-0004, §9)     ── depende de 0b
 
 | Etapa | Resultado |
 |---|---|
-| 0a | **Não executada.** Exige acesso ao banco (SQL Editor do Supabase), que não existe nesta sessão — nem para aplicar, nem sequer para verificar `schema_migrations`. `supabase/README.md` §2 segue declarando #11 `migration_fase0_integridade.sql`, #12 `migration_fase1_higiene.sql` e #13 `migration_fase3_analitico.sql` como PENDENTE, e o `main` já chama os RPCs que #11 e #13 criam. Continua sendo o bloqueador nº 1. A migration nova desta leva, #14 `migration_dropa_status_followup.sql`, **não deve ser aplicada antes de #11/#12/#13** — não foi aplicada a nenhum banco nesta sessão. |
+| 0a | **Não executada — fronteira de credencial, não de esforço.** Procurei ativamente um caminho de acesso e não existe nenhum nesta máquina: sem `.env` em qualquer nível, sem projeto linkado no CLI do Supabase (só telemetria em `~/.supabase`, sem token nem `config.toml`), sem variável de ambiente de Supabase/Postgres. E mesmo com o anon key, DDL (`ALTER TABLE`) exige `service_role` ou o SQL Editor — a chave anônima não executa. Nem aplicar, nem sequer verificar `schema_migrations`, é possível daqui. `supabase/README.md` §2 segue declarando #11 `migration_fase0_integridade.sql`, #12 `migration_fase1_higiene.sql` e #13 `migration_fase3_analitico.sql` como PENDENTE, e o `main` já chama os RPCs que #11 e #13 criam. Continua sendo o bloqueador nº 1. A migration nova desta leva, #14 `migration_dropa_status_followup.sql`, **não deve ser aplicada antes de #11/#12/#13** — não foi aplicada a nenhum banco nesta sessão. |
 | 0b | Executada. Rota pública do quiz desativada via `notFound()` em `app/quiz-seguranca/layout.tsx` (novo); `page.tsx`, `painel/page.tsx`, `lib/quiz-seguranca.ts` e a tabela `quiz_respostas` preservados. |
-| 1 | Implementada: `components/ui/confirm-provider.tsx` e `confirm-dialog-shell.tsx` (novos), montados uma vez, expondo `useConfirm()`; os 7 `window.confirm` migrados. **A verificação em browser que esta seção pedia — composição do scrim, contenção de `Tab`, `Escape`/clique no overlay resolvendo `false` — não foi feita.** Rodaram apenas lint, typecheck e build. |
+| 1 | Implementada: `components/ui/confirm-provider.tsx` e `confirm-dialog-shell.tsx` (novos), montados uma vez, expondo `useConfirm()`; os 7 `window.confirm` migrados. A verificação em browser que esta seção pedia **foi feita e passou** — ver §10.2, incluindo o bug de `isDirty` que ela encontrou e que a revisão de código não pegou. |
 | 2 | Implementada: `follow_up_solicitations.status` removida do código (`syncStatus` apagado, `computeStatus` como fonte única) e da migration nova `supabase/migration_dropa_status_followup.sql`. A migration em si cai sob o bloqueio da Etapa 0a — código e migration foram escritos, mas a migration não foi aplicada a banco algum nesta sessão. |
 | 3 | Implementada, em rodada paralela por outro agente: lixeira do Follow-up com ações explícitas e rotuladas, ambas passando pela confirmação da Etapa 1. |
 | 4 | Implementada: `components/lockers/locker-grid.tsx` com fileira de KPIs em unidade só (armários) e `Total = Ocupados + Livres + Inativos`; vocabulário `Ocupado/Livre/Inativo` acrescentado ao `CONTEXT.md`. |
@@ -194,5 +194,30 @@ Três revisões independentes rodaram sobre o diff completo, com mandatos disjun
 | Importante | Cards de armário ignoram os filtros ativos (correto: são denominador), mas nada na tela dizia isso — quem filtra por "Inativo" podia ler os totais como contradição | Aviso condicional abaixo da barra de filtros, só quando há filtro ativo: "Exibindo N de M armários — os totais acima consideram todos os armários, não o filtro" |
 | Menor | `follow_up_solicitations.updated_at` ficou órfão: o `syncStatus` removido era o único `UPDATE` da tabela e não há trigger de `updated_at` nela | Documentado, não consertado — no cabeçalho da migration e no backlog (§9 do plano de 2026-07-29). Criar o trigger ou dropar a coluna são escopos que ninguém decidiu |
 | Menor | Citação `(:63-69)` na §9 do plano de 2026-07-29 ficou órfã de nome de arquivo depois da reescrita da seção | Qualificada como `follow-up/page.tsx:63-69` |
+
+### 10.2 Verificação em browser — feita, e achou um bug que a revisão de código não pegou
+
+A verificação que a §3 pedia foi executada, dirigindo Chrome headless por CDP (Node 24 tem `WebSocket` global, então não precisou de dependência nova; o app roda sem env porque `lib/supabase.ts:6-11` devolve um client de placeholder). Ela **reprovou na primeira tentativa**, por um motivo que nenhuma das três revisões de código encontrou:
+
+**`form.formState.isDirty` lido apenas dentro do handler nunca era `true`.** `formState` é um Proxy do react-hook-form: ler um campo dele **durante o render** é o que registra a assinatura e faz o formulário re-renderizar quando o valor muda. Lido só dentro de um callback, o Proxy devolve o snapshot inicial — `false` — para sempre. Consequência observada no browser: com o formulário sujo, o `Escape` fechava o diálogo **sem pedir confirmação e descartando o que havia sido digitado**.
+
+Isso **não era regressão desta leva**: a expressão do guarda era idêntica antes, quando chamava `window.confirm`. Ou seja, o "descartar alterações não salvas" nunca funcionou em nenhum dos 7 sítios, e a migração para a primitiva tinha preservado fielmente um guarda morto. Corrigido nos 7 com uma leitura em render (`const { isDirty } = form.formState;`), com o comentário canônico em `app/(dashboard)/sectors/page.tsx` e um ponteiro para ele nos outros seis.
+
+Depois da correção, **39/39 verificações passaram** em três telas (`/sectors`, `/categories`, `/products`), 13 por tela:
+
+| Verificado | Resultado |
+|---|---|
+| Confirmação aparece sobre o formulário sujo | 1 shell aberto, texto correto |
+| Formulário pai permanece aberto | 2 `dialog-content` abertos |
+| **Scrim único** (não empilha overlay) | **1 overlay no DOM** — era o defeito central do modal-sobre-modal |
+| **Contenção de `Tab`** | 8 `Tab`s, foco nunca saiu da confirmação |
+| `Escape` resolve `false` | confirmação fecha, formulário fica |
+| Cancelar preserva o digitado | valor intacto |
+| Confirmar descarta e fecha os dois | ambos fechados |
+| Nenhum overlay órfão no DOM depois | 0 |
+| Formulário intocado fecha sem perguntar | sem confirmação |
+| `body.pointerEvents` liberado no fim | vazio |
+
+**Ainda não verificado:** o retorno de foco quando o gatilho é removido do DOM (excluir item de dentro do `SimpleCrudDialog`). Esse caminho exige lista com dados, e sem banco não há item para excluir. O código dessa política está em `confirm-dialog-shell.tsx`; a verificação depende da Etapa 0a.
 
 Verificação final após as correções: `npx tsc --noEmit` limpo, `npm run lint` com 0 erros, `npm run build` completo. A rota do quiz foi conferida empiricamente contra o servidor de produção (`next start`): `/quiz-seguranca` e `/quiz-seguranca/painel` respondem **HTTP 404**, e o corpo do 404 não contém nada do Supabase. Na mesma checagem confirmou-se que o anon key **segue presente** num chunk cliente do dashboard — a premissa do ADR-0004 foi restaurada, não superada. A verificação em browser da Etapa 1 continua pendente.

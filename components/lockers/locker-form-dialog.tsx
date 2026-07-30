@@ -68,8 +68,13 @@ export function LockerFormDialog({ kind, open, onOpenChange, editingLocker, onSa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editingLocker]);
 
+  // Leitura em render (NÃO dentro do handler): é o que assina o Proxy do
+  // formState e mantém `isDirty` atualizado. Ver o comentário longo em
+  // app/(dashboard)/sectors/page.tsx e a §10.2 do plano de 2026-07-30.
+  const { isDirty } = form.formState;
+
   const requestOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && form.formState.isDirty) {
+    if (!nextOpen && isDirty) {
       // `open` é controlado pelo componente pai: no caminho sujo não
       // fechamos de imediato, esperamos a confirmação e só então propagamos
       // o fechamento. Este diálogo pode abrir sobre o LockerSheet já aberto
