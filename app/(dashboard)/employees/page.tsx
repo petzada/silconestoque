@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
@@ -168,6 +169,8 @@ export default function EmployeesPage() {
     defaultValues: initialEmployeeValues,
   });
 
+  const confirm = useConfirm();
+
   // Não liga isLoading nos refetches: o `if (isLoading)` lá embaixo desmonta os
   // diálogos, e o de importação perderia o CSV já carregado em memória quando o
   // usuário cadastra um setor pela prévia. isLoading serve só à carga inicial.
@@ -224,18 +227,37 @@ export default function EmployeesPage() {
     setIsDialogOpen(true);
   };
 
+  const closeFormDialog = () => {
+    setEditingEmployee(null);
+    form.reset(initialEmployeeValues);
+    setIsDialogOpen(false);
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open && form.formState.isDirty) {
-      const shouldClose = window.confirm('Descartar alterações não salvas?');
-      if (!shouldClose) return;
+      // Estado de abertura é controlado por este componente: no caminho
+      // sujo não fechamos de imediato, esperamos a confirmação e só então
+      // resetamos e fechamos.
+      void (async () => {
+        if (
+          await confirm({
+            title: 'Descartar alterações',
+            description: 'Descartar alterações não salvas?',
+            confirmLabel: 'Descartar',
+          })
+        ) {
+          closeFormDialog();
+        }
+      })();
+      return;
     }
 
     if (!open) {
-      setEditingEmployee(null);
-      form.reset(initialEmployeeValues);
+      closeFormDialog();
+      return;
     }
 
-    setIsDialogOpen(open);
+    setIsDialogOpen(true);
   };
 
   const handleSave = form.handleSubmit(async (values) => {

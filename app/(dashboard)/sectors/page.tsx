@@ -28,6 +28,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,6 +55,7 @@ export default function SectorsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const confirm = useConfirm();
 
   const form = useForm<DepartmentFormValues>({
     resolver: zodResolver(departmentSchema),
@@ -90,18 +92,37 @@ export default function SectorsPage() {
     setIsDialogOpen(true);
   };
 
+  const closeFormDialog = () => {
+    setEditingDepartment(null);
+    form.reset({ name: '' });
+    setIsDialogOpen(false);
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open && form.formState.isDirty) {
-      const shouldClose = window.confirm('Descartar alteracoes nao salvas?');
-      if (!shouldClose) return;
+      // Estado de abertura é controlado por este componente: no caminho
+      // sujo não fechamos de imediato, esperamos a confirmação e só então
+      // resetamos e fechamos.
+      void (async () => {
+        if (
+          await confirm({
+            title: 'Descartar alterações',
+            description: 'Descartar alterações não salvas?',
+            confirmLabel: 'Descartar',
+          })
+        ) {
+          closeFormDialog();
+        }
+      })();
+      return;
     }
 
     if (!open) {
-      setEditingDepartment(null);
-      form.reset({ name: '' });
+      closeFormDialog();
+      return;
     }
 
-    setIsDialogOpen(open);
+    setIsDialogOpen(true);
   };
 
   const handleSave = form.handleSubmit(async (values) => {

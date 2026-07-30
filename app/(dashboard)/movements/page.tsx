@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
@@ -146,6 +147,7 @@ export default function MovementsPage() {
   const [isEntityComboboxOpen, setIsEntityComboboxOpen] = useState(false);
   const [entitySearchValue, setEntitySearchValue] = useState('');
   const saveLockRef = useRef(false);
+  const confirm = useConfirm();
 
   const form = useForm<MovementFormValues>({
     resolver: zodResolver(movementSchema),
@@ -222,20 +224,39 @@ export default function MovementsPage() {
     setIsDialogOpen(true);
   };
 
+  const closeFormDialog = () => {
+    form.reset(initialFormValues);
+    setIsComboboxOpen(false);
+    setIsEntityComboboxOpen(false);
+    setEntitySearchValue('');
+    setIsDialogOpen(false);
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open && form.formState.isDirty) {
-      const shouldClose = window.confirm('Descartar alteracoes nao salvas?');
-      if (!shouldClose) return;
+      // Estado de abertura é controlado por este componente: no caminho
+      // sujo não fechamos de imediato, esperamos a confirmação e só então
+      // resetamos e fechamos.
+      void (async () => {
+        if (
+          await confirm({
+            title: 'Descartar alterações',
+            description: 'Descartar alterações não salvas?',
+            confirmLabel: 'Descartar',
+          })
+        ) {
+          closeFormDialog();
+        }
+      })();
+      return;
     }
 
     if (!open) {
-      form.reset(initialFormValues);
-      setIsComboboxOpen(false);
-      setIsEntityComboboxOpen(false);
-      setEntitySearchValue('');
+      closeFormDialog();
+      return;
     }
 
-    setIsDialogOpen(open);
+    setIsDialogOpen(true);
   };
 
   const openDeleteDialog = useCallback((movement: Movement) => {

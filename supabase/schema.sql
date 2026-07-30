@@ -785,12 +785,14 @@ CREATE POLICY "Allow all" ON quiz_respostas FOR ALL USING (true) WITH CHECK (tru
 -- =====================
 
 -- Solicitações de compra
+-- `status` REMOVIDO por migration_dropa_status_followup.sql: coluna morta,
+-- só escrita (nunca lida) pelo front-end — o status exibido na UI é sempre
+-- derivado ao vivo por computeStatus() em app/(dashboard)/follow-up/page.tsx.
 CREATE TABLE IF NOT EXISTS follow_up_solicitations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   request_number TEXT NOT NULL,
   request_date DATE NOT NULL,
   description TEXT NOT NULL,
-  status TEXT DEFAULT 'pendente' CHECK (status IN ('pendente', 'em_andamento', 'recebido')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

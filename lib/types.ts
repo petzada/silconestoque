@@ -132,7 +132,6 @@ export type FollowUpSolicitation = {
   request_number: string;
   request_date: string;
   description: string;
-  status: FollowUpStatus;
   created_at: string;
   updated_at: string;
   purchase_orders?: FollowUpPurchaseOrder[];

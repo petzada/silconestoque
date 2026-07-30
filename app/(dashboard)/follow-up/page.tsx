@@ -23,12 +23,14 @@ import {
   PackageCheck,
   FileText,
   Trash2,
+  RotateCcw,
   ChevronDown,
   ChevronUp,
   Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import type {
   FollowUpSolicitation,
   FollowUpPurchaseOrder,
@@ -114,7 +116,6 @@ export default function FollowUpPage() {
   const [solicitationModalOpen, setSolicitationModalOpen] = useState(false);
   const [poModalOpen, setPoModalOpen] = useState(false);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Form data
   const [solicitationForm, setSolicitationForm] = useState<SolicitationFormData>({
@@ -140,7 +141,18 @@ export default function FollowUpPage() {
   // Context for modals
   const [activeSolicitationId, setActiveSolicitationId] = useState<string | null>(null);
   const [activePurchaseOrderId, setActivePurchaseOrderId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'solicitation' | 'purchase_order'; id: string } | null>(null);
+
+  // Caminho único de confirmação (Etapa 1 do plano de correções). Os três
+  // alvos de exclusão desta tela — solicitação, pedido, recebimento —
+  // chamam `await confirm(...)` inline no próprio handler, em vez do par de
+  // estado genérico "qual card e qual dialog estão abertos" que existia
+  // antes para alimentar um `Dialog` de confirmação ad-hoc só deste
+  // arquivo. Isso é mais simples do que dar a esse estado genérico um
+  // terceiro caso para o recebimento, que era a ideia original do plano:
+  // com a API imperativa não há necessidade de guardar "o que falta
+  // excluir" em estado — o handler já sabe, é só aguardar a resposta antes
+  // de agir.
+  const confirm = useConfirm();
 
   const refreshSolicitations = useCallback(async () => {
     // Step 1: Fetch solicitations with purchase orders (single-level embed)
@@ -206,49 +218,6 @@ export default function FollowUpPage() {
     fetchSolicitations();
   }, [fetchSolicitations]);
 
-  // Status sync helper
-  const syncStatus = async (solicitationId: string) => {
-    try {
-      // Fetch solicitation with POs (single-level)
-      const { data: solData, error: solError } = await supabase
-        .from('follow_up_solicitations')
-        .select('*, purchase_orders:follow_up_purchase_orders(*)')
-        .eq('id', solicitationId)
-        .single();
-
-      if (solError || !solData) {
-        console.error('syncStatus fetch error:', solError);
-        await refreshSolicitations();
-        return;
-      }
-
-      // Compute status by checking receipts separately
-      const solRow = solData as unknown as SolicitationRow;
-      const poIds: string[] = (solRow.purchase_orders ?? []).map((po) => po.id);
-      let newStatus: FollowUpStatus = 'pendente';
-
-      if (poIds.length > 0) {
-        const { data: receiptsData } = await supabase
-          .from('follow_up_receipts')
-          .select('purchase_order_id')
-          .in('purchase_order_id', poIds);
-
-        const receivedCount = receiptsData?.length || 0;
-        newStatus = receivedCount >= poIds.length ? 'recebido' : 'em_andamento';
-      }
-
-      if (solData.status !== newStatus) {
-        await supabase
-          .from('follow_up_solicitations')
-          .update({ status: newStatus, updated_at: new Date().toISOString() })
-          .eq('id', solicitationId);
-      }
-    } catch (err) {
-      console.error('syncStatus error:', err);
-    }
-    await refreshSolicitations();
-  };
-
   // --- CRUD: Solicitação ---
   const handleCreateSolicitation = async () => {
     if (isSubmitting) return;
@@ -264,7 +233,6 @@ export default function FollowUpPage() {
         request_number: solicitationForm.request_number,
         request_date: isoDate,
         description: solicitationForm.description,
-        status: 'pendente',
       });
 
       if (error) {
@@ -283,6 +251,17 @@ export default function FollowUpPage() {
   };
 
   const handleDeleteSolicitation = async (id: string) => {
+    // Excluir a solicitação leva junto, por FK (`ON DELETE CASCADE` em
+    // schema.sql), todos os pedidos de compra E recebimentos vinculados a
+    // ela — por isso a descrição avisa a cascata completa, não só "a
+    // solicitação".
+    const ok = await confirm({
+      title: 'Excluir solicitação',
+      description: 'Deseja remover esta solicitação e todos os pedidos e recebimentos vinculados? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+    });
+    if (!ok) return;
+
     const { error } = await supabase.from('follow_up_solicitations').delete().eq('id', id);
     if (error) {
       toast.error('Erro ao deletar solicitação');
@@ -320,20 +299,34 @@ export default function FollowUpPage() {
         setPoModalOpen(false);
         setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
         setPoDateDisplay('');
-        await syncStatus(activeSolicitationId);
+        await refreshSolicitations();
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeletePurchaseOrder = async (id: string, solicitationId: string) => {
+  const handleDeletePurchaseOrder = async (id: string, hasReceipt: boolean) => {
+    // Quando o pedido já tem recebimento confirmado, excluí-lo também
+    // apaga o recebimento por cascata (`follow_up_receipts.purchase_order_id
+    // ON DELETE CASCADE`, ver supabase/schema.sql) — a descrição muda
+    // conforme `hasReceipt` para deixar essa consequência explícita em vez
+    // de um aviso genérico igual nos dois casos.
+    const ok = await confirm({
+      title: 'Excluir pedido',
+      description: hasReceipt
+        ? 'Este pedido já tem um recebimento confirmado. Excluir o pedido remove também esse recebimento (a NF vinculada). Esta ação não pode ser desfeita.'
+        : 'Deseja excluir este pedido de compra? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+    });
+    if (!ok) return;
+
     const { error } = await supabase.from('follow_up_purchase_orders').delete().eq('id', id);
     if (error) {
       toast.error('Erro ao deletar pedido');
     } else {
       toast.success('Pedido removido');
-      await syncStatus(solicitationId);
+      await refreshSolicitations();
     }
   };
 
@@ -369,45 +362,32 @@ export default function FollowUpPage() {
       toast.success('Recebimento confirmado');
       setReceiptModalOpen(false);
       setReceiptForm({ supplier_name: '', invoice_value: undefined });
-
-      // Find the solicitation for this PO and sync status
-      const sol = solicitations.find(s =>
-        s.purchase_orders?.some(po => po.id === activePurchaseOrderId)
-      );
-      if (sol) {
-        await syncStatus(sol.id);
-      } else {
-        // Fallback: refresh all data even if solicitation lookup fails
-        await refreshSolicitations();
-      }
+      await refreshSolicitations();
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteReceipt = async (receiptId: string, solicitationId: string) => {
+  const handleDeleteReceipt = async (receiptId: string) => {
+    // Esta era a ação que, antes deste conserto, disparava sem NENHUMA
+    // confirmação — apesar de ser irreversível — porque estava escondida
+    // atrás do mesmo botão/lixeira usado para "Excluir pedido" (ver plano
+    // de correções §5). O pedido de compra em si não é afetado: continua
+    // registrado e pode ser marcado como recebido de novo depois.
+    const ok = await confirm({
+      title: 'Remover recebimento',
+      description: 'Deseja remover o recebimento confirmado deste pedido? O pedido de compra continua registrado e pode ser marcado como recebido novamente depois.',
+      confirmLabel: 'Remover',
+    });
+    if (!ok) return;
+
     const { error } = await supabase.from('follow_up_receipts').delete().eq('id', receiptId);
     if (error) {
       toast.error('Erro ao remover recebimento');
     } else {
       toast.success('Recebimento removido');
-      await syncStatus(solicitationId);
+      await refreshSolicitations();
     }
-  };
-
-  // Confirm delete handler
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleteConfirmOpen(false);
-    if (deleteTarget.type === 'solicitation') {
-      await handleDeleteSolicitation(deleteTarget.id);
-    } else {
-      const sol = solicitations.find(s =>
-        s.purchase_orders?.some(po => po.id === deleteTarget.id)
-      );
-      await handleDeletePurchaseOrder(deleteTarget.id, sol?.id || '');
-    }
-    setDeleteTarget(null);
   };
 
   // Filter solicitations by search
@@ -513,13 +493,10 @@ export default function FollowUpPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="Excluir solicitacao"
-                          aria-label="Excluir solicitacao"
+                          title="Excluir solicitação"
+                          aria-label="Excluir solicitação"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-danger-muted"
-                          onClick={() => {
-                            setDeleteTarget({ type: 'solicitation', id: sol.id });
-                            setDeleteConfirmOpen(true);
-                          }}
+                          onClick={() => void handleDeleteSolicitation(sol.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -576,24 +553,47 @@ export default function FollowUpPage() {
                                   hasReceipt ? 'bg-success-muted' : 'bg-accent'
                                 )}
                               >
-                                {/* Delete button */}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
-                                  aria-label={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
-                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-danger-muted"
-                                  onClick={() => {
-                                    if (hasReceipt && receipt) {
-                                      handleDeleteReceipt(receipt.id, sol.id);
-                                    } else {
-                                      setDeleteTarget({ type: 'purchase_order', id: po.id });
-                                      setDeleteConfirmOpen(true);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                                {/*
+                                  Ações do card. Antes deste conserto havia UM botão de
+                                  lixeira cujo clique fazia uma coisa OU outra dependendo
+                                  de `hasReceipt` — e a ação irreversível (remover
+                                  recebimento) era a que disparava sem confirmação nenhuma,
+                                  enquanto a reversível (excluir pedido) confirmava. Estava
+                                  invertido, e o `title`/`aria-label` mudava de texto
+                                  conforme o estado, então nada no botão revelava ao
+                                  usuário que existia um caminho pra excluir um pedido já
+                                  recebido. Agora são duas ações sempre visíveis (quando
+                                  aplicável) com rótulo fixo e confirmação própria — ver
+                                  plano de correções §5. Dois botões de ícone em vez de um
+                                  DropdownMenu porque são no máximo 2 ações, o padrão de
+                                  revelação por hover/focus já existe no card e cabe sem
+                                  apertar; um menu suspenso seria uma indireção a mais para
+                                  o mesmo resultado.
+                                */}
+                                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                                  {hasReceipt && receipt && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Remover recebimento"
+                                      aria-label="Remover recebimento"
+                                      className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-danger-muted"
+                                      onClick={() => void handleDeleteReceipt(receipt.id)}
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Excluir pedido"
+                                    aria-label="Excluir pedido"
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-danger-muted"
+                                    onClick={() => void handleDeletePurchaseOrder(po.id, Boolean(hasReceipt))}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
 
                                 <div className="flex items-center gap-2 mb-2">
                                   {hasReceipt ? (
@@ -785,35 +785,6 @@ export default function FollowUpPage() {
               className="w-full bg-success hover:bg-success-active h-10 text-success-foreground"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal: Confirmação de Exclusão */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="max-w-sm p-6">
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground mt-2">
-            {deleteTarget?.type === 'solicitation'
-              ? 'Deseja remover esta solicitação e todos os pedidos e recebimentos vinculados?'
-              : 'Deseja remover este pedido de compra e seu recebimento (se houver)?'}
-          </p>
-          <div className="flex gap-2 mt-4">
-            <Button
-              variant="outline"
-              className="flex-1 h-10"
-              onClick={() => setDeleteConfirmOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="flex-1 h-10 bg-destructive hover:bg-destructive-active text-destructive-foreground"
-              onClick={confirmDelete}
-            >
-              Excluir
             </Button>
           </div>
         </DialogContent>

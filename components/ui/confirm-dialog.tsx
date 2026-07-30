@@ -1,14 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialogShell } from '@/components/ui/confirm-dialog-shell';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -21,6 +13,17 @@ interface ConfirmDialogProps {
   isLoading?: boolean;
 }
 
+// Casca declarativa fina: mesma assinatura de props de sempre, usada pelos
+// 6 sítios destrutivos. Cinco deles disparam de uma linha de tabela, com o
+// modal pai fechado (categories, sectors, movements, employees/desligar,
+// products/desativar); o sexto, simple-crud-dialog, dispara de DENTRO do
+// diálogo de gerenciar Funções/Setores, que continua aberto atrás — é um dos
+// sítios empilhados, junto com locker-sheet. Não confie nesta lista para
+// decidir se há aninhamento: quem decide é a autodetecção por DOM do shell,
+// em runtime. Por dentro, delega markup,
+// política de scrim aninhado e retorno de foco ao ConfirmDialogShell — a
+// mesma implementação usada por `useConfirm()` (confirm-provider.tsx). Uma
+// implementação de scrim/foco, duas cascas.
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -32,34 +35,16 @@ export function ConfirmDialog({
   isLoading = false,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="pt-1">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
-        {/* Destructive modal: cancel is the solid-charcoal secondary button,
-            confirm is danger — never ghost next to a destructive action. */}
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => onOpenChange(false)}
-          >
-            {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => void onConfirm()}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Processando...' : confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialogShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel}
+      cancelLabel={cancelLabel}
+      isLoading={isLoading}
+      variant="destructive"
+      onConfirm={onConfirm}
+    />
   );
 }

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import {
   Form,
   FormControl,
@@ -57,6 +58,7 @@ export function LockerRangeDialog({ kind, open, onOpenChange, onCreated }: Locke
   const [preview, setPreview] = useState<RangePreview | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const confirm = useConfirm();
 
   const form = useForm<RangeFormValues>({
     resolver: zodResolver(rangeSchema),
@@ -72,8 +74,21 @@ export function LockerRangeDialog({ kind, open, onOpenChange, onCreated }: Locke
 
   const requestOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && (form.formState.isDirty || preview) && !isCreating) {
-      const shouldClose = window.confirm('Descartar a pré-visualização e fechar?');
-      if (!shouldClose) return;
+      // `open` é controlado pelo componente pai: no caminho sujo não
+      // fechamos de imediato, esperamos a confirmação e só então
+      // propagamos o fechamento.
+      void (async () => {
+        if (
+          await confirm({
+            title: 'Descartar pré-visualização',
+            description: 'Descartar a pré-visualização e fechar?',
+            confirmLabel: 'Descartar',
+          })
+        ) {
+          onOpenChange(false);
+        }
+      })();
+      return;
     }
     onOpenChange(nextOpen);
   };

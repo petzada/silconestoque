@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
@@ -214,6 +215,7 @@ export default function ProductsPage() {
   const [isValidating, setIsValidating] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const confirm = useConfirm();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -358,25 +360,44 @@ export default function ProductsPage() {
     }
   }, []);
 
+  const closeFormDialog = () => {
+    setEditingProduct(null);
+    form.reset({
+      name: '',
+      sku_code: '',
+      unit: 'unidade',
+      category_id: '',
+      min_stock: 0,
+      max_stock: 0,
+    });
+    setIsDialogOpen(false);
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open && form.formState.isDirty) {
-      const shouldClose = window.confirm('Descartar alteracoes nao salvas?');
-      if (!shouldClose) return;
+      // Estado de abertura é controlado por este componente: no caminho
+      // sujo não fechamos de imediato, esperamos a confirmação e só então
+      // resetamos e fechamos.
+      void (async () => {
+        if (
+          await confirm({
+            title: 'Descartar alterações',
+            description: 'Descartar alterações não salvas?',
+            confirmLabel: 'Descartar',
+          })
+        ) {
+          closeFormDialog();
+        }
+      })();
+      return;
     }
 
     if (!open) {
-      setEditingProduct(null);
-      form.reset({
-        name: '',
-        sku_code: '',
-        unit: 'unidade',
-        category_id: '',
-        min_stock: 0,
-        max_stock: 0,
-      });
+      closeFormDialog();
+      return;
     }
 
-    setIsDialogOpen(open);
+    setIsDialogOpen(true);
   };
 
   const handleSave = form.handleSubmit(async (values) => {

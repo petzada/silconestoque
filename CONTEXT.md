@@ -56,6 +56,15 @@ _Avoid_: Chapa (nome antigo), locker
 Vínculo de um Colaborador ativo a um Armário ativo, com início e fim. No máximo um ocupante por armário e uma ocupação ativa por colaborador em cada tipo de armário.
 _Avoid_: Atribuição, assignment
 
+**Ocupado**:
+Armário ativo com Ocupação em curso.
+
+**Livre**:
+Armário ativo sem Ocupação em curso.
+
+**Inativo**:
+Armário desativado — não aparece para novas atribuições e o histórico é mantido. Precede os outros dois na classificação: um Armário desativado conta como Inativo mesmo que ainda carregue uma Ocupação registrada (nunca como Ocupado).
+
 ### Movimentações
 
 **Entrada**:

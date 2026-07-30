@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useConfirm } from '@/components/ui/confirm-provider';
 import {
   Form,
   FormControl,
@@ -50,6 +51,7 @@ interface LockerFormDialogProps {
 
 export function LockerFormDialog({ kind, open, onOpenChange, editingLocker, onSaved }: LockerFormDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const confirm = useConfirm();
 
   const form = useForm<LockerFormValues>({
     resolver: zodResolver(lockerFormSchema),
@@ -68,8 +70,24 @@ export function LockerFormDialog({ kind, open, onOpenChange, editingLocker, onSa
 
   const requestOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && form.formState.isDirty) {
-      const shouldClose = window.confirm('Descartar alterações não salvas?');
-      if (!shouldClose) return;
+      // `open` é controlado pelo componente pai: no caminho sujo não
+      // fechamos de imediato, esperamos a confirmação e só então propagamos
+      // o fechamento. Este diálogo pode abrir sobre o LockerSheet já aberto
+      // (fluxo "Editar" a partir da ficha do armário) — é exatamente o caso
+      // que o ConfirmDialogShell detecta sozinho, via DOM, para não empilhar
+      // um segundo scrim.
+      void (async () => {
+        if (
+          await confirm({
+            title: 'Descartar alterações',
+            description: 'Descartar alterações não salvas?',
+            confirmLabel: 'Descartar',
+          })
+        ) {
+          onOpenChange(false);
+        }
+      })();
+      return;
     }
     onOpenChange(nextOpen);
   };

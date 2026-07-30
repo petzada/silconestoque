@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/auth-provider';
+import { ConfirmProvider } from '@/components/ui/confirm-provider';
 import { Toaster } from '@/components/ui/sonner';
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -30,8 +31,10 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} font-sans antialiased`}>
         <AuthProvider>
-          {children}
-          <Toaster position="bottom-right" richColors />
+          <ConfirmProvider>
+            {children}
+            <Toaster position="bottom-right" richColors />
+          </ConfirmProvider>
         </AuthProvider>
       </body>
     </html>
