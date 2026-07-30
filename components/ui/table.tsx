@@ -44,7 +44,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "bg-muted/50 border-t font-medium [&>tr]:last:border-b-0",
+        "bg-surface-soft border-t font-medium [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -57,7 +57,11 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        // Three distinguishable states, none of them alpha (V10/E.14): normal
+        // is transparent, hover is --accent (solid hover-highlight), selected
+        // is --surface-elevated (one step darker than hover, so a selected
+        // row stays visibly different even when the cursor is over it).
+        "hover:bg-accent data-[state=selected]:bg-surface-elevated border-b transition-colors",
         className
       )}
       {...props}
@@ -70,7 +74,9 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        // Carbon data-table header: 48px row, 16px column padding, 14px/600,
+        // sentence case (no uppercase).
+        "text-foreground h-12 px-4 text-left align-middle font-semibold whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -83,7 +89,8 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        // Carbon "short" row for listings: 32px, 16px column padding, 14px/400.
+        "h-8 px-4 align-middle font-normal whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}

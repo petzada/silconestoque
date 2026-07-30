@@ -1,13 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", "Menlo", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Courier, monospace;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -54,6 +52,8 @@
   --color-primary: var(--primary);
   --color-primary-active: var(--primary-active);
   --color-primary-disabled: var(--primary-disabled);
+  --color-destructive-active: var(--destructive-active);
+  --color-success-active: var(--success-active);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -72,98 +72,128 @@
   --color-brand-primary: var(--primary);
   --color-brand-primary-hover: var(--primary-active);
 
-  /* DESIGN.md radius scale: 8px buttons/inputs, 12px cards. Anything above lg clamps to 12px — pills only via rounded-full. */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 12px;
-  --radius-2xl: 12px;
-  --radius-3xl: 12px;
-  --radius-4xl: 12px;
+  /* Carbon flat geometry: every corner is 0px. --radius-xs survives at 2px only
+     for the small-badge exception DESIGN.md documents ({rounded.xs}); everything
+     else clamps to 0. The rounded-* classes themselves still exist in ~35 files —
+     zeroing the token resolves ~135 of 141 occurrences visually, but removing the
+     classes is Etapa 2, not this one. */
+  --radius-xs: 2px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
 /*
- * DESIGN.md token layer — dark-only system.
- * Canvas #0a0a0a + electric yellow #faff69 as the single brand voltage.
- * Depth comes from surface contrast (canvas → card → elevated) + hairlines. No drop shadows.
+ * DESIGN.md token layer — IBM Carbon, White theme.
+ * Token source: official Carbon packages (@carbon/colors, @carbon/themes,
+ * @carbon/type, @carbon/layout), inspected in node_modules and resolved in
+ * DESIGN.md's "Resolved Tokens" appendix — not re-typed from a Carbon
+ * screenshot. This is a hybrid: Carbon tokens on top of the existing
+ * Radix/Tailwind/CVA runtime, NOT @carbon/react and NOT @carbon/styles.
+ * See docs/adr/0006-carbon-tokens-sobre-radix.md for why.
+ *
+ * Canvas #ffffff, IBM Blue #0f62fe as the single interactive accent, charcoal
+ * #161616 for text. Two flat surface layers (surface-1 #f4f4f4, surface-2
+ * #e0e0e0) — no alpha-composited surfaces, no drop shadows, no rounded corners.
  */
 :root {
-  --radius: 12px;
+  --radius: 0px;
 
   /* Surfaces */
-  --background: #0a0a0a; /* colors.canvas */
-  --foreground: #ffffff; /* colors.on-dark */
+  --background: #ffffff; /* colors.canvas — @carbon/themes white.background */
+  --foreground: #161616; /* colors.ink — white.textPrimary */
 
-  --surface-soft: #121212; /* colors.surface-soft */
-  --surface-elevated: #242424; /* colors.surface-elevated */
+  --surface-soft: #f4f4f4; /* colors.surface-1 — white.layer01 */
+  --surface-elevated: #e0e0e0; /* colors.surface-2 — white.layerAccent01 */
 
-  --card: #1a1a1a; /* colors.surface-card */
-  --card-foreground: #ffffff;
-  --popover: #1a1a1a;
-  --popover-foreground: #ffffff;
+  --card: #ffffff; /* Carbon feature-card: canvas + hairline, never a darker fill */
+  --card-foreground: #161616;
+  --popover: #ffffff;
+  --popover-foreground: #161616;
 
-  /* Brand: electric yellow, black text on yellow */
-  --brand: #faff69; /* colors.primary */
-  --brand-foreground: #0a0a0a; /* colors.on-primary */
-  --primary: #faff69;
-  --primary-foreground: #0a0a0a;
-  --primary-active: #e6eb52; /* colors.primary-active */
-  --primary-disabled: #3a3a1f; /* colors.primary-disabled */
+  /* Brand: IBM Blue, scarce — interactive elements only (DESIGN.md:227) */
+  --brand: #0f62fe; /* colors.primary — white.interactive / blue60 */
+  --brand-foreground: #ffffff; /* colors.on-primary — white.textOnColor */
+  --primary: #0f62fe;
+  --primary-foreground: #ffffff;
+  --primary-active: #002d9c; /* colors.blue-80 — pressed primary (DESIGN.md button-primary-pressed) */
+  --primary-disabled: #c6c6c6; /* gray30 / white.borderDisabled — closest solid Carbon "disabled chrome" token; Carbon's real disabled-button fill is Sass-only, not shipped in these packages */
 
-  --secondary: #1a1a1a;
-  --secondary-foreground: #ffffff;
+  --secondary: #f4f4f4; /* colors.surface-1 */
+  --secondary-foreground: #161616;
 
-  --muted: #242424;
-  --muted-foreground: #888888; /* colors.muted */
+  --muted: #f4f4f4; /* colors.surface-1 */
+  --muted-foreground: #525252; /* colors.ink-muted — white.textSecondary. LOCKED (V5): never #8c8c8c, fails AA (~3.4:1) */
 
-  --accent: #242424;
-  --accent-foreground: #ffffff;
+  --accent: #e8e8e8; /* white.layerHover01 — solid hover-highlight, no alpha */
+  --accent-foreground: #161616;
 
   /* Text ramp */
-  --body: #cccccc; /* colors.body */
-  --body-strong: #e6e6e6; /* colors.body-strong */
-  --muted-soft: #5a5a5a; /* colors.muted-soft */
+  --body: #525252; /* colors.ink-muted */
+  --body-strong: #161616; /* colors.ink */
+  --muted-soft: #c6c6c6; /* gray30 / white.borderSubtle01 — faint tertiary, never #8c8c8c (V5) */
 
-  /* Semantic accents — status only, never brand */
-  --destructive: #ef4444; /* colors.accent-rose */
+  /* Semantic accents — status only, never brand.
+     success/warning deviate from DESIGN.md's literal green-50 / yellow-30:
+     both fail WCAG AA in the roles this app already uses them (solid badge
+     fill + white foreground text, and standalone icon/text color on white).
+     See report for the exact contrast math; values below are official Carbon
+     scale steps, just a different step than DESIGN.md's prose names. */
+  --destructive: #da1e28; /* colors.semantic-error — Carbon red-60 (matches DESIGN.md exactly) */
   --destructive-foreground: #ffffff;
+  --destructive-active: #a2191f; /* Carbon red-70 — solid hover/pressed step, replaces the old hover:bg-destructive/90 alpha (V10: no alpha surfaces) */
 
-  --success: #22c55e; /* colors.accent-emerald */
-  --success-foreground: #0a0a0a;
-  --success-muted: #14331f;
-  --warning: #f59e0b;
-  --warning-foreground: #0a0a0a;
-  --warning-muted: #3a2c10;
-  --danger: #ef4444;
+  --success: #198038; /* Carbon green-60, not green-50: green-50 + white text = 3.35:1, fails AA. green-60 + white = 5.02:1. Also the exact green already locked for the V1 alert palette */
+  --success-foreground: #ffffff;
+  --success-active: #0e6027; /* Carbon green-70 — solid hover step, replaces hover:bg-success/90 alpha */
+  --success-muted: #defbe6; /* Carbon green-10 */
+  --warning: #ba4e00; /* Carbon orange-60, not yellow-30: yellow-30 as standalone text/icon on white = 1.68:1 (near-invisible); orange-60 = 5.03:1. yellow-30 is reserved for icon-on-dark-fill use Carbon never exposes here */
+  --warning-foreground: #ffffff;
+  --warning-muted: #fcf4d6; /* Carbon yellow-10 */
+  --danger: #da1e28; /* same family as destructive */
   --danger-foreground: #ffffff;
-  --danger-muted: #3a1717;
-  --info: #3b82f6; /* colors.accent-blue */
+  --danger-muted: #fff1f1; /* Carbon red-10 */
+  --info: #0043ce; /* Carbon blue-70 = white.supportInfo exactly. DESIGN.md prose claims "identical to primary" (#0f62fe); the real Carbon token is one step darker, kept distinct from interactive blue on purpose */
   --info-foreground: #ffffff;
-  --info-muted: #16263f;
+  --info-muted: #edf5ff; /* Carbon blue-10 */
 
   /* Hairlines */
-  --border: #2a2a2a; /* colors.hairline */
-  --input: #2a2a2a;
-  --hairline-strong: #3a3a3a; /* colors.hairline-strong */
-  --ring: #faff69;
+  --border: #e0e0e0; /* colors.hairline — white.borderSubtle00 */
+  --input: #e0e0e0;
+  --hairline-strong: #8d8d8d; /* colors.hairline-strong — white.borderStrong01 (gray50) */
+  --ring: #0f62fe; /* white.focus */
 
-  /* Charts: yellow carries the hero series; neutrals + semantics for the rest */
-  --chart-1: #faff69;
-  --chart-2: #888888;
-  --chart-3: #3b82f6;
-  --chart-4: #ef4444;
-  --chart-5: #22c55e;
+  /* Charts: official Carbon data-viz palette, in this exact order (V1) —
+     deliberately excludes #0f62fe so a data series never collides with the
+     interactive accent. purple-70, cyan-50, teal-70, magenta-70, red-50. */
+  --chart-1: #6929c4;
+  --chart-2: #1192e8;
+  --chart-3: #005d5d;
+  --chart-4: #9f1853;
+  --chart-5: #fa4d56;
 
-  /* Sidebar: canvas surface, yellow on active */
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #cccccc;
-  --sidebar-primary: #faff69;
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #1a1a1a;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2a2a2a;
-  --sidebar-ring: #faff69;
+  /* Chart-only alert/state steps (V1): orange-40 and yellow-30 from
+     @carbon/colors, used for a 4-tier severity ramp (red -> orange -> yellow
+     -> green) in lib/chart.ts's ALERT_PALETTE. Distinct from --warning
+     (tuned for AA-safe standalone text); these are always paired with a
+     label, matching Carbon's own alert-palette convention exactly. */
+  --chart-alert-orange: #ff832b;
+  --chart-alert-yellow: #f1c21b;
+
+  /* Sidebar: clear per V3 — active item is a left rule + weight 600 at the
+     call site, never a filled blue background. Not inverted to charcoal. */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #525252;
+  --sidebar-primary: #0f62fe;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f4;
+  --sidebar-accent-foreground: #161616;
+  --sidebar-border: #e0e0e0;
+  --sidebar-ring: #0f62fe;
 }
 
 @layer base {
@@ -172,7 +202,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-ibm-plex-sans), "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, ".SFNSText-Regular", sans-serif;
+    letter-spacing: 0.16px; /* Carbon precision detail, DESIGN.md:72,228 */
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -189,22 +220,32 @@
 
   /* DESIGN.md type voices. Size-agnostic on purpose: pair with a text-* size at the call site. */
   .text-display {
-    font-weight: 700;
+    font-weight: 300; /* Carbon light-weight display signature (DESIGN.md display01, weight 300) */
     letter-spacing: -0.02em;
   }
-  /* Stat callouts are ALWAYS yellow (DESIGN.md {typography.stat-display}) */
+  /* Stat callouts: weight 300, no embedded brand color (V2) — a giant KPI in
+     IBM Blue would violate "treat IBM Blue as scarce" (DESIGN.md:227,281).
+     Color is inherited from --foreground (#161616); callers that need an
+     alarm state use a semantic token instead. */
   .text-stat-display {
-    font-weight: 700;
+    font-weight: 300;
     letter-spacing: -0.02em;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
-    color: var(--primary);
   }
-  /* {typography.caption-uppercase}: 600 weight, 1.5px tracking at 12px = 0.125em */
-  .text-caption-uppercase {
-    font-weight: 600;
-    letter-spacing: 0.125em;
-    text-transform: uppercase;
+  /* Name kept as alias so the ~16 existing call sites keep resolving; the
+     rename to a Carbon-accurate name is Etapa 6. Styling now matches
+     DESIGN.md {typography.eyebrow} (sentence case, weight 400, 0.16px
+     tracking) instead of the old uppercase/widely-tracked treatment. Still
+     size-agnostic: every call site pairs this with its own text-[Npx]. */
+  /* Carbon caption-01: 12px / 400 / 0.16px, sentence case. Carbon nao usa o
+     eyebrow all-caps com tracking (DESIGN.md), por isso a classe nao se chama
+     mais "-uppercase": o nome antigo passou a mentir quando o utilitario foi
+     reescrito, e nome que mente vira bug quando alguem confiar nele. */
+  .text-caption {
+    font-weight: 400;
+    letter-spacing: 0.16px;
+    text-transform: none;
   }
 
   /* Slim, theme-aware scrollbars */

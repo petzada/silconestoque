@@ -197,16 +197,16 @@ export function LockerSheet({
     if (!locker || !selectedAssignment || !transferEmployeeId) return;
     setIsTransferring(true);
     try {
-      const { error: releaseError } = await supabase
-        .from('locker_assignments')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('id', selectedAssignment.id);
-      if (releaseError) throw releaseError;
-
-      const { error: assignError } = await supabase
-        .from('locker_assignments')
-        .insert({ locker_id: locker.id, employee_id: transferEmployeeId });
-      if (assignError) throw assignError;
+      // RPC transacional: encerra a ocupação atual e cria a nova na mesma
+      // transação. Se o INSERT falhar (colaborador já tem armário do tipo,
+      // desligado, ou armário inativo), o UPDATE de encerramento é revertido
+      // junto — o ocupante original não fica sem armário por uma falha alheia.
+      const { error } = await supabase.rpc('transfer_locker_assignment', {
+        p_assignment_id: selectedAssignment.id,
+        p_locker_id: locker.id,
+        p_employee_id: transferEmployeeId,
+      });
+      if (error) throw error;
 
       toast.success('Armário transferido com sucesso');
       setIsTransferMode(false);
@@ -281,7 +281,7 @@ export function LockerSheet({
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   {getLockerStatus(locker) === 'occupied' ? (
-                    <Lock className="h-4 w-4 text-primary" />
+                    <Lock className="h-4 w-4 text-foreground" />
                   ) : (
                     <LockOpen className="h-4 w-4 text-muted-foreground" />
                   )}
@@ -295,7 +295,7 @@ export function LockerSheet({
 
               <div className="flex-1 space-y-6 overflow-y-auto px-4 pb-4">
                 {!locker.is_active && (
-                  <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between bg-muted p-3 text-sm text-muted-foreground">
                     <span>Este armário está desativado.</span>
                     <Button type="button" variant="link" className="h-auto p-0" onClick={() => void handleReactivateLocker()}>
                       Reativar
@@ -304,8 +304,8 @@ export function LockerSheet({
                 )}
 
                 {locker.is_active && selectedAssignment && (
-                  <div className="space-y-3 rounded-lg border border-border p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ocupante atual</p>
+                  <div className="space-y-3 border border-border p-4">
+                    <p className="text-xs text-muted-foreground">Ocupante atual</p>
                     <p className="text-base font-semibold text-foreground">{selectedAssignment.employee?.full_name}</p>
                     <p className="text-sm text-muted-foreground">
                       {selectedAssignment.employee?.department?.name} · {selectedAssignment.employee?.role?.name}
@@ -321,7 +321,7 @@ export function LockerSheet({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="text-destructive hover:bg-destructive/10"
+                          className="text-destructive hover:bg-danger-muted"
                           onClick={() => setIsReleaseDialogOpen(true)}
                         >
                           Liberar
@@ -329,7 +329,7 @@ export function LockerSheet({
                       </div>
                     ) : (
                       <div className="space-y-2 border-t border-border pt-3">
-                        <p className="text-xs font-semibold text-muted-foreground">Transferir para:</p>
+                        <p className="text-xs text-muted-foreground">Transferir para:</p>
                         <EmployeeCombobox
                           employees={employeesWithoutLocker}
                           value={transferEmployeeId}
@@ -362,8 +362,8 @@ export function LockerSheet({
                 )}
 
                 {locker.is_active && !selectedAssignment && (
-                  <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Armário livre</p>
+                  <div className="space-y-3 border border-border bg-surface-soft p-4">
+                    <p className="text-xs text-muted-foreground">Armário livre</p>
                     <EmployeeCombobox employees={employeesWithoutLocker} value={assignEmployeeId} onChange={setAssignEmployeeId} />
                     <Button
                       type="button"
@@ -377,7 +377,7 @@ export function LockerSheet({
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Histórico</p>
+                  <p className="text-xs text-muted-foreground">Histórico</p>
                   {isLoadingHistory ? (
                     <p className="text-xs text-muted-foreground">Carregando...</p>
                   ) : history.length === 0 ? (
@@ -385,7 +385,7 @@ export function LockerSheet({
                   ) : (
                     <ul className="space-y-2">
                       {history.map((entry) => (
-                        <li key={entry.id} className="rounded-lg bg-muted p-2.5 text-xs">
+                        <li key={entry.id} className="bg-muted p-3 text-xs">
                           <p className="font-semibold text-foreground">{entry.employee?.full_name || '—'}</p>
                           <p className="text-muted-foreground">
                             {formatDateTime(entry.started_at)} — {entry.ended_at ? formatDateTime(entry.ended_at) : 'Atual'}
@@ -406,7 +406,7 @@ export function LockerSheet({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="text-destructive hover:bg-destructive/10 disabled:opacity-40"
+                    className="text-destructive hover:bg-danger-muted disabled:opacity-40"
                     disabled={!!selectedAssignment}
                     title={selectedAssignment ? 'Libere o armário antes de desativar' : undefined}
                     onClick={() => setIsDeactivateDialogOpen(true)}

@@ -1,5 +1,15 @@
 -- Hotfix: corrige baixa duplicada em movimentos de saida
 -- Execute este script no Supabase SQL Editor (ambiente afetado)
+--
+-- SINCRONIZADO em migration_fase1_higiene.sql: a copia de
+-- reconcile_product_on_delete abaixo tinha regredido para a logica antiga
+-- (SET cost_price = prev_cost, sem exigir NF na entrada restaurada), a
+-- mesma regressao encontrada em schema.sql:317-320. Corrigida para bater
+-- com a versao final (COALESCE(prev_cost, cost_price) +
+-- invoice_number IS NOT NULL), ver migration_integridade_historico.sql item
+-- d e migration_fase0_integridade.sql secao 4. Se este hotfix for
+-- reexecutado hoje, ele PRECISA gravar a mesma logica que ja esta em
+-- producao — nao a antiga.
 
 CREATE OR REPLACE FUNCTION update_product_quantity()
 RETURNS TRIGGER AS $$
@@ -60,17 +70,23 @@ BEGIN
   WHERE id = OLD.product_id;
 
   IF OLD.type = 'IN' THEN
+    -- Só uma Entrada com NF + valor unitário é fonte válida de Custo
+    -- Cadastrado (CONTEXT.md). Sem invoice_number IS NOT NULL, restaurava o
+    -- custo a partir de uma entrada informal.
     SELECT unit_value INTO prev_cost
     FROM movements
     WHERE product_id = OLD.product_id
       AND type = 'IN'
       AND unit_value IS NOT NULL
+      AND invoice_number IS NOT NULL
       AND id != OLD.id
     ORDER BY created_at DESC
     LIMIT 1;
 
+    -- COALESCE preserva o último custo conhecido; nunca zera cost_price
+    -- quando não há entrada anterior com NF.
     UPDATE products
-    SET cost_price = prev_cost,
+    SET cost_price = COALESCE(prev_cost, cost_price),
         updated_at = NOW()
     WHERE id = OLD.product_id;
   END IF;

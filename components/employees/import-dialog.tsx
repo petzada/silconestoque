@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getDbErrorMessage, isPostgrestLikeError } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +25,8 @@ import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
+import { PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES, PDF_BLACK, PDF_RED } from '@/lib/pdf';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   CsvFormatError,
   decodeCsvBuffer,
@@ -63,25 +66,25 @@ function MissingList({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex-1 space-y-2 rounded-lg border border-warning/40 bg-warning-muted p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
-        <AlertTriangle className="h-3.5 w-3.5" />
-        {title}
-      </p>
-      <ul className="space-y-1">
-        {items.map((item) => (
-          <li key={item.name} className="flex items-baseline justify-between gap-2 text-xs">
-            <span className="font-medium text-foreground">{item.name}</span>
-            <span className="whitespace-nowrap text-muted-foreground">
-              {item.count} {item.count === 1 ? 'linha' : 'linhas'}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <Button type="button" variant="outline" size="sm" className="h-7 w-full text-xs" onClick={onManage}>
-        {manageLabel}
-      </Button>
-    </div>
+    <Alert variant="warning" className="flex-1">
+      <AlertTriangle className="h-3.5 w-3.5" />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>
+        <ul className="w-full space-y-1">
+          {items.map((item) => (
+            <li key={item.name} className="flex items-baseline justify-between gap-2 text-xs">
+              <span className="font-medium text-foreground">{item.name}</span>
+              <span className="whitespace-nowrap text-muted-foreground">
+                {item.count} {item.count === 1 ? 'linha' : 'linhas'}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Button type="button" variant="outline" size="sm" className="h-8 w-full text-xs" onClick={onManage}>
+          {manageLabel}
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -171,9 +174,9 @@ export function EmployeeImportDialog({
     doc.setFontSize(10);
     doc.text(`Total de linhas: ${result.valid.length + result.errors.length}`, 14, 45);
     doc.text(`Válidas: ${result.valid.length}`, 14, 51);
-    doc.setTextColor(220, 38, 38);
+    doc.setTextColor(...PDF_RED);
     doc.text(`Com erro: ${result.errors.length}`, 14, 57);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...PDF_BLACK);
 
     autoTable(doc, {
       startY: 65,
@@ -183,9 +186,9 @@ export function EmployeeImportDialog({
         error.name.length > 40 ? `${error.name.substring(0, 40)}...` : error.name,
         error.reason,
       ]),
-      headStyles: { fillColor: [15, 23, 42], fontSize: 9 },
+      headStyles: { ...PDF_HEAD_STYLES, fontSize: 9 },
       bodyStyles: { fontSize: 8 },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      alternateRowStyles: PDF_ALTERNATE_ROW_STYLES,
     });
 
     doc.save(`erros_importacao_colaboradores_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
@@ -208,13 +211,12 @@ export function EmployeeImportDialog({
       onOpenChange(false);
       await onImported();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('duplicate key') || message.includes('uniq_employees_full_name')) {
+      if (isPostgrestLikeError(error) && error.code === '23505') {
         // Alguém cadastrou o mesmo nome entre a validação e o insert.
         toast.error('Alguns nomes já foram cadastrados. Revalidando o arquivo...');
         await onImported();
       } else {
-        toast.error('Erro ao importar colaboradores');
+        toast.error(getDbErrorMessage(error, 'Erro ao importar colaboradores'));
       }
     } finally {
       setIsImporting(false);
@@ -228,7 +230,7 @@ export function EmployeeImportDialog({
       <DialogContent className={cn('max-h-[90vh] overflow-y-auto', result ? 'max-w-2xl' : 'max-w-md')}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-4 w-4 text-primary" /> Importar colaboradores via CSV
+            <Upload className="h-4 w-4 text-foreground" /> Importar colaboradores via CSV
           </DialogTitle>
           <DialogDescription className="text-xs">
             Colunas obrigatórias: nome, setor, funcao — separadas por ponto e vírgula (;). O setor e a
@@ -237,7 +239,7 @@ export function EmployeeImportDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          <div className="rounded-lg border-2 border-dashed border-border bg-muted p-4 text-center">
+          <div className="border border-border bg-surface-soft p-4 text-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -248,7 +250,7 @@ export function EmployeeImportDialog({
             />
             <label htmlFor="employee-csv-upload" className="cursor-pointer">
               <Users className="mx-auto mb-2 h-10 w-10 text-muted-foreground" />
-              <p className="text-sm font-semibold text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {fileName || 'Clique para selecionar o arquivo'}
               </p>
               <p className="mt-1 text-[10px] text-muted-foreground">
@@ -260,17 +262,17 @@ export function EmployeeImportDialog({
           {result && (
             <div className="space-y-3">
               <div className="flex gap-3">
-                <div className="flex flex-1 items-center gap-2 rounded-lg bg-success-muted p-3">
+                <div className="flex flex-1 items-center gap-2 bg-success-muted p-3">
                   <CheckCircle2 className="h-5 w-5 text-success" />
                   <div>
-                    <p className="text-sm font-semibold text-success">{result.valid.length} válidos</p>
+                    <p className="text-sm text-success">{result.valid.length} válidos</p>
                     <p className="text-[10px] text-success">Prontos para importar</p>
                   </div>
                 </div>
-                <div className="flex flex-1 items-center gap-2 rounded-lg bg-destructive/10 p-3">
+                <div className="flex flex-1 items-center gap-2 bg-danger-muted p-3">
                   <XCircle className="h-5 w-5 text-destructive" />
                   <div>
-                    <p className="text-sm font-semibold text-destructive">{result.errors.length} com erro</p>
+                    <p className="text-sm text-destructive">{result.errors.length} com erro</p>
                     <p className="text-[10px] text-destructive">Não serão importados</p>
                   </div>
                 </div>
@@ -296,18 +298,18 @@ export function EmployeeImportDialog({
               {result.errors.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-foreground">Erros por linha</p>
+                    <p className="text-xs text-foreground">Erros por linha</p>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 text-xs"
+                      className="h-8 text-xs"
                       onClick={exportErrorsPdf}
                     >
                       <FileDown className="h-3.5 w-3.5" /> Exportar PDF
                     </Button>
                   </div>
-                  <div className="max-h-[220px] overflow-y-auto rounded-lg border border-border">
+                  <div className="max-h-[220px] overflow-y-auto border border-border">
                     <Table>
                       <TableHeader>
                         <TableRow>

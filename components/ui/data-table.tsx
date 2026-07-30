@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,22 @@ import { cn } from '@/lib/utils';
 type SortDirection = 'asc' | 'desc';
 type ColumnAlignment = 'left' | 'center' | 'right';
 type AccessorValue = string | number | boolean | Date | null | undefined;
+
+// Carbon data-table row heights. "short" (32px row / 48px header) is the
+// documented spec for listings (plan §1, "o que não se aplica"); "compact"
+// (24px row / 40px header) is Carbon's next step down for denser listings.
+// Default is "short" so existing call sites don't change unless they opt in.
+export type DataTableDensity = 'short' | 'compact';
+
+const DENSITY_ROW_CLASS: Record<DataTableDensity, string> = {
+  short: 'h-8',
+  compact: 'h-6',
+};
+
+const DENSITY_HEADER_CLASS: Record<DataTableDensity, string> = {
+  short: 'h-12',
+  compact: 'h-10',
+};
 
 export interface DataTableColumn<T> {
   key: string;
@@ -40,6 +56,7 @@ interface DataTableProps<T> {
   pageSizeOptions?: number[];
   initialPageSize?: number;
   stickyHeader?: boolean;
+  density?: DataTableDensity;
   className?: string;
 }
 
@@ -81,6 +98,7 @@ export function DataTable<T>({
   pageSizeOptions = [10, 25, 50],
   initialPageSize = 25,
   stickyHeader = true,
+  density = 'short',
   className,
 }: DataTableProps<T>) {
   const firstSortableKey = columns.find((column) => column.sortable)?.key;
@@ -108,16 +126,21 @@ export function DataTable<T>({
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
 
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
+  // Página efetiva, derivada no render em vez de corrigida por um effect.
+  //
+  // Quando um filtro encolhe a lista, a página guardada pode deixar de existir.
+  // Antes isso era corrigido com `setPage` dentro de um `useEffect`, o que
+  // dispara um render em cascata — e, no frame entre o primeiro render e a
+  // correção, a tabela aparecia vazia. Derivar o valor resolve os dois: não há
+  // segundo render e nunca existe um estado intermediário inválido. O estado
+  // guardado continua sendo a intenção do usuário; `currentPage` é o que essa
+  // intenção significa para os dados que existem agora.
+  const currentPage = Math.min(page, totalPages);
 
   const paginatedData = useMemo(() => {
-    const start = (page - 1) * pageSize;
+    const start = (currentPage - 1) * pageSize;
     return sortedData.slice(start, start + pageSize);
-  }, [page, pageSize, sortedData]);
+  }, [currentPage, pageSize, sortedData]);
 
   const handleSort = (column: DataTableColumn<T>) => {
     if (!column.sortable) return;
@@ -133,7 +156,9 @@ export function DataTable<T>({
 
   const renderSortIcon = (column: DataTableColumn<T>) => {
     if (!column.sortable) return null;
-    if (sortKey !== column.key) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />;
+    // Sem alpha: e o unico indicio de que a coluna e ordenavel, entao precisa
+    // ser legivel. --muted-foreground a 60% sobre branco cai para ~#999.
+    if (sortKey !== column.key) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />;
     return sortDirection === 'asc' ? (
       <ArrowUp className="h-3.5 w-3.5 text-foreground" />
     ) : (
@@ -142,7 +167,7 @@ export function DataTable<T>({
   };
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-border bg-card', className)}>
+    <div className={cn('overflow-hidden border border-border bg-card', className)}>
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-semibold text-muted-foreground">
           {sortedData.length} {sortedData.length === 1 ? 'registro' : 'registros'}
@@ -153,7 +178,7 @@ export function DataTable<T>({
           </label>
           <select
             id="table-page-size"
-            className="h-8 rounded-md border border-border bg-card px-2 text-xs font-semibold text-foreground"
+            className="h-8 border border-border bg-card px-2 text-xs font-semibold text-foreground"
             value={pageSize}
             onChange={(event) => {
               setPage(1);
@@ -171,21 +196,24 @@ export function DataTable<T>({
             size="sm"
             variant="outline"
             className="h-8 text-xs font-semibold"
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            disabled={page <= 1}
+            // Navega a partir da página EFETIVA, não da guardada: se a lista
+            // encolheu, "Anterior" precisa recuar em relação ao que está na
+            // tela, senão o primeiro clique parece não fazer nada.
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
           >
             Anterior
           </Button>
           <span className="min-w-[90px] text-center text-xs font-semibold text-muted-foreground">
-            Página {page} de {totalPages}
+            Página {currentPage} de {totalPages}
           </span>
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="h-8 text-xs font-semibold"
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            disabled={page >= totalPages}
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
           >
             Proxima
           </Button>
@@ -199,7 +227,10 @@ export function DataTable<T>({
               <TableHead
                 key={column.key}
                 className={cn(
-                  'h-11 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                  // Carbon data-table header: 48px (short) row, 14px/600,
+                  // sentence case — h-11 (44px) and uppercase/tracking removed.
+                  DENSITY_HEADER_CLASS[density],
+                  'px-4 text-sm font-semibold text-muted-foreground',
                   getAlignmentClassName(column.align),
                   column.headerClassName
                 )}
@@ -208,7 +239,8 @@ export function DataTable<T>({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      // Carbon focus: inset 2px ring, not an outset ring/border (E.4).
+                      'inline-flex items-center gap-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]',
                       column.align === 'right' && 'ml-auto'
                     )}
                     onClick={() => handleSort(column)}
@@ -236,12 +268,14 @@ export function DataTable<T>({
             </TableRow>
           ) : (
             paginatedData.map((row) => (
-              <TableRow key={rowKey(row)} className="group border-border hover:bg-muted/40">
+              <TableRow key={rowKey(row)} className="group border-border hover:bg-accent">
                 {columns.map((column) => (
                   <TableCell
                     key={`${rowKey(row)}-${column.key}`}
                     className={cn(
-                      'px-4 py-2.5 align-middle text-sm text-foreground',
+                      // Carbon data-table cell: 14px/400, row height per density.
+                      DENSITY_ROW_CLASS[density],
+                      'px-4 align-middle text-sm font-normal text-foreground',
                       getAlignmentClassName(column.align),
                       column.cellClassName
                     )}

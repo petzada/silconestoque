@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -51,12 +52,12 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import { SimpleCrudDialog } from '@/components/employees/simple-crud-dialog';
 import { EmployeeImportDialog } from '@/components/employees/import-dialog';
 import {
   Plus,
   Pencil,
-  Search,
   Settings2,
   Building2,
   Upload,
@@ -122,18 +123,15 @@ function joinWithAnd(items: string[]): string {
   return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
 }
 
+// Delega ao helper central (lib/db-error.ts): supabase-js devolve o erro do
+// PostgREST como objeto plano, nunca como instância de Error, então
+// `error instanceof Error` (o que este arquivo fazia antes) é sempre falso e
+// nenhuma das mensagens abaixo nunca aparecia.
 function friendlyDbError(error: unknown, fallback: string): string {
-  const message = error instanceof Error ? error.message : '';
-  if (message.includes('uniq_employees_full_name')) {
-    return 'Já existe um colaborador com esse nome.';
-  }
-  if (message.includes('duplicate key') || message.includes('unique constraint')) {
-    return 'Já existe um registro com esses dados.';
-  }
-  if (message.includes('foreign key') || message.includes('violates foreign key')) {
-    return 'Este registro está em uso e não pode ser removido.';
-  }
-  return fallback;
+  return getDbErrorMessage(error, fallback, {
+    '23505': 'Já existe um colaborador com esse nome.',
+    '23503': 'Este registro está em uso e não pode ser removido.',
+  });
 }
 
 export default function EmployeesPage() {
@@ -176,13 +174,19 @@ export default function EmployeesPage() {
   const fetchData = useCallback(async () => {
     try {
       const [employeesRes, departmentsRes, rolesRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select(
-            '*, department:departments(*), role:roles(*), locker_assignments!left(id, started_at, ended_at, locker:lockers(id, kind, number, size))'
-          )
-          .is('locker_assignments.ended_at', null)
-          .order('full_name'),
+        // Acima do teto do PostgREST (1000 linhas), esta lista alimentava
+        // `existingNames` (pré-checagem de duplicidade da importação) cega ao
+        // que estivesse na cauda da paginação. fetchAllRows pagina até esgotar.
+        fetchAllRows(() =>
+          supabase
+            .from('employees')
+            .select(
+              '*, department:departments(*), role:roles(*), locker_assignments!left(id, started_at, ended_at, locker:lockers(id, kind, number, size))'
+            )
+            .is('locker_assignments.ended_at', null)
+            .order('full_name')
+            .order('id', { ascending: true })
+        ),
         supabase.from('departments').select('*').order('name'),
         supabase.from('roles').select('*').order('name'),
       ]);
@@ -273,25 +277,25 @@ export default function EmployeesPage() {
 
     setIsOffboarding(true);
     try {
-      const { error: employeeError } = await supabase
-        .from('employees')
-        .update({ is_active: false })
-        .eq('id', employeeToOffboard.id);
-      if (employeeError) throw employeeError;
-
-      const { error: assignmentError } = await supabase
-        .from('locker_assignments')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('employee_id', employeeToOffboard.id)
-        .is('ended_at', null);
-      if (assignmentError) throw assignmentError;
+      // RPC transacional: is_active=false e o encerramento das ocupações
+      // abertas viram uma única transação. Antes, se a segunda escrita
+      // falhasse, o colaborador ficava desligado segurando o armário — e o
+      // armário deixava de ser liberável, pois o colaborador sai de
+      // `activeEmployees` (locker-utils.ts).
+      const { error } = await supabase.rpc('deactivate_employee', {
+        p_employee_id: employeeToOffboard.id,
+      });
+      if (error) throw error;
 
       toast.success('Colaborador desligado com sucesso');
       setIsOffboardDialogOpen(false);
       setEmployeeToOffboard(null);
       await fetchData();
-    } catch {
-      toast.error('Erro ao desligar colaborador');
+    } catch (error: unknown) {
+      // deactivate_employee (RPC) levanta RAISE EXCEPTION com texto em
+      // português pronto para o usuário (ex.: "Colaborador não encontrado");
+      // sem capturar `error` aqui, esse texto nunca chegava à tela.
+      toast.error(friendlyDbError(error, 'Erro ao desligar colaborador'));
     } finally {
       setIsOffboarding(false);
     }
@@ -322,6 +326,9 @@ export default function EmployeesPage() {
           .eq('type', 'OUT')
           .eq('employee_id', employeeId)
           .order('created_at', { ascending: false })
+          // Desempate estável: sem uma segunda chave, retiradas no mesmo
+          // instante podem ser puladas ou repetidas entre páginas do range().
+          .order('id', { ascending: false })
       );
       if (error) throw error;
       setWithdrawals((data as unknown as WithdrawalRow[]) || []);
@@ -411,14 +418,14 @@ export default function EmployeesPage() {
           return (
             <div className="flex flex-wrap items-center gap-1">
               {uniformAssignment?.locker ? (
-                <Badge variant="outline" className="font-mono text-xs font-semibold">
+                <Badge variant="outline" className="font-mono text-xs">
                   Nº {String(uniformAssignment.locker.number).padStart(2, '0')} · {uniformAssignment.locker.size}
                 </Badge>
               ) : (
                 <span className="text-xs text-muted-foreground">sem uniforme</span>
               )}
               {vestiarioAssignment?.locker ? (
-                <Badge variant="outline" className="font-mono text-xs font-semibold">
+                <Badge variant="outline" className="font-mono text-xs">
                   Vest. {String(vestiarioAssignment.locker.number).padStart(2, '0')}
                 </Badge>
               ) : (
@@ -435,7 +442,7 @@ export default function EmployeesPage() {
         cell: (employee) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-xs font-semibold',
+              'border-none px-2 py-0.5 text-xs',
               employee.is_active ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'
             )}
           >
@@ -478,7 +485,7 @@ export default function EmployeesPage() {
                 size="icon"
                 title="Desligar colaborador"
                 aria-label="Desligar colaborador"
-                className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
                 onClick={() => openOffboardDialog(employee)}
               >
                 <UserX className="h-4 w-4" />
@@ -543,16 +550,9 @@ export default function EmployeesPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 sm:flex-row sm:items-center">
-        <div className="relative w-full flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            className="h-10 border-border pl-9 text-sm"
-          />
-        </div>
+      <FilterBar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por nome...' }}
+      >
         <Select value={filterDepartment} onValueChange={setFilterDepartment}>
           <SelectTrigger className="h-10 w-full border-border text-sm sm:w-[200px]">
             <SelectValue placeholder="Setor" />
@@ -589,7 +589,7 @@ export default function EmployeesPage() {
             <SelectItem value="inactive">Desligados</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredEmployees}
@@ -732,7 +732,7 @@ export default function EmployeesPage() {
             <>
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" />
+                  <History className="h-4 w-4 text-foreground" />
                   Retiradas de {employeeForWithdrawals.full_name}
                 </SheetTitle>
                 <SheetDescription>Histórico de saídas de material solicitadas por este colaborador.</SheetDescription>
@@ -747,9 +747,9 @@ export default function EmployeesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs font-semibold">Data</TableHead>
-                        <TableHead className="text-xs font-semibold">Produto</TableHead>
-                        <TableHead className="text-right text-xs font-semibold">Qtd</TableHead>
+                        <TableHead className="text-xs">Data</TableHead>
+                        <TableHead className="text-xs">Produto</TableHead>
+                        <TableHead className="text-right text-xs">Qtd</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -759,7 +759,7 @@ export default function EmployeesPage() {
                             {format(new Date(withdrawal.created_at), 'dd/MM/yyyy HH:mm')}
                           </TableCell>
                           <TableCell className="text-xs text-foreground">{withdrawal.product?.name || '-'}</TableCell>
-                          <TableCell className="text-right text-xs font-semibold text-foreground">
+                          <TableCell className="text-right text-xs text-foreground">
                             {withdrawal.quantity}
                           </TableCell>
                         </TableRow>

@@ -7,7 +7,11 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-lg border py-6",
+        // E.7: card is white on white — the 1px hairline (`border`, using
+        // --card-foreground family) is the only thing separating it from
+        // canvas, so it must stay non-optional. gap-6 (24px) was generous
+        // for dense product UI; Carbon feature-card interior rhythm is 16px.
+        "bg-card text-card-foreground flex flex-col gap-4 border py-6",
         className
       )}
       {...props}

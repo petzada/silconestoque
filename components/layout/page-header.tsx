@@ -17,7 +17,10 @@ export function PageHeader({ title, description, actions, className }: PageHeade
       )}
     >
       <div>
-        <h1 className="text-display text-2xl text-foreground">{title}</h1>
+        {/* Carbon card-title (DESIGN.md): 24px/weight 400 — not .text-display
+            (weight 300, reserved for the display-* sizes this app doesn't
+            use). Page titles are the largest heading in the app. */}
+        <h1 className="text-2xl font-normal text-foreground">{title}</h1>
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

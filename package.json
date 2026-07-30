@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@carbon/colors": "^11.54.0",
+    "@carbon/layout": "^11.55.0",
+    "@carbon/themes": "^11.77.0",
+    "@carbon/type": "^11.63.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",

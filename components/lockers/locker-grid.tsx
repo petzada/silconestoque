@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -11,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
+import { FilterBar } from '@/components/layout/filter-bar';
 import { cn } from '@/lib/utils';
 import type { LockerKind } from '@/lib/types';
 import { LOCKER_SIZES } from '@/lib/types';
@@ -57,25 +56,25 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">Total</span>
+            <span className="text-xs text-muted-foreground">Total</span>
             <span className="text-stat-display text-3xl">{summary.total}</span>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">Ocupados</span>
+            <span className="text-xs text-muted-foreground">Ocupados</span>
             <span className="text-stat-display text-3xl">{summary.occupied}</span>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">Livres</span>
+            <span className="text-xs text-muted-foreground">Livres</span>
             <span className="text-stat-display text-3xl">{summary.free}</span>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 px-4">
-            <span className="text-caption-uppercase text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {kind === 'uniforme' ? 'Sem armário' : 'Sem vestiário'}
             </span>
             <span className="text-stat-display text-3xl">{summary.withoutLocker}</span>
@@ -83,16 +82,13 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
         </Card>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 sm:flex-row sm:items-center">
-        <div className="relative w-full flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por número ou colaborador..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            className="h-10 border-border pl-9 text-sm"
-          />
-        </div>
+      <FilterBar
+        search={{
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: 'Buscar por número ou colaborador...',
+        }}
+      >
         {kind === 'uniforme' && (
           <Select value={filterSize} onValueChange={setFilterSize}>
             <SelectTrigger className="h-10 w-full border-border text-sm sm:w-[140px]">
@@ -119,10 +115,10 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
             <SelectItem value="inactive">Inativo</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       {filteredLockers.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card py-16 text-center text-sm text-muted-foreground">
+        <div className="py-16 text-center text-sm text-muted-foreground">
           {lockers.length === 0 ? 'Nenhum armário cadastrado.' : 'Nenhum armário encontrado para este filtro.'}
         </div>
       ) : (
@@ -136,13 +132,21 @@ export function LockerGrid({ kind, lockers, withoutLockerCount, onSelectLocker }
                 type="button"
                 onClick={() => onSelectLocker(locker)}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1.5 rounded-lg border p-3 text-center transition-colors',
-                  status === 'occupied' && 'border-primary/40 bg-primary/5 hover:bg-primary/10',
-                  status === 'free' && 'border-dashed border-border bg-card hover:bg-muted/50',
+                  'flex flex-col items-center justify-center gap-2 border p-3 text-center transition-colors',
+                  // Occupied uses the info surface (pale blue, static) instead
+                  // of the old primary-tinted alpha fill — IBM Blue stays
+                  // scarce (V2/V6) and this isn't an interactive element.
+                  // Hover reuses --accent, the one universal solid hover
+                  // token, same as every other hoverable surface in the app.
+                  status === 'occupied' && 'border-info bg-info-muted hover:bg-accent',
+                  // Free lockers used a dashed border to read as "empty slot";
+                  // Etapa 2 (V12) reserves dashed/2px for focus and error, so
+                  // this becomes a plain hairline like every other card.
+                  status === 'free' && 'border-border bg-card hover:bg-accent',
                   status === 'inactive' && 'border-border bg-muted opacity-50 hover:opacity-70'
                 )}
               >
-                <span className={cn('text-xl font-bold', status === 'occupied' ? 'text-primary' : 'text-foreground')}>
+                <span className={cn('text-xl font-bold', status === 'occupied' ? 'text-info' : 'text-foreground')}>
                   {String(locker.number).padStart(2, '0')}
                 </span>
                 {kind === 'uniforme' && (

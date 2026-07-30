@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -122,8 +123,8 @@ export default function SectorsPage() {
       setEditingDepartment(null);
       form.reset({ name: '' });
       await fetchDepartments();
-    } catch {
-      toast.error('Erro ao salvar setor');
+    } catch (error: unknown) {
+      toast.error(getDbErrorMessage(error, 'Erro ao salvar setor', { '23505': 'Já existe um setor com esse nome.' }));
     } finally {
       setIsSaving(false);
     }
@@ -147,9 +148,10 @@ export default function SectorsPage() {
       setDepartmentToDelete(null);
       await fetchDepartments();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
       toast.error(
-        message.includes('foreign') ? 'Existem colaboradores vinculados a este setor.' : 'Erro ao excluir setor'
+        getDbErrorMessage(error, 'Erro ao excluir setor', {
+          '23503': 'Existem colaboradores vinculados a este setor.',
+        })
       );
     } finally {
       setIsDeleting(false);
@@ -188,7 +190,7 @@ export default function SectorsPage() {
               size="icon"
               title="Excluir setor"
               aria-label="Excluir setor"
-              className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
               onClick={() => openDeleteDialog(department)}
             >
               <Trash2 className="h-4 w-4" />

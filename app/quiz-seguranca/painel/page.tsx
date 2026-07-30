@@ -20,6 +20,10 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
 import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
 import {
   QUIZ_QUESTIONS,
@@ -56,7 +60,7 @@ export default function QuizPainelPage() {
           </Link>
 
           <div className="mt-16 flex flex-col items-center text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-card border border-border">
+            <div className="flex size-16 items-center justify-center bg-card border border-border">
               <Lock className="size-7 text-primary" />
             </div>
             <h1 className="text-display mt-6 text-[24px] text-foreground">
@@ -68,21 +72,23 @@ export default function QuizPainelPage() {
           </div>
 
           <form onSubmit={handleUnlock} className="mt-8 flex flex-col gap-3">
-            <input
+            <Label htmlFor="quiz-manager-password" className="sr-only">
+              Senha
+            </Label>
+            <Input
+              id="quiz-manager-password"
               type="password"
               inputMode="numeric"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Senha"
               autoFocus
-              className="h-12 w-full rounded-md border border-input bg-card px-4 text-center text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:tracking-normal placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-ring/30"
+              style={password ? { letterSpacing: '0.3em' } : undefined}
+              className="h-12 text-center text-lg"
             />
-            <button
-              type="submit"
-              className="flex h-12 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active"
-            >
+            <Button type="submit" size="lg">
               Acessar
-            </button>
+            </Button>
           </form>
         </div>
       </div>
@@ -145,7 +151,7 @@ function ManagerPanel() {
       doc.text('Quiz de Segurança do Trabalho', 14, 13);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text('Silcon Ambiental — Respostas dos colaboradores', 14, 20);
+      doc.text('Silcon Ambiental · Respostas dos colaboradores', 14, 20);
 
       doc.setTextColor(10, 10, 10);
       doc.setFontSize(10);
@@ -204,24 +210,18 @@ function ManagerPanel() {
               Respostas do Quiz
             </h1>
             <p className="text-[14px] text-muted-foreground">
-              Segurança do Trabalho — Silcon Ambiental
+              Segurança do Trabalho · Silcon Ambiental
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={load}
-              disabled={loading}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 text-[14px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            >
+            <Button type="button" variant="outline" onClick={load} disabled={loading}>
               <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
               Atualizar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleExportPdf}
               disabled={exporting || responses.length === 0}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-md bg-primary px-4 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-primary-active disabled:opacity-50"
             >
               {exporting ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -229,7 +229,7 @@ function ManagerPanel() {
                 <FileDown className="size-4" />
               )}
               Exportar PDF
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -250,14 +250,27 @@ function ManagerPanel() {
         {/* Lista */}
         <div className="mt-6">
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" />
-              Carregando respostas...
+            <div
+              className="flex flex-col gap-2.5"
+              role="status"
+              aria-live="polite"
+              aria-label="Carregando respostas"
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="flex items-center gap-3 border border-border bg-card p-4">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-40 animate-pulse bg-surface-soft" />
+                    <div className="h-3 w-56 animate-pulse bg-surface-soft" />
+                  </div>
+                  <div className="h-4 w-10 animate-pulse bg-surface-soft" />
+                </div>
+              ))}
+              <span className="sr-only">Carregando respostas</span>
             </div>
           ) : responses.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border py-16 text-center text-[14px] text-muted-foreground">
+            <p className="py-16 text-center text-[14px] text-muted-foreground">
               Nenhuma resposta registrada ainda.
-            </div>
+            </p>
           ) : (
             <div className="flex flex-col gap-2.5">
               {responses.map((r) => (
@@ -288,15 +301,15 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card className="p-4">
       <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-[26px] font-bold tracking-tight text-foreground">
+      <div className="mt-1 text-stat-display text-[26px] text-foreground">
         {value}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -311,11 +324,11 @@ function ResponseRow({
 }) {
   const pct = Math.round((r.score / r.total) * 100);
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <Card className="gap-0 overflow-hidden py-0">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50"
+        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-accent"
       >
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-semibold text-foreground">
@@ -329,7 +342,7 @@ function ResponseRow({
           <div className="text-right">
             <div
               className={cn(
-                'text-[15px] font-bold tabular-nums',
+                'text-[15px] font-semibold tabular-nums',
                 pct >= 70 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-destructive'
               )}
             >
@@ -375,6 +388,6 @@ function ResponseRow({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

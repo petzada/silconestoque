@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  ClipboardList,
   Plus,
   Truck,
   PackageCheck,
@@ -31,12 +31,27 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type {
   FollowUpSolicitation,
+  FollowUpPurchaseOrder,
   FollowUpReceipt,
   FollowUpStatus,
   SolicitationFormData,
   PurchaseOrderFormData,
   ReceiptFormData,
 } from '@/lib/types';
+
+/**
+ * Linha crua de `follow_up_solicitations` com os pedidos de compra embutidos,
+ * como a consulta `select('*, purchase_orders:follow_up_purchase_orders(*)')`
+ * devolve: os pedidos ainda **sem** `receipt`, porque os recebimentos vêm numa
+ * segunda consulta e são costurados depois.
+ *
+ * Existe para tipar esse passo intermediário em vez de usar `any`, que
+ * escondia justamente a diferença entre o formato cru e o `FollowUpSolicitation`
+ * final — a distinção que faz o merge abaixo ser necessário.
+ */
+type SolicitationRow = Omit<FollowUpSolicitation, 'purchase_orders'> & {
+  purchase_orders: Omit<FollowUpPurchaseOrder, 'receipt'>[] | null;
+};
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -69,13 +84,17 @@ function parseDateInput(value: string): string {
 }
 
 function statusBadge(status: FollowUpStatus) {
+  // Carbon Tag (V4): pale fill + dark text of the same color family, never a
+  // solid fill with light text. Status is not a CTA, so `em_andamento` moves
+  // off bg-primary onto --info (blue-70), which is visually distinct from
+  // the interactive brand blue reserved for CTAs/links (DESIGN.md:227).
   const config = {
-    pendente: { label: 'PENDENTE', className: 'bg-warning hover:bg-warning text-warning-foreground' },
-    em_andamento: { label: 'EM ANDAMENTO', className: 'bg-primary hover:bg-primary text-primary-foreground' },
-    recebido: { label: 'RECEBIDO', className: 'bg-success hover:bg-success text-success-foreground' },
+    pendente: { label: 'Pendente', className: 'bg-warning-muted text-warning' },
+    em_andamento: { label: 'Em andamento', className: 'bg-info-muted text-info' },
+    recebido: { label: 'Recebido', className: 'bg-success-muted text-success' },
   };
   const c = config[status];
-  return <Badge className={cn('text-[10px] font-bold tracking-wider', c.className)}>{c.label}</Badge>;
+  return <Badge className={c.className}>{c.label}</Badge>;
 }
 
 function computeStatus(solicitation: FollowUpSolicitation): FollowUpStatus {
@@ -135,7 +154,10 @@ export default function FollowUpPage() {
       return;
     }
 
-    const sols = solsData || [];
+    // `as unknown as`: o supabase-js infere o embed aninhado de forma mais
+    // frouxa do que o formato real em runtime. Mesmo padrao de conversao ja
+    // usado em movements/page.tsx e employees/page.tsx.
+    const sols = (solsData ?? []) as unknown as SolicitationRow[];
 
     // Step 2: Collect all PO IDs and fetch their receipts separately
     const allPoIds: string[] = [];
@@ -163,11 +185,11 @@ export default function FollowUpPage() {
     }
 
     // Step 3: Merge receipts into purchase orders
-    const merged: FollowUpSolicitation[] = sols.map((sol: any) => ({
+    const merged: FollowUpSolicitation[] = sols.map((sol) => ({
       ...sol,
-      purchase_orders: (sol.purchase_orders || []).map((po: any) => ({
+      purchase_orders: (sol.purchase_orders ?? []).map((po) => ({
         ...po,
-        receipt: receiptsMap[po.id] || [],
+        receipt: receiptsMap[po.id] ?? [],
       })),
     }));
 
@@ -201,7 +223,8 @@ export default function FollowUpPage() {
       }
 
       // Compute status by checking receipts separately
-      const poIds: string[] = (solData.purchase_orders || []).map((po: any) => po.id);
+      const solRow = solData as unknown as SolicitationRow;
+      const poIds: string[] = (solRow.purchase_orders ?? []).map((po) => po.id);
       let newStatus: FollowUpStatus = 'pendente';
 
       if (poIds.length > 0) {
@@ -397,6 +420,8 @@ export default function FollowUpPage() {
     );
   });
 
+  if (isLoading) return <PageLoading label="Carregando solicitações..." />;
+
   return (
     <PageContainer>
       <PageHeader
@@ -424,17 +449,14 @@ export default function FollowUpPage() {
           placeholder="Buscar por número ou descrição..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="pl-10 h-9 text-sm"
+          className="pl-10 h-10 text-sm"
         />
       </div>
 
       {/* Solicitations List */}
-      {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Carregando solicitações...</div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="text-center py-12">
-          <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">
+          <p className="text-base font-normal text-foreground">
             {searchTerm ? 'Nenhuma solicitação encontrada' : 'Nenhuma solicitação cadastrada'}
           </p>
         </div>
@@ -445,11 +467,11 @@ export default function FollowUpPage() {
             const orders = sol.purchase_orders || [];
 
             return (
-              <div key={sol.id} className="bg-card rounded-lg border border-border overflow-hidden">
+              <div key={sol.id} className="bg-card border border-border overflow-hidden">
                 {/* Row header */}
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : sol.id)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted transition-colors text-left"
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted transition-colors text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {isExpanded ? (
@@ -457,7 +479,7 @@ export default function FollowUpPage() {
                     ) : (
                       <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     )}
-                    <span className="font-bold text-sm text-foreground">{sol.request_number}</span>
+                    <span className="text-sm text-foreground">{sol.request_number}</span>
                     <span className="text-xs text-muted-foreground">|</span>
                     <span className="text-xs text-muted-foreground">{formatDate(sol.request_date)}</span>
                     <span className="text-xs text-muted-foreground">|</span>
@@ -470,21 +492,21 @@ export default function FollowUpPage() {
 
                 {/* Expanded content */}
                 {isExpanded && (
-                  <div className="border-t border-border px-5 py-4 bg-muted/50">
+                  <div className="border-t border-border px-5 py-4 bg-surface-soft">
                     {/* Solicitation card */}
-                    <div className="bg-card rounded-lg border border-border p-4 mb-4">
+                    <div className="bg-card border border-border p-4 mb-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-2">
                           <div>
-                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Nº Solicitação</Label>
-                            <p className="text-sm font-semibold text-foreground">{sol.request_number}</p>
+                            <Label className="text-muted-foreground">Nº Solicitação</Label>
+                            <p className="text-sm text-foreground">{sol.request_number}</p>
                           </div>
                           <div>
-                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Data</Label>
+                            <Label className="text-muted-foreground">Data</Label>
                             <p className="text-sm text-foreground">{formatDate(sol.request_date)}</p>
                           </div>
                           <div>
-                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Descrição</Label>
+                            <Label className="text-muted-foreground">Descrição</Label>
                             <p className="text-sm text-foreground">{sol.description}</p>
                           </div>
                         </div>
@@ -493,7 +515,7 @@ export default function FollowUpPage() {
                           size="icon"
                           title="Excluir solicitacao"
                           aria-label="Excluir solicitacao"
-                          className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-danger-muted"
                           onClick={() => {
                             setDeleteTarget({ type: 'solicitation', id: sol.id });
                             setDeleteConfirmOpen(true);
@@ -507,11 +529,10 @@ export default function FollowUpPage() {
                     {/* Purchase Orders section */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h3 className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Pedidos de Compra</h3>
+                        <h3 className="text-xs tracking-[0.32px] text-muted-foreground">Pedidos de Compra</h3>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] font-bold"
                           onClick={() => {
                             setActiveSolicitationId(sol.id);
                             setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
@@ -525,12 +546,11 @@ export default function FollowUpPage() {
                       </div>
 
                       {orders.length === 0 ? (
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                        <div className="py-6 text-center">
                           <p className="text-sm text-muted-foreground mb-2">Nenhum pedido de compra adicionado</p>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[11px] font-bold"
                             onClick={() => {
                               setActiveSolicitationId(sol.id);
                               setPoForm({ po_number: '', supplier_name: '', estimated_delivery: '' });
@@ -552,10 +572,8 @@ export default function FollowUpPage() {
                               <div
                                 key={po.id}
                                 className={cn(
-                                  'group relative rounded-lg border p-4 transition-all',
-                                  hasReceipt
-                                    ? 'bg-success-muted border-success/30'
-                                    : 'bg-accent border-primary/30'
+                                  'group relative border border-border p-4 transition-all',
+                                  hasReceipt ? 'bg-success-muted' : 'bg-accent'
                                 )}
                               >
                                 {/* Delete button */}
@@ -564,7 +582,7 @@ export default function FollowUpPage() {
                                   size="icon"
                                   title={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
                                   aria-label={hasReceipt && receipt ? 'Remover recebimento' : 'Excluir pedido'}
-                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-danger-muted"
                                   onClick={() => {
                                     if (hasReceipt && receipt) {
                                       handleDeleteReceipt(receipt.id, sol.id);
@@ -581,33 +599,33 @@ export default function FollowUpPage() {
                                   {hasReceipt ? (
                                     <PackageCheck className="h-4 w-4 text-success" />
                                   ) : (
-                                    <Truck className="h-4 w-4 text-primary" />
+                                    <Truck className="h-4 w-4 text-muted-foreground" />
                                   )}
-                                  <span className="font-bold text-sm text-foreground">{po.po_number}</span>
+                                  <span className="text-sm text-foreground">{po.po_number}</span>
                                 </div>
 
                                 <div className="space-y-1 text-xs text-muted-foreground">
-                                  <p><span className="font-semibold">Fornecedor:</span> {po.supplier_name}</p>
+                                  <p><span className="text-foreground">Fornecedor:</span> {po.supplier_name}</p>
                                   {po.estimated_delivery && (
-                                    <p><span className="font-semibold">Prazo:</span> {formatDate(po.estimated_delivery)}</p>
+                                    <p><span className="text-foreground">Prazo:</span> {formatDate(po.estimated_delivery)}</p>
                                   )}
                                 </div>
 
                                 {hasReceipt && receipt ? (
-                                  <div className="mt-3 pt-2 border-t border-success/30 space-y-1">
-                                    <Badge className="bg-success hover:bg-success text-success-foreground text-[9px] font-bold">RECEBIDO</Badge>
+                                  <div className="mt-3 pt-2 border-t border-border space-y-1">
+                                    <Badge className="bg-success-muted text-success">Recebido</Badge>
                                     <p className="text-xs text-muted-foreground">
-                                      <span className="font-semibold">Fornecedor NF:</span> {receipt.supplier_name}
+                                      <span className="text-foreground">Fornecedor NF:</span> {receipt.supplier_name}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      <span className="font-semibold">Valor NF:</span> {formatCurrency(receipt.invoice_value)}
+                                      <span className="text-foreground">Valor NF:</span> {formatCurrency(receipt.invoice_value)}
                                     </p>
                                   </div>
                                 ) : (
                                   <div className="mt-3">
                                     <Button
                                       size="sm"
-                                      className="w-full h-7 text-[11px] font-bold"
+                                      className="w-full"
                                       onClick={() => {
                                         setActivePurchaseOrderId(po.id);
                                         setReceiptForm({ supplier_name: po.supplier_name, invoice_value: undefined });
@@ -637,44 +655,44 @@ export default function FollowUpPage() {
       <Dialog open={solicitationModalOpen} onOpenChange={setSolicitationModalOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-              <FileText className="h-5 w-5 text-primary" />
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-muted-foreground" />
               Nova Solicitação
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Nº da Solicitação *</Label>
+              <Label className="text-muted-foreground">Nº da Solicitação *</Label>
               <Input
                 value={solicitationForm.request_number}
                 onChange={e => setSolicitationForm(f => ({ ...f, request_number: e.target.value }))}
                 placeholder="Ex: SOL-001"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Data da Solicitação *</Label>
+              <Label className="text-muted-foreground">Data da Solicitação *</Label>
               <Input
                 value={dateDisplay}
                 onChange={e => setDateDisplay(applyDateMask(e.target.value))}
                 placeholder="DD/MM/AAAA"
                 maxLength={10}
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Descrição *</Label>
+              <Label className="text-muted-foreground">Descrição *</Label>
               <Input
                 value={solicitationForm.description}
                 onChange={e => setSolicitationForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="Descrição da solicitação"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <Button
               onClick={handleCreateSolicitation}
               disabled={isSubmitting}
-              className="w-full h-9 text-xs font-bold"
+              className="w-full h-10"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -686,44 +704,44 @@ export default function FollowUpPage() {
       <Dialog open={poModalOpen} onOpenChange={setPoModalOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-              <Truck className="h-5 w-5 text-primary" />
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-muted-foreground" />
               Novo Pedido de Compra
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Nº do Pedido *</Label>
+              <Label className="text-muted-foreground">Nº do Pedido *</Label>
               <Input
                 value={poForm.po_number}
                 onChange={e => setPoForm(f => ({ ...f, po_number: e.target.value }))}
                 placeholder="Ex: PC-001"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Fornecedor *</Label>
+              <Label className="text-muted-foreground">Fornecedor *</Label>
               <Input
                 value={poForm.supplier_name}
                 onChange={e => setPoForm(f => ({ ...f, supplier_name: e.target.value }))}
                 placeholder="Nome do fornecedor"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Prazo de Entrega</Label>
+              <Label className="text-muted-foreground">Prazo de Entrega</Label>
               <Input
                 value={poDateDisplay}
                 onChange={e => setPoDateDisplay(applyDateMask(e.target.value))}
                 placeholder="DD/MM/AAAA"
                 maxLength={10}
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <Button
               onClick={handleCreatePurchaseOrder}
               disabled={isSubmitting}
-              className="w-full h-9 text-xs font-bold text-primary-foreground"
+              className="w-full h-10"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -735,36 +753,36 @@ export default function FollowUpPage() {
       <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+            <DialogTitle className="flex items-center gap-2">
               <PackageCheck className="h-5 w-5 text-success" />
               Confirmar Recebimento
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Fornecedor *</Label>
+              <Label className="text-muted-foreground">Fornecedor *</Label>
               <Input
                 value={receiptForm.supplier_name}
                 onChange={e => setReceiptForm(f => ({ ...f, supplier_name: e.target.value }))}
                 placeholder="Fornecedor que entregou"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <div>
-              <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-widest">Valor da NF (R$)</Label>
+              <Label className="text-muted-foreground">Valor da NF (R$)</Label>
               <Input
                 type="number"
                 step="0.01"
                 value={receiptForm.invoice_value ?? ''}
                 onChange={e => setReceiptForm(f => ({ ...f, invoice_value: e.target.value ? parseFloat(e.target.value) : undefined }))}
                 placeholder="0,00"
-                className="mt-1 h-9 text-sm"
+                className="mt-1 h-10 text-sm"
               />
             </div>
             <Button
               onClick={handleCreateReceipt}
               disabled={isSubmitting}
-              className="w-full bg-success hover:bg-success/90 h-9 text-xs font-bold text-success-foreground"
+              className="w-full bg-success hover:bg-success-active h-10 text-success-foreground"
             >
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -776,7 +794,7 @@ export default function FollowUpPage() {
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-sm p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-foreground">Confirmar Exclusão</DialogTitle>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground mt-2">
             {deleteTarget?.type === 'solicitation'
@@ -786,13 +804,13 @@ export default function FollowUpPage() {
           <div className="flex gap-2 mt-4">
             <Button
               variant="outline"
-              className="flex-1 h-9 text-xs font-bold"
+              className="flex-1 h-10"
               onClick={() => setDeleteConfirmOpen(false)}
             >
               Cancelar
             </Button>
             <Button
-              className="flex-1 h-9 text-xs font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              className="flex-1 h-10 bg-destructive hover:bg-destructive-active text-destructive-foreground"
               onClick={confirmDelete}
             >
               Excluir

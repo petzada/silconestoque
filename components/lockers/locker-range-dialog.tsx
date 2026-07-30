@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { CheckCircle2, XCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { isPostgrestLikeError } from '@/lib/db-error';
 import type { LockerKind } from '@/lib/types';
 
 const MAX_RANGE = 500;
@@ -115,8 +116,11 @@ export function LockerRangeDialog({ kind, open, onOpenChange, onCreated }: Locke
           .from('lockers')
           .insert(preview.toCreate.map((number) => ({ kind, number, size: null })));
         if (error) {
-          const message = error instanceof Error ? error.message : '';
-          if (message.includes('uniq_lockers_kind_number') || message.includes('duplicate key')) {
+          // `error` aqui é o objeto desestruturado da resposta, nunca
+          // embrulhado em `Error` — checar o código Postgres (23505,
+          // unique_violation) em vez de `instanceof Error` é o que faz este
+          // ramo de fato disparar.
+          if (isPostgrestLikeError(error) && error.code === '23505') {
             toast.error('Alguns números foram criados por outro usuário nesse meio tempo. Pré-visualização atualizada.');
             await handlePreview();
             return;
@@ -211,16 +215,16 @@ export function LockerRangeDialog({ kind, open, onOpenChange, onCreated }: Locke
             {preview && (
               <div className="space-y-3">
                 <div className="flex gap-3">
-                  <div className="flex flex-1 items-center gap-2 rounded-lg bg-success-muted p-3">
+                  <div className="flex flex-1 items-center gap-2 bg-success-muted p-3">
                     <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
-                      <p className="text-sm font-semibold text-success">{preview.toCreate.length} serão criados</p>
+                      <p className="text-sm text-success">{preview.toCreate.length} serão criados</p>
                     </div>
                   </div>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg bg-muted p-3">
+                  <div className="flex flex-1 items-center gap-2 bg-muted p-3">
                     <XCircle className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-semibold text-foreground">{preview.existing.length} já existem</p>
+                      <p className="text-sm text-foreground">{preview.existing.length} já existem</p>
                       <p className="text-[10px] text-muted-foreground">Serão ignorados</p>
                     </div>
                   </div>

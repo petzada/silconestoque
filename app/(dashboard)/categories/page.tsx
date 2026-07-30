@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -122,8 +123,8 @@ export default function CategoriesPage() {
       setEditingCategory(null);
       form.reset({ name: '' });
       await fetchCategories();
-    } catch {
-      toast.error('Erro ao salvar categoria');
+    } catch (error: unknown) {
+      toast.error(getDbErrorMessage(error, 'Erro ao salvar categoria', { '23505': 'Já existe uma categoria com esse nome.' }));
     } finally {
       setIsSaving(false);
     }
@@ -147,9 +148,10 @@ export default function CategoriesPage() {
       setCategoryToDelete(null);
       await fetchCategories();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
       toast.error(
-        message.includes('foreign') ? 'Existem produtos vinculados a esta categoria.' : 'Erro ao excluir categoria'
+        getDbErrorMessage(error, 'Erro ao excluir categoria', {
+          '23503': 'Existem produtos vinculados a esta categoria.',
+        })
       );
     } finally {
       setIsDeleting(false);
@@ -188,7 +190,7 @@ export default function CategoriesPage() {
               size="icon"
               title="Excluir categoria"
               aria-label="Excluir categoria"
-              className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
               onClick={() => openDeleteDialog(category)}
             >
               <Trash2 className="h-4 w-4" />

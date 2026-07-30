@@ -180,12 +180,12 @@ export function LockersCsvImportDialog({
       <DialogContent className={cn(validationResult ? 'max-w-2xl' : 'max-w-md')}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FolderInput className="h-4 w-4 text-primary" /> Importar armários via CSV
+            <FolderInput className="h-4 w-4 text-foreground" /> Importar armários via CSV
           </DialogTitle>
           <DialogDescription>Colunas obrigatórias: numero, tamanho.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="rounded-lg border-2 border-dashed border-border bg-muted p-4 text-center">
+          <div className="border border-border bg-surface-soft p-4 text-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -204,32 +204,32 @@ export function LockersCsvImportDialog({
           </div>
 
           {isValidating && (
-            <p className="animate-pulse py-2 text-center text-sm font-medium text-muted-foreground">Validando arquivo...</p>
+            <p className="py-2 text-center text-sm text-muted-foreground">Validando arquivo...</p>
           )}
 
           {validationResult && (
             <div className="space-y-3">
               <div className="flex gap-3">
-                <div className="flex flex-1 items-center gap-2 rounded-lg bg-success-muted p-3">
+                <div className="flex flex-1 items-center gap-2 bg-success-muted p-3">
                   <CheckCircle2 className="h-5 w-5 text-success" />
                   <div>
-                    <p className="text-sm font-semibold text-success">{validationResult.valid.length} válidos</p>
+                    <p className="text-sm text-success">{validationResult.valid.length} válidos</p>
                     <p className="text-[10px] text-success">Prontos para importar</p>
                   </div>
                 </div>
-                <div className="flex flex-1 items-center gap-2 rounded-lg bg-destructive/10 p-3">
+                <div className="flex flex-1 items-center gap-2 bg-danger-muted p-3">
                   <XCircle className="h-5 w-5 text-destructive" />
                   <div>
-                    <p className="text-sm font-semibold text-destructive">{validationResult.errors.length} com erro</p>
+                    <p className="text-sm text-destructive">{validationResult.errors.length} com erro</p>
                     <p className="text-[10px] text-destructive">Verifique abaixo</p>
                   </div>
                 </div>
               </div>
 
               {validationResult.errors.length > 0 && (
-                <div className="overflow-hidden rounded-lg border border-border">
-                  <div className="bg-destructive/10 px-3 py-2">
-                    <span className="text-xs font-semibold text-destructive">Linhas com erro</span>
+                <div className="overflow-hidden border border-border">
+                  <div className="bg-danger-muted px-3 py-2">
+                    <span className="text-xs text-destructive">Linhas com erro</span>
                   </div>
                   <div className="max-h-[220px] overflow-y-auto">
                     <Table>

@@ -6,6 +6,10 @@ import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// Carbon core has no SidePanel equivalent (it lives in @carbon/ibm-products,
+// a separate package this app doesn't install — see plan §0). This is a
+// deliberate approximation, not a spec'd Carbon component: white panel,
+// 1px hairline on the leading edge, 48px header, 0 radius, no shadow.
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
@@ -36,7 +40,8 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        // Pure black overlay is banned (DESIGN.md); Carbon's own scrim value.
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[rgba(22,22,22,0.5)]",
         className
       )}
       {...props}
@@ -75,7 +80,7 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+          <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
@@ -89,7 +94,11 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      // 48px SidePanel header with a bottom hairline separating it from body.
+      className={cn(
+        "flex min-h-12 flex-col justify-center gap-2 border-b border-border px-4 py-3",
+        className
+      )}
       {...props}
     />
   )
@@ -99,7 +108,10 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn(
+        "mt-auto flex flex-col gap-2 border-t border-border p-4",
+        className
+      )}
       {...props}
     />
   )

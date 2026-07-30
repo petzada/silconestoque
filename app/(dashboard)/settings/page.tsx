@@ -17,13 +17,13 @@ export default function SettingsPage() {
 
       <div className="grid gap-6">
         <Card className="overflow-hidden">
-          <CardHeader className="bg-muted/50 pb-4">
+          <CardHeader className="bg-surface-soft pb-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-success-muted p-2">
+              <div className="bg-success-muted p-2">
                 <Database className="h-5 w-5 text-success" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-foreground">Integridade de Dados</CardTitle>
+                <CardTitle className="text-base text-foreground">Integridade de Dados</CardTitle>
                 <CardDescription className="text-xs">
                   Estoque e custo sao controlados automaticamente pelas movimentacoes.
                 </CardDescription>
@@ -31,8 +31,8 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-4">
-              <p className="text-sm font-bold text-foreground">Fluxo unico de atualizacao</p>
+            <div className="space-y-1 border border-border bg-surface-soft p-4">
+              <p className="text-sm text-foreground">Fluxo unico de atualizacao</p>
               <p className="max-w-[620px] text-xs text-muted-foreground">
                 Esta tela nao executa recalculo manual de estoque para evitar sobrescrita indevida de saldos e custos.
                 Qualquer ajuste deve ocorrer por entrada, saida, exclusao de movimentacao ou exclusao do produto completo.
@@ -42,13 +42,13 @@ export default function SettingsPage() {
         </Card>
 
         <Card className="pointer-events-none overflow-hidden opacity-80 grayscale">
-          <CardHeader className="bg-muted/50 pb-4">
+          <CardHeader className="bg-surface-soft pb-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-muted p-2">
+              <div className="bg-muted p-2">
                 <ShieldCheck className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-foreground">Seguranca (Em breve)</CardTitle>
+                <CardTitle className="text-base text-foreground">Seguranca (Em breve)</CardTitle>
                 <CardDescription className="text-xs">Gerenciamento de acesso e logs.</CardDescription>
               </div>
             </div>

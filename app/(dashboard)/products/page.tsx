@@ -45,12 +45,12 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import {
   Plus,
   Pencil,
   Package,
   Upload,
-  Search,
   History,
   TrendingUp,
   TrendingDown,
@@ -59,13 +59,21 @@ import {
   CheckCircle2,
   XCircle,
   RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
+import {
+  drawPdfBrandHeader,
+  PDF_HEAD_STYLES,
+  PDF_ALTERNATE_ROW_STYLES,
+  PDF_BLACK,
+  PDF_WHITE,
+  PDF_RED,
+} from '@/lib/pdf';
 import type { Product, Category, PriceHistory } from '@/lib/types';
 
 const UNIT_OPTIONS = [
@@ -82,14 +90,24 @@ function formatCurrency(value: number | null): string {
   }).format(value);
 }
 
-const productFormSchema = z.object({
-  name: z.string().trim().min(2, 'Informe o nome do produto com pelo menos 2 caracteres.'),
-  sku_code: z.string().optional(),
-  unit: z.enum(['unidade', 'caixa', 'pacote']),
-  category_id: z.string().min(1, 'Selecione uma categoria.'),
-  min_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
-  max_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
-});
+const productFormSchema = z
+  .object({
+    name: z.string().trim().min(2, 'Informe o nome do produto com pelo menos 2 caracteres.'),
+    sku_code: z.string().optional(),
+    unit: z.enum(['unidade', 'caixa', 'pacote']),
+    category_id: z.string().min(1, 'Selecione uma categoria.'),
+    min_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
+    max_stock: z.number().int().min(0, 'Nao pode ser negativo.'),
+  })
+  .superRefine((values, ctx) => {
+    if (values.max_stock < values.min_stock) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['max_stock'],
+        message: 'Estoque máximo não pode ser menor que o mínimo.',
+      });
+    }
+  });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
@@ -121,6 +139,45 @@ type ProductPdfRow = {
   minStock: number;
   maxStock: number;
 };
+
+// parseFloat('12,50') devolve 12: o parser nativo para no separador decimal
+// BR. O CSV de importação é ';'-delimitado (locale BR), então a perda de
+// centavos é sistemática. Trata tanto "1.234,56" (milhar + decimal BR)
+// quanto "1234.56" (decimal já no formato aceito por Number). Retorna null
+// para campo vazio, distinto de um zero legítimo.
+function parseBrazilianNumber(raw: string | undefined | null): number | null {
+  if (raw === undefined || raw === null) return null;
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+
+  const cleaned = trimmed.replace(/[^\d,.\-]/g, '');
+  if (cleaned === '' || cleaned === '-') return null;
+
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+
+  let normalized: string;
+  if (hasComma && hasDot) {
+    // "1.234,56": pontos são separador de milhar, vírgula é o decimal.
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    // "12,50": vírgula é o separador decimal.
+    normalized = cleaned.replace(',', '.');
+  } else {
+    // "1234.56" ou inteiro puro: já está no formato aceito por Number.
+    normalized = cleaned;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// Variante inteira (quantidade): mesmo parser, truncado. Campo vazio vira 0
+// (mantém o comportamento existente para saldo inicial não informado).
+function parseBrazilianInt(raw: string | undefined | null): number {
+  const parsed = parseBrazilianNumber(raw);
+  return parsed === null ? 0 : Math.trunc(parsed);
+}
 
 function slugifyCategoryName(value: string): string {
   return (
@@ -181,13 +238,23 @@ export default function ProductsPage() {
         // Traz ativos e desativados: a desativação precisa ter caminho de volta,
         // senão vira porta de mão única. O filtro de status abaixo decide o que
         // aparece na tabela (padrão: só ativos).
+        // Desempate estável obrigatório: products.name não tem UNIQUE
+        // (schema.sql:60-73), então ordenar só por nome deixa a ordem ambígua
+        // entre produtos homônimos e o range() do fetchAllRows pode pular ou
+        // repetir linhas acima do teto de 1000.
         fetchAllRows<Product>(() =>
           supabase
             .from('products')
             .select('*, category:categories(*)')
             .order('name')
+            .order('id', { ascending: true })
         ),
-        supabase.from('categories').select('*').order('name'),
+        // fetchAllRows: esta lista alimenta o dedupe de categorias na
+        // importação (categoryIdByName) — acima do teto do PostgREST ela
+        // ficaria cega a categorias existentes e recriaria duplicatas.
+        fetchAllRows<Category>(() =>
+          supabase.from('categories').select('*').order('name').order('id', { ascending: true })
+        ),
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -237,6 +304,9 @@ export default function ProductsPage() {
           .select('*')
           .eq('product_id', product.id)
           .order('created_at', { ascending: false })
+          // Desempate estável: sem uma segunda chave, variações no mesmo
+          // instante podem ser puladas ou repetidas entre páginas do range().
+          .order('id', { ascending: false })
       );
 
       if (error) throw error;
@@ -322,9 +392,11 @@ export default function ProductsPage() {
       };
 
       if (editingProduct) {
-        await supabase.from('products').update(productData).eq('id', editingProduct.id);
+        const { error } = await supabase.from('products').update(productData).eq('id', editingProduct.id);
+        if (error) throw error;
       } else {
-        await supabase.from('products').insert({ ...productData, current_qty: 0 });
+        const { error } = await supabase.from('products').insert({ ...productData, current_qty: 0 });
+        if (error) throw error;
       }
 
       toast.success(editingProduct ? 'Atualizado' : 'Criado');
@@ -396,8 +468,8 @@ export default function ProductsPage() {
 
         const unit = row.unidade?.toLowerCase() || 'unidade';
         const validUnit = ['unidade', 'caixa', 'pacote'].includes(unit) ? unit : 'unidade';
-        const initialQty = parseInt(row.estoque || row.quantidade || row.qty || '0') || 0;
-        const costPrice = parseFloat(row.custo || row.cost_price || '0') || null;
+        const initialQty = parseBrazilianInt(row.estoque || row.quantidade || row.qty);
+        const costPrice = parseBrazilianNumber(row.custo || row.cost_price);
 
         valid.push({ row, categoryName, initialQty, costPrice, validUnit });
       }
@@ -436,9 +508,9 @@ export default function ProductsPage() {
     doc.setFontSize(10);
     doc.text(`Total de linhas: ${(validationResult.valid.length + validationResult.errors.length)}`, 14, 45);
     doc.text(`Válidas: ${validationResult.valid.length}`, 14, 51);
-    doc.setTextColor(220, 38, 38);
+    doc.setTextColor(...PDF_RED);
     doc.text(`Com erro: ${validationResult.errors.length}`, 14, 57);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...PDF_BLACK);
 
     autoTable(doc, {
       startY: 65,
@@ -496,12 +568,12 @@ export default function ProductsPage() {
 
       const doc = new jsPDF();
       drawPdfBrandHeader(doc, 24);
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...PDF_WHITE);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.text('Relatório de Produtos por Categoria', 14, 15);
 
-      doc.setTextColor(10, 10, 10);
+      doc.setTextColor(...PDF_BLACK);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.text(`Categoria: ${selectedCategory?.name || 'Categoria'}`, 14, 32);
@@ -560,11 +632,21 @@ export default function ProductsPage() {
     try {
       // Categorias que ainda não existem são criadas a partir do próprio CSV
       // (comparação por nome, ignorando maiúsculas/minúsculas, para não
-      // duplicar uma categoria já cadastrada com grafia diferente).
+      // duplicar uma categoria já cadastrada com grafia diferente). O dedupe
+      // precisa ser feito pela chave normalizada, e não pelo texto bruto: um
+      // CSV com "EPIs" e "epis" gerava duas linhas distintas em missingNames
+      // (Set compara por igualdade exata) e o INSERT em lote as criava como
+      // duas categorias — uma delas órfã do agrupamento do dashboard, que
+      // chaveia por nome. Mantém apenas a primeira grafia vista por chave.
       const categoryIdByName = new Map(categories.map((c) => [c.name.toLowerCase().trim(), c.id]));
-      const missingCategoryNames = Array.from(
-        new Set(validationResult.valid.map((item) => item.categoryName))
-      ).filter((name) => !categoryIdByName.has(name.toLowerCase().trim()));
+      const firstSeenNameByNormalized = new Map<string, string>();
+      for (const item of validationResult.valid) {
+        const normalized = item.categoryName.toLowerCase().trim();
+        if (!categoryIdByName.has(normalized) && !firstSeenNameByNormalized.has(normalized)) {
+          firstSeenNameByNormalized.set(normalized, item.categoryName);
+        }
+      }
+      const missingCategoryNames = Array.from(firstSeenNameByNormalized.values());
 
       if (missingCategoryNames.length > 0) {
         const { data: newCategories, error: categoryError } = await supabase
@@ -580,19 +662,31 @@ export default function ProductsPage() {
           const categoryId = categoryIdByName.get(item.categoryName.toLowerCase().trim());
           if (!categoryId) throw new Error('Categoria não encontrada');
 
-          const { data: newProduct } = await supabase.from('products').insert({
-            name: item.row.nome,
-            sku_code: item.row.sku || item.row.codigo || null,
-            unit: item.validUnit,
-            category_id: categoryId,
-            current_qty: 0,
-            min_stock: parseInt(item.row.minimo || item.row.min_stock || '0') || 0,
-            max_stock: parseInt(item.row.maximo || item.row.max_stock || '0') || 0,
-            cost_price: item.costPrice,
-          }).select().single();
+          const { data: newProduct, error: productError } = await supabase
+            .from('products')
+            .insert({
+              name: item.row.nome,
+              sku_code: item.row.sku || item.row.codigo || null,
+              unit: item.validUnit,
+              category_id: categoryId,
+              current_qty: 0,
+              min_stock: parseInt(item.row.minimo || item.row.min_stock || '0') || 0,
+              max_stock: parseInt(item.row.maximo || item.row.max_stock || '0') || 0,
+              cost_price: item.costPrice,
+            })
+            .select()
+            .single();
 
+          if (productError) {
+            throw new Error(`Falha ao criar produto "${item.row.nome}": ${productError.message}`);
+          }
+
+          // Produto criado sem a movimentação de saldo inicial conta como
+          // erro, não sucesso: antes, o resultado deste insert era descartado
+          // e `imported++` rodava de qualquer forma, mesmo quando a
+          // movimentação falhava e o saldo nunca era estabelecido.
           if (item.initialQty > 0 && newProduct) {
-            await supabase.from('movements').insert({
+            const { error: movementError } = await supabase.from('movements').insert({
               product_id: newProduct.id,
               type: 'IN',
               quantity: item.initialQty,
@@ -600,11 +694,19 @@ export default function ProductsPage() {
               unit_value: item.costPrice,
               is_initial_import: true,
             });
+
+            if (movementError) {
+              throw new Error(
+                `Produto "${item.row.nome}" foi criado, mas a movimentação de saldo inicial falhou: ${movementError.message}`
+              );
+            }
           }
 
           imported++;
-        } catch {
+        } catch (error: unknown) {
           errors++;
+          const message = error instanceof Error ? error.message : 'Erro desconhecido ao importar linha';
+          console.error(`Falha ao importar "${item.row.nome}": ${message}`);
         }
       }
 
@@ -638,10 +740,12 @@ export default function ProductsPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Carbon Tag (V4): pale fill + dark text of the same color family, never a
+  // solid fill with light text. Sentence case per DESIGN.md (no all-caps tags).
   const getStatus = (p: Product) => {
-    if (p.current_qty === 0) return { label: 'ZERADO', color: 'bg-destructive text-destructive-foreground' };
-    if (p.current_qty < p.min_stock) return { label: 'CRITICO', color: 'bg-warning text-warning-foreground' };
-    return { label: 'ESTAVEL', color: 'bg-success-muted text-success' };
+    if (p.current_qty === 0) return { label: 'Zerado', color: 'bg-danger-muted text-destructive' };
+    if (p.current_qty < p.min_stock) return { label: 'Crítico', color: 'bg-warning-muted text-warning' };
+    return { label: 'Estável', color: 'bg-success-muted text-success' };
   };
 
   const columns = useMemo<DataTableColumn<Product>[]>(
@@ -652,7 +756,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.sku_code || '',
         cell: (product) => (
-          <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-bold text-muted-foreground">
+          <span className="bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
             {product.sku_code || '---'}
           </span>
         ),
@@ -666,11 +770,11 @@ export default function ProductsPage() {
           <div className="flex items-center gap-2">
             <TruncatedCell
               value={product.name}
-              className={cn('max-w-[300px] font-bold text-foreground', !product.is_active && 'opacity-50')}
+              className={cn('max-w-[300px] text-foreground', !product.is_active && 'opacity-50')}
             />
             {!product.is_active && (
-              <Badge variant="outline" className="shrink-0 rounded-md border-none bg-muted px-1.5 py-0 text-[10px] font-bold text-muted-foreground">
-                DESATIVADO
+              <Badge variant="outline" className="shrink-0 border-none bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">
+                Desativado
               </Badge>
             )}
           </div>
@@ -682,7 +786,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.category?.name || '',
         cell: (product) => (
-          <TruncatedCell value={product.category?.name || '-'} className="max-w-[240px] text-xs font-semibold text-muted-foreground" />
+          <TruncatedCell value={product.category?.name || '-'} className="max-w-[240px] text-xs text-muted-foreground" />
         ),
       },
       {
@@ -693,8 +797,8 @@ export default function ProductsPage() {
         align: 'center',
         cell: (product) => (
           <div className="flex flex-col items-center">
-            <span className="text-sm font-bold text-foreground leading-none">{product.current_qty}</span>
-            <span className="mt-0.5 text-xs font-bold uppercase text-muted-foreground">{product.unit}</span>
+            <span className="text-sm text-foreground leading-none">{product.current_qty}</span>
+            <span className="mt-0.5 text-xs text-muted-foreground">{product.unit}</span>
           </div>
         ),
       },
@@ -704,7 +808,7 @@ export default function ProductsPage() {
         sortable: true,
         accessor: (product) => product.cost_price || 0,
         align: 'right',
-        cell: (product) => <span className="font-bold text-foreground text-sm">{formatCurrency(product.cost_price)}</span>,
+        cell: (product) => <span className="text-foreground text-sm">{formatCurrency(product.cost_price)}</span>,
       },
       {
         key: 'status',
@@ -715,7 +819,7 @@ export default function ProductsPage() {
         cell: (product) => {
           const status = getStatus(product);
           return (
-            <Badge className={cn('border-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider', status.color)}>
+            <Badge className={cn('border-none px-2 py-0.5 text-xs', status.color)}>
               {status.label}
             </Badge>
           );
@@ -756,7 +860,7 @@ export default function ProductsPage() {
                 size="icon"
                 title="Desativar produto"
                 aria-label="Desativar produto"
-                className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
+                className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
                 onClick={() => handleOpenDeleteDialog(product)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -804,36 +908,29 @@ export default function ProductsPage() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-2 items-center bg-card p-2.5 rounded-lg border border-border">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 border-border font-medium text-sm"
-          />
-        </div>
+      <FilterBar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por nome ou SKU...' }}
+      >
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border text-sm font-semibold">
+          <SelectTrigger className="w-full sm:w-[220px] h-10 border-border">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
-          <SelectContent className="rounded-lg">
-            <SelectItem value="all" className="font-semibold">Todas as categorias</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as typeof filterStatus)}>
-          <SelectTrigger className="w-full sm:w-[170px] h-10 border-border text-sm font-semibold">
+          <SelectTrigger className="w-full sm:w-[170px] h-10 border-border">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="rounded-lg">
-            <SelectItem value="active" className="font-semibold">Ativos</SelectItem>
+          <SelectContent>
+            <SelectItem value="active">Ativos</SelectItem>
             <SelectItem value="inactive">Desativados</SelectItem>
             <SelectItem value="all">Todos</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredProducts}
@@ -847,8 +944,8 @@ export default function ProductsPage() {
       {/* Dialog: Novo/Editar Produto */}
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-md p-6">
-          <DialogHeader><DialogTitle className="text-lg font-bold flex items-center gap-2">
-            {editingProduct ? <><Pencil className="h-4 w-4 text-muted-foreground" /> Editar Material</> : <><Plus className="h-4 w-4 text-primary" /> Novo Material</>}
+          <DialogHeader><DialogTitle className="flex items-center gap-2">
+            {editingProduct ? <><Pencil className="h-4 w-4 text-muted-foreground" /> Editar Material</> : <><Plus className="h-4 w-4 text-muted-foreground" /> Novo Material</>}
           </DialogTitle></DialogHeader>
           <Form {...form}>
             <form className="grid gap-4 pt-4" onSubmit={(event) => void handleSave(event)}>
@@ -857,7 +954,7 @@ export default function ProductsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nome do Produto</FormLabel>
+                    <FormLabel className="pl-1 text-muted-foreground">Nome do Produto</FormLabel>
                     <FormControl>
                       <Input {...field} className="h-10 bg-muted" autoFocus />
                     </FormControl>
@@ -871,7 +968,7 @@ export default function ProductsPage() {
                   name="sku_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">SKU</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">SKU</FormLabel>
                       <FormControl>
                         <Input {...field} className="h-10 bg-muted" />
                       </FormControl>
@@ -884,11 +981,11 @@ export default function ProductsPage() {
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Unid. Medida</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Unid. Medida</FormLabel>
                       <FormControl>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <SelectTrigger className="h-10 border-border bg-muted"><SelectValue /></SelectTrigger>
-                          <SelectContent className="rounded-lg">{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                          <SelectContent>{UNIT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -901,11 +998,11 @@ export default function ProductsPage() {
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Categoria</FormLabel>
+                    <FormLabel className="pl-1 text-muted-foreground">Categoria</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger className="h-10 border-border bg-muted"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent className="rounded-lg">{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </FormControl>
                     <FormMessage className="text-xs" />
@@ -918,7 +1015,7 @@ export default function ProductsPage() {
                   name="min_stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Minimo</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Minimo</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -938,7 +1035,7 @@ export default function ProductsPage() {
                   name="max_stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Maximo</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Maximo</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -955,8 +1052,8 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="ghost" className="h-10 px-6 font-bold" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
-                <Button type="submit" className="h-10 px-8 font-bold" disabled={isSaving}>Salvar</Button>
+                <Button type="button" variant="ghost" className="h-10 px-6" onClick={() => handleDialogOpenChange(false)}>Cancelar</Button>
+                <Button type="submit" className="h-10 px-8" disabled={isSaving}>Salvar</Button>
               </div>
             </form>
           </Form>
@@ -978,8 +1075,8 @@ export default function ProductsPage() {
       <Dialog open={isImportDialogOpen} onOpenChange={handleCloseImportDialog}>
         <DialogContent className={cn('p-6', validationResult ? 'max-w-2xl' : 'max-w-md')}>
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Upload className="h-4 w-4 text-primary" /> Importar Produtos via CSV
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-4 w-4 text-muted-foreground" /> Importar Produtos via CSV
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               Colunas: Nome, Categoria (ou Setor), Unidade (obrigatórias) | SKU, Minimo, Maximo, Custo, Estoque (opcionais).
@@ -987,7 +1084,7 @@ export default function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div className="p-4 border-2 border-dashed border-border bg-muted text-center">
+            <div className="p-4 border border-border bg-surface-soft text-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -998,41 +1095,42 @@ export default function ProductsPage() {
               />
               <label htmlFor="csv-upload" className="cursor-pointer">
                 <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm font-bold text-muted-foreground">{importFile ? importFile.name : 'Clique para selecionar arquivo'}</p>
+                <p className="text-sm text-muted-foreground">{importFile ? importFile.name : 'Clique para selecionar arquivo'}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">Formato CSV separado por ponto e vírgula (;)</p>
               </label>
             </div>
 
             {isValidating && (
-              <div className="text-center py-4">
-                <p className="text-sm font-bold text-muted-foreground animate-pulse">Validando arquivo...</p>
+              <div className="flex items-center justify-center gap-2 py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Validando arquivo...</p>
               </div>
             )}
 
             {validationResult && (
               <div className="space-y-3">
                 <div className="flex gap-3">
-                  <div className="flex-1 p-3 bg-success-muted rounded-lg flex items-center gap-2">
+                  <div className="flex-1 p-3 bg-success-muted flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-success" />
                     <div>
-                      <p className="text-sm font-bold text-success">{validationResult.valid.length} válidos</p>
+                      <p className="text-sm text-success">{validationResult.valid.length} válidos</p>
                       <p className="text-[10px] text-success">Prontos para importar</p>
                     </div>
                   </div>
-                  <div className="flex-1 p-3 bg-destructive/10 rounded-lg flex items-center gap-2">
+                  <div className="flex-1 p-3 bg-danger-muted flex items-center gap-2">
                     <XCircle className="h-5 w-5 text-destructive" />
                     <div>
-                      <p className="text-sm font-bold text-destructive">{validationResult.errors.length} com erro</p>
+                      <p className="text-sm text-destructive">{validationResult.errors.length} com erro</p>
                       <p className="text-[10px] text-destructive">Verifique abaixo</p>
                     </div>
                   </div>
                 </div>
 
                 {validationResult.errors.length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-destructive/10 px-3 py-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-destructive">Linhas com Erro</span>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs font-bold text-destructive hover:bg-destructive/15" onClick={exportErrorsPDF}>
+                  <div className="border overflow-hidden">
+                    <div className="bg-danger-muted px-3 py-2 flex items-center justify-between">
+                      <span className="text-xs text-destructive">Linhas com Erro</span>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:bg-danger-muted" onClick={exportErrorsPDF}>
                         <FileDown className="h-3 w-3 mr-1" /> Exportar PDF
                       </Button>
                     </div>
@@ -1040,19 +1138,19 @@ export default function ProductsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted">
-                            <TableHead className="py-2 px-3 text-[10px] font-bold w-[60px]">Linha</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Produto</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Categoria</TableHead>
-                            <TableHead className="py-2 px-3 text-[10px] font-bold">Erro</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px] w-[60px]">Linha</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px]">Produto</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px]">Categoria</TableHead>
+                            <TableHead className="py-2 px-3 text-[10px]">Erro</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {validationResult.errors.slice(0, 20).map((e, i) => (
                             <TableRow key={i} className="border-border">
                               <TableCell className="py-1.5 px-3 text-xs font-mono">{e.line}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs font-medium truncate max-w-[120px]">{e.name}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs truncate max-w-[120px]">{e.name}</TableCell>
                               <TableCell className="py-1.5 px-3 text-xs text-muted-foreground">{e.category}</TableCell>
-                              <TableCell className="py-1.5 px-3 text-xs text-destructive font-medium">{e.reason}</TableCell>
+                              <TableCell className="py-1.5 px-3 text-xs text-destructive">{e.reason}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1067,9 +1165,9 @@ export default function ProductsPage() {
             )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" className="h-10 text-xs font-bold" onClick={handleCloseImportDialog}>Cancelar</Button>
+              <Button variant="ghost" className="h-10" onClick={handleCloseImportDialog}>Cancelar</Button>
               <Button
-                className="h-10 px-8 text-xs font-bold"
+                className="h-10 px-8"
                 onClick={handleImportValidRows}
                 disabled={isImporting || !validationResult || validationResult.valid.length === 0}
               >
@@ -1084,18 +1182,17 @@ export default function ProductsPage() {
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
         <DialogContent className="max-w-lg p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2">
               <History className="h-4 w-4 text-success" /> Histórico de Preços
             </DialogTitle>
             {selectedProductForHistory && (
-              <p className="text-sm text-muted-foreground font-medium">{selectedProductForHistory.name}</p>
+              <p className="text-sm text-muted-foreground">{selectedProductForHistory.name}</p>
             )}
           </DialogHeader>
           <div className="pt-4">
             {priceHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <History className="h-12 w-12 mx-auto opacity-30 mb-2" />
-                <p className="text-xs font-bold">Nenhuma variação de preço registrada</p>
+              <div className="text-center py-8">
+                <p className="text-base font-normal text-foreground">Nenhuma variação de preço registrada</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -1103,18 +1200,18 @@ export default function ProductsPage() {
                   const variation = h.old_price ? ((h.new_price - h.old_price) / h.old_price) * 100 : 0;
                   const isIncrease = variation > 0;
                   return (
-                    <div key={h.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div key={h.id} className="flex items-center justify-between p-3 bg-muted">
                       <div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(h.created_at), 'dd/MM/yyyy HH:mm')}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">NF: {h.invoice_number || '---'}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           {h.old_price && <p className="text-[10px] text-muted-foreground line-through">{formatCurrency(h.old_price)}</p>}
-                          <p className="text-sm font-bold text-foreground">{formatCurrency(h.new_price)}</p>
+                          <p className="text-sm text-foreground">{formatCurrency(h.new_price)}</p>
                         </div>
                         {h.old_price && (
-                          <Badge className={cn("font-bold text-[10px] h-6 px-2 border-none", isIncrease ? "bg-destructive/15 text-destructive" : "bg-success-muted text-success")}>
+                          <Badge className={cn("text-[10px] h-6 px-2 border-none", isIncrease ? "bg-danger-muted text-destructive" : "bg-success-muted text-success")}>
                             {isIncrease ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                             {Math.abs(variation).toFixed(0)}%
                           </Badge>

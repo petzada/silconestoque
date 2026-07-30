@@ -24,17 +24,11 @@ function LockersPageContent() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="h-10 bg-muted p-1">
-          <TabsTrigger
-            value="uniforme"
-            className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
+        <TabsList>
+          <TabsTrigger value="uniforme" className="text-xs">
             Uniformes
           </TabsTrigger>
-          <TabsTrigger
-            value="vestiario"
-            className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
+          <TabsTrigger value="vestiario" className="text-xs">
             Vestiário
           </TabsTrigger>
         </TabsList>

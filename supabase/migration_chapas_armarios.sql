@@ -1,5 +1,24 @@
 -- Silcon Ambiental - Migração: Chapas & Armários + Colaboradores
--- Aditiva e idempotente ao schema.sql. Rodar no SQL Editor do Supabase.
+-- Aditiva ao schema.sql. Rodar no SQL Editor do Supabase.
+--
+-- IDEMPOTÊNCIA (corrigida em migration_fase1_higiene.sql, ver nota abaixo):
+-- este arquivo se declarava "idempotente", mas não era mais depois que
+-- migration_colaboradores_csv.sql (aplicada por cima, na mesma leva de
+-- trabalho) removeu employees.sector_id em favor de employees.department_id.
+-- `CREATE TABLE IF NOT EXISTS employees (...)` continua seguro de
+-- re-executar (o statement inteiro é pulado se a tabela já existe, então a
+-- referência a sector_id nunca chega a ser resolvida). O problema era
+-- `CREATE INDEX IF NOT EXISTS idx_employees_sector ON employees(sector_id)`
+-- logo abaixo: IF NOT EXISTS aqui só suprime "índice já existe", não
+-- resolve a coluna — num banco já migrado para department_id, sector_id não
+-- existe mais e o CREATE INDEX falha com "column does not exist",
+-- derrubando a reexecução do arquivo inteiro.
+--
+-- Escolha: corrigir para ser genuinamente idempotente (em vez de só admitir
+-- que não é), guardando a criação do índice atrás de uma checagem de
+-- existência da coluna. O custo é baixo (um DO $$ a mais) e preserva o
+-- valor do arquivo como script único de instalação de armários para quem
+-- ainda não rodou migration_colaboradores_csv.sql.
 
 -- =====================
 -- ROLES TABLE
@@ -30,7 +49,24 @@ CREATE TABLE IF NOT EXISTS employees (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_employees_sector ON employees(sector_id);
+-- Guardado pela existência da coluna: num banco onde
+-- migration_colaboradores_csv.sql já rodou, employees.sector_id não existe
+-- mais e este bloco é pulado em vez de derrubar o arquivo com "column does
+-- not exist".
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'employees'
+      AND column_name = 'sector_id'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_employees_sector ON employees(sector_id)';
+  END IF;
+END;
+$$;
+
 CREATE INDEX IF NOT EXISTS idx_employees_role ON employees(role_id);
 CREATE INDEX IF NOT EXISTS idx_employees_active ON employees(is_active);
 

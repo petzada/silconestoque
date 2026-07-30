@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage, isPostgrestLikeError } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -50,10 +51,10 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
-  Search,
   Check,
   ChevronsUpDown,
   Trash2,
@@ -158,6 +159,18 @@ export default function MovementsPage() {
     void fetchData();
   }, []);
 
+  // O campo de preço só é exibido quando type === 'IN' e a NF tem conteúdo
+  // (ver o bloco condicional mais abaixo, em torno de "invoiceNumber?.trim()").
+  // react-hook-form não desregistra o campo ao desmontá-lo, então um valor
+  // digitado antes ficava retido: trocar para OUT, ou apagar a NF e digitar
+  // outra, reexibia (ou submetia) um preço de um contexto anterior. Zera o
+  // campo sempre que ele deixa de ser exibido.
+  useEffect(() => {
+    if (movementType !== 'IN' || !invoiceNumber?.trim()) {
+      form.setValue('unit_value', undefined);
+    }
+  }, [movementType, invoiceNumber, form]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -254,13 +267,19 @@ export default function MovementsPage() {
     saveLockRef.current = true;
     setIsSaving(true);
     try {
+      // Normaliza a NF uma única vez e usa o mesmo valor nas duas decisões.
+      // Antes, unit_value checava o campo sem trim e invoice_number com trim:
+      // uma NF preenchida só com espaços gravava o preço com NF NULL, e o
+      // trigger handle_price_change (que exige os dois) nunca disparava —
+      // mas o valor entrava nos totais mesmo assim.
+      const trimmedInvoiceNumber = values.type === 'IN' ? values.invoice_number?.trim() || '' : '';
       const movementData = {
         product_id: values.product_id,
         type: values.type,
         quantity: values.quantity,
         entity_name: values.entity_name?.trim() || null,
-        unit_value: values.type === 'IN' && values.invoice_number ? values.unit_value || null : null,
-        invoice_number: values.type === 'IN' ? values.invoice_number?.trim() || null : null,
+        unit_value: trimmedInvoiceNumber ? values.unit_value || null : null,
+        invoice_number: trimmedInvoiceNumber || null,
         employee_id: values.type === 'OUT' ? values.employee_id || null : null,
       };
 
@@ -272,14 +291,22 @@ export default function MovementsPage() {
       form.reset(initialFormValues);
       await fetchData();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('stock')) {
-        toast.error('Estoque insuficiente');
-      } else if (message.includes('foreign key') || message.includes('employee_id')) {
+      // Antes isto era `error instanceof Error`, sempre falso para erro de
+      // banco (ver lib/db-error.ts), então nem "Estoque insuficiente" nem o
+      // aviso de colaborador inválido chegavam a aparecer — só o fallback.
+      // O 23503 continua tendo ramo próprio porque, além da mensagem, ele
+      // precisa recarregar a lista de colaboradores.
+      const code = isPostgrestLikeError(error) ? error.code : undefined;
+      if (code === '23503') {
         toast.error('Colaborador selecionado não é mais válido. A lista foi atualizada.');
         await fetchData();
       } else {
-        toast.error('Erro ao salvar');
+        // A trava de estoque é uma RAISE EXCEPTION do trigger
+        // update_product_quantity (schema.sql), cuja mensagem original está em
+        // inglês ('Insufficient stock for this product') — daí o override.
+        toast.error(
+          getDbErrorMessage(error, 'Erro ao salvar', { P0001: 'Estoque insuficiente' })
+        );
       }
     } finally {
       setIsSaving(false);
@@ -333,7 +360,7 @@ export default function MovementsPage() {
         sortable: true,
         accessor: (movement) => new Date(movement.created_at),
         cell: (movement) => (
-          <span className="whitespace-nowrap text-xs font-bold text-muted-foreground">
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
             {format(new Date(movement.created_at), 'dd/MM/yy HH:mm')}
           </span>
         ),
@@ -345,10 +372,10 @@ export default function MovementsPage() {
         accessor: (movement) => movement.product?.name || '',
         cell: (movement) => (
           <div className="flex flex-col">
-            <TruncatedCell value={movement.product?.name || '-'} className="max-w-[260px] font-bold text-foreground" />
+            <TruncatedCell value={movement.product?.name || '-'} className="max-w-[260px] text-foreground" />
             <TruncatedCell
               value={movement.product?.category?.name || '-'}
-              className="max-w-[260px] text-xs font-bold uppercase tracking-wide text-muted-foreground"
+              className="max-w-[260px] text-xs text-muted-foreground"
             />
           </div>
         ),
@@ -363,8 +390,8 @@ export default function MovementsPage() {
           <Badge
             variant="outline"
             className={cn(
-              'rounded-md border-none px-2 py-0 text-xs font-bold',
-              movement.type === 'IN' ? 'bg-success-muted text-success' : 'bg-destructive/10 text-destructive'
+              'border-none px-2 py-0 text-xs',
+              movement.type === 'IN' ? 'bg-success-muted text-success' : 'bg-danger-muted text-destructive'
             )}
           >
             {movement.type === 'IN' ? '+' : '-'}
@@ -378,13 +405,13 @@ export default function MovementsPage() {
         sortable: true,
         accessor: (movement) => movement.entity_name || '',
         cell: (movement) => (
-          <div className="flex max-w-[200px] items-center gap-1.5">
+          <div className="flex max-w-[200px] items-center gap-2">
             {movement.employee_id && (
-              <span title="Colaborador cadastrado" className="shrink-0 text-primary">
+              <span title="Colaborador cadastrado" className="shrink-0 text-muted-foreground">
                 <UserCheck className="h-3.5 w-3.5" />
               </span>
             )}
-            <TruncatedCell value={movement.entity_name || '---'} className="min-w-0 flex-1 text-xs font-semibold text-muted-foreground" />
+            <TruncatedCell value={movement.entity_name || '---'} className="min-w-0 flex-1 text-xs text-muted-foreground" />
           </div>
         ),
       },
@@ -395,7 +422,7 @@ export default function MovementsPage() {
         accessor: (movement) => movement.unit_value || 0,
         align: 'right',
         cell: (movement) => (
-          <span className="text-xs font-bold text-foreground">{formatCurrency(movement.unit_value)}</span>
+          <span className="text-xs text-foreground">{formatCurrency(movement.unit_value)}</span>
         ),
       },
       {
@@ -405,7 +432,7 @@ export default function MovementsPage() {
         accessor: (movement) => (movement.unit_value || 0) * movement.quantity,
         align: 'right',
         cell: (movement) => (
-          <span className={cn('text-sm font-bold', movement.type === 'IN' ? 'text-success' : 'text-muted-foreground')}>
+          <span className={cn('text-sm', movement.type === 'IN' ? 'text-success' : 'text-muted-foreground')}>
             {formatCurrency((movement.unit_value || 0) * movement.quantity)}
           </span>
         ),
@@ -417,7 +444,7 @@ export default function MovementsPage() {
         accessor: (movement) => movement.invoice_number || '',
         align: 'center',
         cell: (movement) => (
-          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs font-bold text-muted-foreground">
+          <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
             {movement.invoice_number || '---'}
           </span>
         ),
@@ -433,7 +460,7 @@ export default function MovementsPage() {
             size="icon"
             title="Excluir movimentacao"
             aria-label="Excluir movimentacao"
-            className="h-8 w-8 text-destructive/70 hover:bg-destructive/10"
+            className="h-8 w-8 text-muted-foreground hover:bg-danger-muted hover:text-destructive"
             onClick={() => openDeleteDialog(movement)}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -462,7 +489,7 @@ export default function MovementsPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="border-destructive text-destructive hover:bg-danger-muted hover:text-destructive"
               onClick={() => openDialog('OUT')}
             >
               <ArrowUpCircle className="h-4 w-4" /> Registrar Saida
@@ -471,50 +498,42 @@ export default function MovementsPage() {
         }
       />
 
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5">
-        <div className="flex flex-col items-center gap-2 sm:flex-row">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Produto, fornecedor ou NF..."
-              value={filters.searchTerm}
-              onChange={(event) => setFilters((prev) => ({ ...prev, searchTerm: event.target.value }))}
-              className="h-10 border-border pl-9 text-sm"
-            />
-          </div>
-          <Tabs
-            value={filters.type}
-            onValueChange={(value) =>
-              setFilters((prev) => ({
-                ...prev,
-                type: value as MovementFilters['type'],
-              }))
-            }
-            className="shrink-0"
-          >
-            <TabsList className="h-10 bg-muted p-1">
-              <TabsTrigger value="all" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-foreground">
-                TODAS
-              </TabsTrigger>
-              <TabsTrigger value="IN" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                ENTRADAS
-              </TabsTrigger>
-              <TabsTrigger value="OUT" className="h-8 rounded-md px-4 text-xs font-bold data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
-                SAIDAS
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <FilterBar
+        search={{
+          value: filters.searchTerm,
+          onChange: (value) => setFilters((prev) => ({ ...prev, searchTerm: value })),
+          placeholder: 'Produto, fornecedor ou NF...',
+        }}
+      >
+        <Tabs
+          value={filters.type}
+          onValueChange={(value) =>
+            setFilters((prev) => ({
+              ...prev,
+              type: value as MovementFilters['type'],
+            }))
+          }
+          className="shrink-0"
+        >
+          {/* Carbon Tabs default (underline, weight 600 on selected) — no
+              capsule override. The three tabs are equal in color; a tab is
+              not an error state, so SAIDAS no longer borrows bg-destructive. */}
+          <TabsList>
+            <TabsTrigger value="all">Todas</TabsTrigger>
+            <TabsTrigger value="IN">Entradas</TabsTrigger>
+            <TabsTrigger value="OUT">Saidas</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2">
           <Select
             value={filters.month}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, month: value }))}
           >
-            <SelectTrigger className="h-10 w-[150px] border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[150px] border-border">
               <SelectValue placeholder="Mes" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos os meses</SelectItem>
               {MONTHS.map((month) => (
                 <SelectItem key={month.value} value={month.value}>
@@ -528,10 +547,10 @@ export default function MovementsPage() {
             value={filters.year}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, year: value }))}
           >
-            <SelectTrigger className="h-10 w-[130px] border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[130px] border-border">
               <SelectValue placeholder="Ano" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos os anos</SelectItem>
               {availableYears.map((year) => (
                 <SelectItem key={year} value={year}>
@@ -545,10 +564,10 @@ export default function MovementsPage() {
             value={filters.categoryId}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, categoryId: value }))}
           >
-            <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[220px] border-border">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
@@ -562,10 +581,10 @@ export default function MovementsPage() {
             value={filters.employeeId}
             onValueChange={(value) => setFilters((prev) => ({ ...prev, employeeId: value }))}
           >
-            <SelectTrigger className="h-10 w-[220px] border-border text-xs font-bold">
+            <SelectTrigger className="h-10 w-[220px] border-border">
               <SelectValue placeholder="Colaborador" />
             </SelectTrigger>
-            <SelectContent className="rounded-lg">
+            <SelectContent>
               <SelectItem value="all">Todos os colaboradores</SelectItem>
               {employeeFilterOptions.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
@@ -576,7 +595,7 @@ export default function MovementsPage() {
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </FilterBar>
 
       <DataTable
         data={filteredMovements}
@@ -610,7 +629,7 @@ export default function MovementsPage() {
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+            <DialogTitle className="flex items-center gap-2">
               {movementType === 'IN' ? (
                 <ArrowDownCircle className="h-4 w-4 text-success" />
               ) : (
@@ -626,7 +645,7 @@ export default function MovementsPage() {
                 name="product_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Produto</FormLabel>
+                    <FormLabel className="pl-1 text-muted-foreground">Produto</FormLabel>
                     <FormControl>
                       <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
                         <PopoverTrigger asChild>
@@ -634,13 +653,13 @@ export default function MovementsPage() {
                             type="button"
                             variant="outline"
                             role="combobox"
-                            className="h-10 w-full justify-between border-border bg-muted px-3 text-[12px] font-bold"
+                            className="h-10 w-full justify-between border-border bg-muted px-3 text-sm"
                           >
                             {field.value ? products.find((product) => product.id === field.value)?.name : 'Pesquisar produto...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[min(450px,90vw)] min-w-[280px] rounded-lg p-0 overflow-hidden">
+                        <PopoverContent className="w-[min(450px,90vw)] min-w-[280px] p-0 overflow-hidden">
                           <Command>
                             <CommandInput placeholder="Digite para buscar..." className="h-10 text-sm" />
                             <CommandList>
@@ -654,11 +673,11 @@ export default function MovementsPage() {
                                       field.onChange(product.id);
                                       setIsComboboxOpen(false);
                                     }}
-                                    className="cursor-pointer px-4 py-2 text-xs font-bold"
+                                    className="cursor-pointer px-4 py-2 text-xs"
                                   >
                                     <Check className={cn('mr-2 h-3.5 w-3.5 text-success', field.value === product.id ? 'opacity-100' : 'opacity-0')} />
                                     <span className="flex-1">{product.name}</span>
-                                    <span className="text-xs text-muted-foreground">ESTOQUE: {product.current_qty}</span>
+                                    <span className="text-xs text-muted-foreground">Estoque: {product.current_qty}</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -678,7 +697,7 @@ export default function MovementsPage() {
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Quantidade</FormLabel>
+                      <FormLabel className="pl-1 text-muted-foreground">Quantidade</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -698,7 +717,7 @@ export default function MovementsPage() {
                   name="entity_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      <FormLabel className="pl-1 text-muted-foreground">
                         {movementType === 'IN' ? 'Fornecedor' : 'Solicitante'}
                       </FormLabel>
                       <FormControl>
@@ -718,13 +737,13 @@ export default function MovementsPage() {
                                   type="button"
                                   variant="outline"
                                   role="combobox"
-                                  className="h-10 min-w-0 flex-1 justify-between border-border bg-muted px-3 text-[12px] font-bold"
+                                  className="h-10 min-w-0 flex-1 justify-between border-border bg-muted px-3 text-sm"
                                 >
                                   <span className="truncate">{field.value || 'Selecionar colaborador...'}</span>
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[min(320px,90vw)] p-0 rounded-lg overflow-hidden" align="start">
+                              <PopoverContent className="w-[min(320px,90vw)] p-0 overflow-hidden" align="start">
                                 <Command shouldFilter>
                                   <CommandInput
                                     placeholder="Buscar colaborador..."
@@ -745,7 +764,7 @@ export default function MovementsPage() {
                                             setIsEntityComboboxOpen(false);
                                             setEntitySearchValue('');
                                           }}
-                                          className="cursor-pointer px-4 py-2 text-xs font-bold"
+                                          className="cursor-pointer px-4 py-2 text-xs"
                                         >
                                           <Check
                                             className={cn(
@@ -767,7 +786,7 @@ export default function MovementsPage() {
                                             setIsEntityComboboxOpen(false);
                                             setEntitySearchValue('');
                                           }}
-                                          className="cursor-pointer px-4 py-2 text-xs font-bold text-muted-foreground"
+                                          className="cursor-pointer px-4 py-2 text-xs text-muted-foreground"
                                         >
                                           Usar &quot;{entitySearchValue.trim()}&quot;
                                         </CommandItem>
@@ -809,7 +828,7 @@ export default function MovementsPage() {
                     name="invoice_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Numero da NF</FormLabel>
+                        <FormLabel className="pl-1 text-muted-foreground">Numero da NF</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -828,13 +847,13 @@ export default function MovementsPage() {
                       name="unit_value"
                       render={({ field }) => (
                         <FormItem className="animate-in fade-in slide-in-from-top-1">
-                          <FormLabel className="pl-1 text-xs font-semibold uppercase tracking-widest text-success">Preco Pago (Unitario R$)</FormLabel>
+                          <FormLabel className="pl-1 text-success">Preco Pago (Unitario R$)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               min={0.01}
                               step="0.01"
-                              className="h-10 border-success/30 bg-success-muted font-bold"
+                              className="h-10 border-success bg-success-muted"
                               value={field.value ?? ''}
                               onChange={(event) =>
                                 field.onChange(
@@ -855,7 +874,7 @@ export default function MovementsPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-10 px-6 font-bold"
+                  className="h-10 px-6"
                   onClick={() => handleDialogOpenChange(false)}
                 >
                   Cancelar
@@ -863,10 +882,10 @@ export default function MovementsPage() {
                 <Button
                   type="submit"
                   className={cn(
-                    'h-10 px-8 font-semibold',
+                    'h-10 px-8',
                     movementType === 'IN'
                       ? 'bg-primary text-primary-foreground hover:bg-primary-active'
-                      : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                      : 'bg-destructive text-destructive-foreground hover:bg-destructive-active'
                   )}
                   disabled={isSaving}
                 >

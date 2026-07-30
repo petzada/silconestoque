@@ -3,9 +3,8 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -19,18 +18,24 @@ import { DataTable, TruncatedCell, type DataTableColumn } from '@/components/ui/
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { PageLoading } from '@/components/layout/page-loading';
+import { FilterBar } from '@/components/layout/filter-bar';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   FileDown,
-  Search,
   PackageSearch,
   Inbox,
   ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_ALTERNATE_ROW_STYLES } from '@/lib/pdf';
+import {
+  drawPdfBrandHeader,
+  PDF_HEAD_STYLES,
+  PDF_ALTERNATE_ROW_STYLES,
+  PDF_BLACK,
+  PDF_WHITE,
+} from '@/lib/pdf';
 import type { Product, Category } from '@/lib/types';
 
 type UrgencyFilter = 'all' | 'zerado' | 'critico';
@@ -57,9 +62,20 @@ export default function ReplenishmentQueuePage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // fetchAllRows: acima do teto do PostgREST (1000 linhas), a fila ficava
+      // cega à cauda do catálogo — produtos zerados/críticos fora da primeira
+      // página simplesmente não apareciam, sem erro nenhum.
       const [productsRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('*, category:categories(*)').eq('is_active', true),
-        supabase.from('categories').select('*').order('name'),
+        fetchAllRows<Product>(() =>
+          supabase
+            .from('products')
+            .select('*, category:categories(*)')
+            .eq('is_active', true)
+            .order('id', { ascending: true })
+        ),
+        fetchAllRows<Category>(() =>
+          supabase.from('categories').select('*').order('name').order('id', { ascending: true })
+        ),
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -120,11 +136,11 @@ export default function ReplenishmentQueuePage() {
       const timestamp = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
 
       drawPdfBrandHeader(doc, 26);
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...PDF_WHITE);
       doc.setFontSize(15);
       doc.text('FILA DE REPOSICAO', 14, 17);
 
-      doc.setTextColor(10, 10, 10);
+      doc.setTextColor(...PDF_BLACK);
       doc.setFontSize(10);
       doc.text(`Gerado em: ${timestamp}`, 14, 34);
 
@@ -173,8 +189,8 @@ export default function ReplenishmentQueuePage() {
         accessor: (item) => item.name,
         cell: (item) => (
           <div className="flex flex-col">
-            <TruncatedCell value={item.name} className="max-w-[260px] font-bold text-foreground" />
-            <span className="font-mono text-xs font-bold text-muted-foreground">
+            <TruncatedCell value={item.name} className="max-w-[260px] text-foreground" />
+            <span className="font-mono text-xs text-muted-foreground">
               {item.sku_code || '---'}
             </span>
           </div>
@@ -188,7 +204,7 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <TruncatedCell
             value={item.category?.name || '-'}
-            className="max-w-[220px] text-xs font-semibold text-muted-foreground"
+            className="max-w-[220px] text-xs text-muted-foreground"
           />
         ),
       },
@@ -201,8 +217,8 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-xs font-bold',
-              item.current_qty === 0 ? 'bg-destructive/15 text-destructive' : 'bg-warning-muted text-warning'
+              'border-none px-2 py-0.5 text-xs',
+              item.current_qty === 0 ? 'bg-danger-muted text-destructive' : 'bg-warning-muted text-warning'
             )}
           >
             {item.current_qty}
@@ -215,7 +231,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.min_stock,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-foreground">{item.min_stock}</span>,
+        cell: (item) => <span className="text-sm text-foreground">{item.min_stock}</span>,
       },
       {
         key: 'max_stock',
@@ -223,7 +239,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.max_stock,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-foreground">{item.max_stock}</span>,
+        cell: (item) => <span className="text-sm text-foreground">{item.max_stock}</span>,
       },
       {
         key: 'deficit',
@@ -231,7 +247,7 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.deficit,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-destructive">{item.deficit}</span>,
+        cell: (item) => <span className="text-sm text-destructive">{item.deficit}</span>,
       },
       {
         key: 'targetDeficit',
@@ -239,13 +255,13 @@ export default function ReplenishmentQueuePage() {
         sortable: true,
         accessor: (item) => item.targetDeficit,
         align: 'center',
-        cell: (item) => <span className="text-sm font-bold text-foreground">{item.targetDeficit}</span>,
+        cell: (item) => <span className="text-sm text-foreground">{item.targetDeficit}</span>,
       },
       {
         key: 'unit',
         header: 'Unidade',
         cell: (item) => (
-          <Badge variant="outline" className="text-xs font-bold uppercase">
+          <Badge variant="outline" className="text-xs">
             {item.unit}
           </Badge>
         ),
@@ -260,7 +276,7 @@ export default function ReplenishmentQueuePage() {
         cell: (item) => (
           <Badge
             className={cn(
-              'border-none px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+              'border-none px-2 py-0.5 text-[10px]',
               item.urgencyLevel === 'zerado' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
             )}
           >
@@ -291,11 +307,11 @@ export default function ReplenishmentQueuePage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <PackageSearch className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Total na fila</p>
+              <p className="text-[11px] text-muted-foreground">Total na fila</p>
               <p className="text-stat-display text-3xl">{kpis.total}</p>
             </div>
           </CardContent>
@@ -303,11 +319,11 @@ export default function ReplenishmentQueuePage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <Inbox className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Estoque zerado</p>
+              <p className="text-[11px] text-muted-foreground">Estoque zerado</p>
               <p className="text-stat-display text-3xl">{kpis.zeroed}</p>
             </div>
           </CardContent>
@@ -315,55 +331,45 @@ export default function ReplenishmentQueuePage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center bg-muted">
               <ShieldAlert className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-caption-uppercase text-[11px] text-muted-foreground">Estoque critico</p>
+              <p className="text-[11px] text-muted-foreground">Estoque critico</p>
               <p className="text-stat-display text-3xl">{kpis.critical}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-2.5">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por produto ou SKU..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 border-border pl-9 text-sm"
-            />
-          </div>
+      <FilterBar
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Buscar por produto ou SKU...' }}
+      >
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="h-10 w-full border-border text-xs lg:w-[220px]">
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as categorias</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[220px]">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent className="rounded-lg">
-              <SelectItem value="all">Todas as categorias</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
-            <SelectTrigger className="h-10 w-full border-border text-xs font-bold lg:w-[180px]">
-              <SelectValue placeholder="Urgencia" />
-            </SelectTrigger>
-            <SelectContent className="rounded-lg">
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="zerado">Zerado</SelectItem>
-              <SelectItem value="critico">Critico</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        <Select value={selectedUrgency} onValueChange={(value) => setSelectedUrgency(value as UrgencyFilter)}>
+          <SelectTrigger className="h-10 w-full border-border text-xs lg:w-[180px]">
+            <SelectValue placeholder="Urgencia" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="zerado">Zerado</SelectItem>
+            <SelectItem value="critico">Critico</SelectItem>
+          </SelectContent>
+        </Select>
+      </FilterBar>
 
       <DataTable
         data={replenishmentItems}

@@ -60,14 +60,14 @@ export default function LoginPage() {
     <div className="relative min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="relative w-full max-w-md border-border">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+          <div className="mx-auto flex items-center justify-center w-16 h-16 overflow-hidden border border-border bg-muted">
             <Image src="/logo.png" alt="Silcon Logo" width={64} height={64} className="object-contain" />
           </div>
           <div className="space-y-1">
             <CardTitle className="text-display text-2xl text-foreground">
               Silcon Ambiental
             </CardTitle>
-            <CardDescription className="text-caption-uppercase text-[11px] text-muted-foreground">
+            <CardDescription className="text-[11px] text-muted-foreground">
               Sistema de Gestão de Estoque
             </CardDescription>
           </div>

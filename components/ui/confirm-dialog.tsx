@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -39,10 +40,12 @@ export function ConfirmDialog({
             {description}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex justify-end gap-2 pt-2">
+        {/* Destructive modal: cancel is the solid-charcoal secondary button,
+            confirm is danger — never ghost next to a destructive action. */}
+        <DialogFooter>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
           >
             {cancelLabel}
@@ -55,7 +58,7 @@ export function ConfirmDialog({
           >
             {isLoading ? 'Processando...' : confirmLabel}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
