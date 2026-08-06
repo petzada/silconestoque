@@ -110,10 +110,10 @@ Acesse: [http://localhost:3000](http://localhost:3000)
 
 ## 🔐 Segurança
 
-- Autenticação por senha única (configurável no banco)
-- Row Level Security (RLS) configurado no Supabase
-- Variáveis de ambiente para chaves sensíveis
-- `.gitignore` configurado para proteger arquivos `.env`
+- Autenticação individual via Supabase Auth (e-mail + senha; usuários criados no painel)
+- Row Level Security: políticas `TO authenticated` — a anon key sozinha não acessa dados
+- Proxy Next.js 16 (`proxy.ts` + `@supabase/ssr`) renova a sessão e protege rotas no servidor
+- Variáveis de ambiente para URL e anon key; `.gitignore` protege `.env*`
 
 ---
 

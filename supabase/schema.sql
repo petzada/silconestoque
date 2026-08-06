@@ -228,14 +228,16 @@ CREATE TABLE IF NOT EXISTS movements (
   invoice_number TEXT, -- Nota fiscal
   is_initial_import BOOLEAN DEFAULT false,
   employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+  created_by UUID DEFAULT auth.uid(), -- quem lançou (Supabase Auth); NULL em legado pré-auth
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Instalação nova a partir deste schema.sql já nasce com a coluna acima; o
+-- Instalação nova a partir deste schema.sql já nasce com a coluna; o
 -- ADD COLUMN IF NOT EXISTS é o que torna a re-execução deste arquivo, e a
 -- aplicação de migration_fase3_analitico.sql sobre um banco mais antigo,
 -- idempotentes.
 ALTER TABLE movements ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id);
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS created_by UUID DEFAULT auth.uid();
 
 CREATE INDEX IF NOT EXISTS idx_movements_product ON movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_movements_type ON movements(type);
@@ -691,7 +693,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION transfer_locker_assignment(UUID, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION transfer_locker_assignment(UUID, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION transfer_locker_assignment(UUID, UUID, UUID) FROM anon;
 
 -- 8. RPC deactivate_employee — desligamento atômico
 -- (migration_fase0_integridade.sql secao 2). Mesmo padrão de defeito do
@@ -725,7 +728,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION deactivate_employee(UUID) TO anon;
+GRANT EXECUTE ON FUNCTION deactivate_employee(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION deactivate_employee(UUID) FROM anon;
 
 -- =====================
 -- RLS POLICIES
@@ -743,42 +747,55 @@ ALTER TABLE lockers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE locker_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quiz_respostas ENABLE ROW LEVEL SECURITY;
 
+-- Auth real (migration_auth_rls.sql): só role authenticated. Anon key sem
+-- JWT não lê nem escreve. Quiz permanece desativado na app.
 DROP POLICY IF EXISTS "Allow all" ON sectors;
-CREATE POLICY "Allow all" ON sectors FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON sectors;
+CREATE POLICY "Authenticated" ON sectors FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON categories;
-CREATE POLICY "Allow all" ON categories FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON categories;
+CREATE POLICY "Authenticated" ON categories FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON products;
-CREATE POLICY "Allow all" ON products FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON products;
+CREATE POLICY "Authenticated" ON products FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON movements;
-CREATE POLICY "Allow all" ON movements FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON movements;
+CREATE POLICY "Authenticated" ON movements FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON config;
-CREATE POLICY "Allow all" ON config FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON config;
+CREATE POLICY "Authenticated" ON config FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON price_history;
-CREATE POLICY "Allow all" ON price_history FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON price_history;
+CREATE POLICY "Authenticated" ON price_history FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON departments;
-CREATE POLICY "Allow all" ON departments FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON departments;
+CREATE POLICY "Authenticated" ON departments FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON roles;
-CREATE POLICY "Allow all" ON roles FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON roles;
+CREATE POLICY "Authenticated" ON roles FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON employees;
-CREATE POLICY "Allow all" ON employees FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON employees;
+CREATE POLICY "Authenticated" ON employees FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON lockers;
-CREATE POLICY "Allow all" ON lockers FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON lockers;
+CREATE POLICY "Authenticated" ON lockers FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON locker_assignments;
-CREATE POLICY "Allow all" ON locker_assignments FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON locker_assignments;
+CREATE POLICY "Authenticated" ON locker_assignments FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- Página pública: colaboradores inserem sem login; gestor lê tudo (gate por senha no app).
 DROP POLICY IF EXISTS "Allow all" ON quiz_respostas;
-CREATE POLICY "Allow all" ON quiz_respostas FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Authenticated" ON quiz_respostas;
+CREATE POLICY "Authenticated" ON quiz_respostas FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- =====================
 -- FOLLOW-UP TABLES
@@ -827,13 +844,16 @@ ALTER TABLE follow_up_purchase_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE follow_up_receipts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow all" ON follow_up_solicitations;
-CREATE POLICY "Allow all" ON follow_up_solicitations FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON follow_up_solicitations;
+CREATE POLICY "Authenticated" ON follow_up_solicitations FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON follow_up_purchase_orders;
-CREATE POLICY "Allow all" ON follow_up_purchase_orders FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON follow_up_purchase_orders;
+CREATE POLICY "Authenticated" ON follow_up_purchase_orders FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow all" ON follow_up_receipts;
-CREATE POLICY "Allow all" ON follow_up_receipts FOR ALL USING (true);
+DROP POLICY IF EXISTS "Authenticated" ON follow_up_receipts;
+CREATE POLICY "Authenticated" ON follow_up_receipts FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- =====================
 -- VIEWS
@@ -850,7 +870,7 @@ DROP VIEW IF EXISTS dashboard_stats;
 -- RPCs ANALÍTICOS (migration_fase3_analitico.sql — Fase 3 do plano de
 -- dashboard, docs/superpowers/plans/2026-07-29-dashboard-home-plan.md §5)
 -- =====================
--- SECURITY INVOKER, STABLE, GRANT EXECUTE TO anon. Parâmetros com prefixo
+-- SECURITY INVOKER, STABLE, GRANT EXECUTE TO authenticated. Parâmetros com prefixo
 -- p_. Formato de retorno documentado no comentário de cada função — ver
 -- migration_fase3_analitico.sql para a justificativa completa de cada
 -- decisão de modelagem (is_active nas agregações históricas, filtro de
@@ -970,7 +990,8 @@ AS $$
   FROM contagens;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_operacao(UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_operacao(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_operacao(UUID) FROM anon;
 
 -- 10. dashboard_analise_kpis — TABLE de 1 linha: consumo/compras/nº de
 -- movimentações do período e do período anterior equivalente, lado a lado,
@@ -1051,7 +1072,8 @@ AS $$
   FROM atual, anterior, imobilizado;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) FROM anon;
 
 -- 11. dashboard_serie — buckets DIÁRIOS de consumo/compras via
 -- generate_series (dia sem movimento vem com 0, nunca some).
@@ -1101,7 +1123,8 @@ AS $$
   ORDER BY dias.dia;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) FROM anon;
 
 -- 12. dashboard_dimensao — consumo (só OUT) por 'categoria'|'setor'|'produto',
 -- com valor do período anterior, ordenado desc, limitado a p_limit. 'setor'
@@ -1222,7 +1245,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) FROM anon;
 
 -- 13. dashboard_destaques — TABLE(tipo, texto, valor), 0 a 4 linhas na ordem
 -- fixa: maior_alta_custo, setor_acima_media, categoria_maior_share (todos
@@ -1366,4 +1390,5 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) FROM anon;

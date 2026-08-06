@@ -2,25 +2,15 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { isAuthenticated, setAuthCookie, removeAuthCookie } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  login: () => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Rotas públicas que dispensam login (ex.: quiz divulgado aos colaboradores).
-const PUBLIC_PATHS = ['/login', '/quiz-seguranca'];
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
-  );
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -29,36 +19,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = isAuthenticated();
-      setIsLoggedIn(authenticated);
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setIsLoggedIn(!!session);
       setIsLoading(false);
+    });
 
-      // Redirect logic
-      if (!authenticated && !isPublicPath(pathname)) {
-        router.push('/login');
-      } else if (authenticated && pathname === '/login') {
-        router.push('/dashboard');
-      }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      setIsLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
     };
+  }, []);
 
-    checkAuth();
-  }, [pathname, router]);
+  // Guarda client-side complementar ao middleware (evita flash de conteúdo).
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isLoggedIn && pathname !== '/login') {
+      router.replace('/login');
+    } else if (isLoggedIn && pathname === '/login') {
+      router.replace('/dashboard');
+    }
+  }, [isLoggedIn, isLoading, pathname, router]);
 
-  const login = () => {
-    setAuthCookie();
-    setIsLoggedIn(true);
-    router.push('/dashboard');
-  };
-
-  const logout = () => {
-    removeAuthCookie();
-    setIsLoggedIn(false);
-    router.push('/login');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Mesmo com falha de rede, limpa o estado local e manda para o login.
+    } finally {
+      setIsLoggedIn(false);
+      router.push('/login');
+      router.refresh();
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ isLoggedIn, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

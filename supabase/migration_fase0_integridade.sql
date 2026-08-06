@@ -50,7 +50,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION transfer_locker_assignment(UUID, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION transfer_locker_assignment(UUID, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION transfer_locker_assignment(UUID, UUID, UUID) FROM anon;
 
 -- =====================================================================
 -- 2. RPC deactivate_employee — desligamento atômico
@@ -88,7 +89,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION deactivate_employee(UUID) TO anon;
+GRANT EXECUTE ON FUNCTION deactivate_employee(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION deactivate_employee(UUID) FROM anon;
 
 -- =====================================================================
 -- 3. products: CHECK (max_stock >= min_stock)

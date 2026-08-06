@@ -42,6 +42,8 @@ export type Movement = {
   created_at: string;
   is_initial_import: boolean;
   employee_id: string | null;
+  /** UUID do usuário Auth que lançou; NULL em registros anteriores à auth real. */
+  created_by: string | null;
   product?: Product;
   employee?: Employee;
 };

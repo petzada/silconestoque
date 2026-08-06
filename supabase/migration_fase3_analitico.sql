@@ -109,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_movements_product_created
 DROP VIEW IF EXISTS dashboard_stats;
 
 -- =====================================================================
--- 3. RPCs — SECURITY INVOKER, STABLE, GRANT EXECUTE TO anon
+-- 3. RPCs — SECURITY INVOKER, STABLE, GRANT EXECUTE TO authenticated
 -- =====================================================================
 -- Convenção adotada nesta migration (nenhuma pré-existe no repo — D11 do
 -- plano, "zero .rpc() hoje"):
@@ -309,7 +309,8 @@ AS $$
   FROM contagens;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_operacao(UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_operacao(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_operacao(UUID) FROM anon;
 
 -- ---------------------------------------------------------------------
 -- 3.2 dashboard_analise_kpis(p_from, p_to, p_category_id, p_department_id)
@@ -425,7 +426,8 @@ AS $$
   FROM atual, anterior, imobilizado;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_analise_kpis(DATE, DATE, UUID, UUID) FROM anon;
 
 -- ---------------------------------------------------------------------
 -- 3.3 dashboard_serie(p_from, p_to, p_category_id, p_department_id)
@@ -479,7 +481,8 @@ AS $$
   ORDER BY dias.dia;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_serie(DATE, DATE, UUID, UUID) FROM anon;
 
 -- ---------------------------------------------------------------------
 -- 3.4 dashboard_dimensao(p_from, p_to, p_dim, p_category_id, p_department_id, p_limit)
@@ -605,7 +608,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT) FROM anon;
 
 -- ---------------------------------------------------------------------
 -- 3.5 dashboard_destaques(p_from, p_to, p_category_id, p_department_id)
@@ -782,7 +786,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION dashboard_destaques(DATE, DATE, UUID, UUID) FROM anon;
 
 -- =====================================================================
 -- 4. Registro em schema_migrations

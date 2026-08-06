@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient, PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -7,7 +8,8 @@ function createSupabaseClient(): SupabaseClient {
   if (!supabaseUrl || !supabaseAnonKey) {
     return createClient('https://placeholder.supabase.co', 'placeholder-key');
   }
-  return createClient(supabaseUrl, supabaseAnonKey);
+  // Cookie-based session — compartilhada com middleware.ts via @supabase/ssr.
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
 
 export const supabase = createSupabaseClient();
@@ -85,15 +87,4 @@ export async function fetchAllRows<T>(
   }
 
   return { data: rows, error: null };
-}
-
-export function createServerClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    return createClient('https://placeholder.supabase.co', 'placeholder-key');
-  }
-
-  return createClient(url, key);
 }
