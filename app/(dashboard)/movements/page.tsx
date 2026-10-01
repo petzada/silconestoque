@@ -131,6 +131,33 @@ function formatCurrency(value: number | null): string {
   }).format(value);
 }
 
+function partyLabel(movement: Movement): string {
+  const linkedName = movement.employee?.full_name?.trim();
+  if (movement.employee_id && linkedName) return linkedName;
+  return movement.entity_name?.trim() || '---';
+}
+
+function stockAfterRemoving(movement: Movement, all: Movement[]): number {
+  return all.reduce((sum, item) => {
+    if (item.product_id !== movement.product_id || item.id === movement.id) return sum;
+    return sum + (item.type === 'IN' ? item.quantity : -item.quantity);
+  }, 0);
+}
+
+function laterOutsKeepThisCost(movement: Movement, all: Movement[]): boolean {
+  if (movement.type !== 'IN' || movement.unit_value == null) return false;
+  const price = Number(movement.unit_value);
+  const at = new Date(movement.created_at).getTime();
+  return all.some(
+    (item) =>
+      item.product_id === movement.product_id &&
+      item.type === 'OUT' &&
+      item.unit_value != null &&
+      Number(item.unit_value) === price &&
+      new Date(item.created_at).getTime() > at
+  );
+}
+
 export default function MovementsPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -191,13 +218,18 @@ export default function MovementsPage() {
             // o mesmo instante podem trocar de página e ser puladas ou repetidas.
             .order('id', { ascending: false })
         ),
-        supabase
-          .from('products')
-          .select('*, category:categories(*)')
-          .eq('is_active', true)
-          .order('name'),
+        fetchAllRows(() =>
+          supabase
+            .from('products')
+            .select('*, category:categories(*)')
+            .eq('is_active', true)
+            .order('name')
+            .order('id', { ascending: true })
+        ),
         supabase.from('categories').select('*').order('name'),
-        supabase.from('employees').select('*, role:roles(*)').order('full_name'),
+        fetchAllRows(() =>
+          supabase.from('employees').select('*, role:roles(*)').order('full_name').order('id', { ascending: true })
+        ),
       ]);
 
       if (movementsRes.error) throw movementsRes.error;
@@ -274,15 +306,22 @@ export default function MovementsPage() {
 
     setIsDeleting(true);
     try {
+      if (movementToDelete.type === 'IN' && stockAfterRemoving(movementToDelete, movements) < 0) {
+        toast.error(
+          'Não é possível excluir esta entrada: o saldo ficaria negativo. Exclua antes as saídas que consumiram esse estoque.'
+        );
+        return;
+      }
+
       const { error } = await supabase.from('movements').delete().eq('id', movementToDelete.id);
       if (error) throw error;
 
-      toast.success('Movimentacao excluida com sucesso');
+      toast.success('Movimentação excluída com sucesso');
       setIsDeleteDialogOpen(false);
       setMovementToDelete(null);
       await fetchData();
-    } catch {
-      toast.error('Erro ao excluir movimentacao');
+    } catch (error: unknown) {
+      toast.error(getDbErrorMessage(error, 'Erro ao excluir movimentação'));
     } finally {
       setIsDeleting(false);
     }
@@ -362,8 +401,8 @@ export default function MovementsPage() {
         const normalizedSearch = filters.searchTerm.trim().toLowerCase();
         const matchesSearch =
           !normalizedSearch ||
-          [movement.product?.name, movement.entity_name, movement.invoice_number].some((value) =>
-            value?.toLowerCase().includes(normalizedSearch)
+          [movement.product?.name, partyLabel(movement), movement.entity_name, movement.invoice_number].some(
+            (value) => value?.toLowerCase().includes(normalizedSearch)
           );
 
         const movementDate = new Date(movement.created_at);
@@ -429,7 +468,7 @@ export default function MovementsPage() {
         key: 'entity_name',
         header: 'Envolvido',
         sortable: true,
-        accessor: (movement) => movement.entity_name || '',
+        accessor: (movement) => partyLabel(movement),
         cell: (movement) => (
           <div className="flex max-w-[200px] items-center gap-2">
             {movement.employee_id && (
@@ -437,7 +476,7 @@ export default function MovementsPage() {
                 <UserCheck className="h-3.5 w-3.5" />
               </span>
             )}
-            <TruncatedCell value={movement.entity_name || '---'} className="min-w-0 flex-1 text-xs text-muted-foreground" />
+            <TruncatedCell value={partyLabel(movement)} className="min-w-0 flex-1 text-xs text-muted-foreground" />
           </div>
         ),
       },
@@ -645,7 +684,15 @@ export default function MovementsPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         title="Excluir Movimentacao"
-        description={`Deseja excluir a movimentacao do produto "${movementToDelete?.product?.name || ''}"?`}
+        description={
+          movementToDelete
+            ? `Deseja excluir a movimentação do produto "${movementToDelete.product?.name || ''}"?${
+                laterOutsKeepThisCost(movementToDelete, movements)
+                  ? ' As saídas já lançadas depois desta entrada mantêm o custo congelado da época e não serão recalculadas.'
+                  : ''
+              }`
+            : ''
+        }
         onConfirm={handleDeleteMovement}
         confirmLabel="Excluir"
         cancelLabel="Cancelar"

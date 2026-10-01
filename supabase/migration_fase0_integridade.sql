@@ -140,30 +140,52 @@ ALTER TABLE products
 -- migration_integridade_historico.sql (item d daquele arquivo) — NÃO regride
 -- para `SET cost_price = prev_cost`, que zerava o custo quando não havia
 -- entrada anterior.
+--
+-- Também apaga a linha de price_history da Entrada excluída
+-- (0001_desfaz_variacao_preco_entrada.sql). Esta função é redefinida nos
+-- dois arquivos de propósito: a fase 0 ainda pode rodar depois da 0001 num
+-- banco antigo, e sem o DELETE aqui ela regravaria a versão que deixa a
+-- variação órfã.
 CREATE OR REPLACE FUNCTION reconcile_product_on_delete()
 RETURNS TRIGGER AS $$
 DECLARE
   prev_cost DECIMAL(10, 2);
+  new_qty INTEGER;
 BEGIN
+  SELECT COALESCE(
+           SUM(
+             CASE
+               WHEN m.type = 'IN' THEN m.quantity
+               ELSE -m.quantity
+             END
+           ),
+           0
+         )::integer
+    INTO new_qty
+  FROM movements m
+  WHERE m.product_id = OLD.product_id
+    AND m.id != OLD.id;
+
+  -- Entrada já consumida: apagá-la deixaria saldo negativo, estado que as
+  -- faixas Zerado / Crítico / Estável não fecham. A saída que consumiu o
+  -- saldo continua no histórico e precisa ser desfeita antes.
+  IF OLD.type = 'IN' AND new_qty < 0 THEN
+    RAISE EXCEPTION 'Não é possível excluir esta entrada: o saldo ficaria negativo. Exclua antes as saídas que consumiram esse estoque.';
+  END IF;
+
   UPDATE products
-  SET current_qty = COALESCE(
-        (
-          SELECT SUM(
-            CASE
-              WHEN m.type = 'IN' THEN m.quantity
-              ELSE -m.quantity
-            END
-          )
-          FROM movements m
-          WHERE m.product_id = OLD.product_id
-            AND m.id != OLD.id
-        ),
-        0
-      ),
+  SET current_qty = new_qty,
       updated_at = NOW()
   WHERE id = OLD.product_id;
 
   IF OLD.type = 'IN' THEN
+    -- A variação nasce desta entrada (handle_price_change). Excluir o
+    -- lançamento desfaz a variação; a FK é SET NULL e, sem este DELETE, a
+    -- linha continuaria na tela de Variação de Preço com um preço que o
+    -- custo cadastrado já não tem.
+    DELETE FROM price_history
+    WHERE movement_id = OLD.id;
+
     -- Só uma Entrada com NF + valor unitário é fonte válida de Custo
     -- Cadastrado (ver comentário acima). Sem o AND invoice_number IS NOT
     -- NULL, esta função podia restaurar o custo a partir de uma entrada sem

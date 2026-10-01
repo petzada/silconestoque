@@ -238,7 +238,10 @@ AS $$
       -- zerados + criticos + estaveis > total_ativos — o que quebra o KPI
       -- "% do catalogo em risco" da aba Operacao.
       COUNT(*) FILTER (WHERE current_qty = 0) AS zerados,
-      COUNT(*) FILTER (WHERE current_qty < min_stock AND current_qty > 0) AS criticos,
+      -- Saldo negativo conta como Crítico para as três faixas fecharem em
+      -- total_ativos. Exclusão que deixaria saldo negativo é recusada em
+      -- reconcile_product_on_delete (0002_integridade_saldos_e_painel.sql).
+      COUNT(*) FILTER (WHERE current_qty <> 0 AND current_qty < min_stock) AS criticos,
       COUNT(*) FILTER (WHERE current_qty >= min_stock AND current_qty > 0) AS estaveis,
       COUNT(*) AS total_ativos
     FROM produtos_filtrados
@@ -256,7 +259,7 @@ AS $$
         ELSE (pf.min_stock - pf.current_qty)::numeric / NULLIF(pf.min_stock, 0)
       END AS deficit_relativo
     FROM produtos_filtrados pf
-    WHERE pf.current_qty = 0 OR (pf.current_qty < pf.min_stock AND pf.current_qty > 0)
+    WHERE pf.current_qty = 0 OR (pf.current_qty <> 0 AND pf.current_qty < pf.min_stock)
   ),
   top_urgencia AS (
     SELECT * FROM urgencia
@@ -634,16 +637,13 @@ REVOKE EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT)
 --  3. categoria_maior_share — categoria com maior fatia (%) do consumo total
 --                           do período. Omitido se não houve consumo no
 --                           período (evita divisão por zero/insight vazio).
---  4. encalhe             — SEMPRE presente (mesmo com valor 0): contagem de
---                           produtos ATIVOS (respeitando p_category_id; NÃO
---                           filtra por p_department_id — produto não tem
---                           dimensão de setor) sem nenhuma movimentação nos
---                           90 dias anteriores a p_to. Usa p_to como
---                           referência de "hoje" (não NOW()), para o insight
---                           ser reproduzível para qualquer período histórico
---                           passado a este RPC — diferente de
---                           dashboard_operacao, que é foto instantânea de
---                           verdade e usa NOW().
+--  4. encalhe             — presente sem filtro de setor (mesmo com valor 0):
+--                           produtos ATIVOS com saldo > 0 e sem movimentação
+--                           nos 90 dias anteriores a p_to. Omitido quando
+--                           p_department_id vem preenchido: encalhe é saldo
+--                           parado do catálogo, não consumo de um setor.
+--                           Usa p_to como referência (não NOW()), para o
+--                           insight ser reproduzível em período histórico.
 --
 -- "valor" é sempre a mesma unidade do texto (percentual em pontos — ex.
 -- 42.3 para "42,3%" — para 1/2/3; contagem inteira para 4), para a UI
@@ -768,21 +768,27 @@ BEGIN
   ORDER BY cc.consumo DESC, cc.category_id
   LIMIT 1;
 
-  -- 4. Encalhe: produtos ativos sem movimento há 90+ dias (referência: p_to)
-  RETURN QUERY
-  SELECT
-    'encalhe'::text,
-    format('%s produto(s) ativo(s) sem movimentação há mais de 90 dias', COUNT(*)),
-    COUNT(*)::numeric
-  FROM products p
-  WHERE p.is_active = true
-    AND (p_category_id IS NULL OR p.category_id = p_category_id)
-    AND NOT EXISTS (
-      SELECT 1 FROM movements m
-      WHERE m.product_id = p.id
-        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date > (p_to - 90)
-        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= p_to
-    );
+  -- 4. Encalhe: saldo parado no catálogo. Com filtro de setor o destaque
+  -- some: entrada não tem setor, e "este setor não mexeu no produto"
+  -- contaria quase o catálogo inteiro. Saldo zero também não entra —
+  -- não há material parado.
+  IF p_department_id IS NULL THEN
+    RETURN QUERY
+    SELECT
+      'encalhe'::text,
+      format('%s produto(s) ativo(s) com saldo parado há mais de 90 dias', COUNT(*)),
+      COUNT(*)::numeric
+    FROM products p
+    WHERE p.is_active = true
+      AND p.current_qty > 0
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND NOT EXISTS (
+        SELECT 1 FROM movements m
+        WHERE m.product_id = p.id
+          AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date > (p_to - 90)
+          AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= p_to
+      );
+  END IF;
 END;
 $$;
 

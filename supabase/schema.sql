@@ -107,6 +107,25 @@ ALTER TABLE products DROP CONSTRAINT IF EXISTS chk_products_max_stock_gte_min_st
 ALTER TABLE products
   ADD CONSTRAINT chk_products_max_stock_gte_min_stock CHECK (max_stock >= min_stock);
 
+-- Desativar com saldo tiraria o produto do valor imobilizado e da operação
+-- sem uma saída. O histórico permanece; o saldo precisa ser zerado por
+-- movimentação antes. 0002_integridade_saldos_e_painel.sql.
+CREATE OR REPLACE FUNCTION prevent_product_deactivate_with_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.is_active AND NOT NEW.is_active AND OLD.current_qty <> 0 THEN
+    RAISE EXCEPTION 'Não é possível desativar um produto com saldo. Ajuste o estoque até zero com uma movimentação antes.';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_prevent_deactivate_with_stock ON products;
+CREATE TRIGGER trigger_prevent_deactivate_with_stock
+  BEFORE UPDATE OF is_active ON products
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_product_deactivate_with_stock();
+
 -- =====================
 -- DEPARTMENTS TABLE (setor do COLABORADOR)
 -- =====================
@@ -253,16 +272,15 @@ CREATE INDEX IF NOT EXISTS idx_movements_department_created ON movements(departm
 -- =====================
 -- PRICE HISTORY TABLE
 -- =====================
--- movement_id: ON DELETE SET NULL (migration_integridade_historico.sql item
--- b). Era CASCADE — excluir uma Entrada apagava junto o ponto de
--- price_history correspondente, destruindo permanentemente um dado do
--- gráfico de variação de preços (ver supabase/diagnostico_movimentacoes.sql,
--- query 6). O registro de preço deve sobreviver à exclusão da movimentação
--- que o originou.
+-- movement_id: ON DELETE SET NULL na FK (migration_integridade_historico.sql
+-- item b; era CASCADE). A exclusão normal de uma Entrada NÃO preserva a
+-- variação: reconcile_product_on_delete apaga a linha de price_history
+-- daquela movimentação (0001_desfaz_variacao_preco_entrada.sql). A FK fica
+-- SET NULL só como rede de segurança se o trigger não rodar.
 CREATE TABLE IF NOT EXISTS price_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  movement_id UUID REFERENCES movements(id) ON DELETE SET NULL, -- SET NULL preserva o histórico de preço
+  movement_id UUID REFERENCES movements(id) ON DELETE SET NULL, -- fallback; o trigger apaga a linha na exclusão da Entrada
   old_price DECIMAL(10, 2),
   new_price DECIMAL(10, 2) NOT NULL,
   invoice_number TEXT,
@@ -499,31 +517,50 @@ CREATE TRIGGER trigger_handle_price_change
 -- valor unitário é fonte válida de Custo Cadastrado) e preserva
 -- `COALESCE(prev_cost, cost_price)` em vez de `SET cost_price = prev_cost`
 -- (migration_integridade_historico.sql item d — não zerar o custo quando não
--- há Entrada anterior).
+-- há Entrada anterior). Na exclusão de uma Entrada, apaga a linha de
+-- price_history ligada àquela movimentação
+-- (0001_desfaz_variacao_preco_entrada.sql): desfazer o lançamento desfaz a
+-- variação que ele gerou.
 CREATE OR REPLACE FUNCTION reconcile_product_on_delete()
 RETURNS TRIGGER AS $$
 DECLARE
   prev_cost DECIMAL(10, 2);
+  new_qty INTEGER;
 BEGIN
+  SELECT COALESCE(
+           SUM(
+             CASE
+               WHEN m.type = 'IN' THEN m.quantity
+               ELSE -m.quantity
+             END
+           ),
+           0
+         )::integer
+    INTO new_qty
+  FROM movements m
+  WHERE m.product_id = OLD.product_id
+    AND m.id != OLD.id;
+
+  -- Entrada já consumida: apagá-la deixaria saldo negativo, estado que as
+  -- faixas Zerado / Crítico / Estável não fecham. A saída que consumiu o
+  -- saldo continua no histórico e precisa ser desfeita antes.
+  IF OLD.type = 'IN' AND new_qty < 0 THEN
+    RAISE EXCEPTION 'Não é possível excluir esta entrada: o saldo ficaria negativo. Exclua antes as saídas que consumiram esse estoque.';
+  END IF;
+
   UPDATE products
-  SET current_qty = COALESCE(
-        (
-          SELECT SUM(
-            CASE
-              WHEN m.type = 'IN' THEN m.quantity
-              ELSE -m.quantity
-            END
-          )
-          FROM movements m
-          WHERE m.product_id = OLD.product_id
-            AND m.id != OLD.id
-        ),
-        0
-      ),
+  SET current_qty = new_qty,
       updated_at = NOW()
   WHERE id = OLD.product_id;
 
   IF OLD.type = 'IN' THEN
+    -- A variação nasce desta entrada (handle_price_change). Excluir o
+    -- lançamento desfaz a variação; a FK é SET NULL e, sem este DELETE, a
+    -- linha continuaria na tela de Variação de Preço com um preço que o
+    -- custo cadastrado já não tem.
+    DELETE FROM price_history
+    WHERE movement_id = OLD.id;
+
     -- Só uma Entrada com NF + valor unitário é fonte válida de Custo
     -- Cadastrado. Sem o AND invoice_number IS NOT NULL, esta função podia
     -- restaurar o custo a partir de uma entrada informal.
@@ -915,7 +952,11 @@ AS $$
   contagens AS (
     SELECT
       COUNT(*) FILTER (WHERE current_qty = 0) AS zerados,
-      COUNT(*) FILTER (WHERE current_qty < min_stock AND current_qty > 0) AS criticos,
+      -- Saldo negativo (dado antigo: entrada apagada depois de consumida)
+      -- conta como Crítico. A exclusão nova é recusada em
+      -- reconcile_product_on_delete. Sem este `<> 0`, o saldo negativo
+      -- ficava fora das três faixas e zerados + criticos + estaveis < total.
+      COUNT(*) FILTER (WHERE current_qty <> 0 AND current_qty < min_stock) AS criticos,
       -- Faixas mutuamente exclusivas: CONTEXT.md define Zerado como "uma
       -- faixa propria". Sem o `current_qty > 0`, um produto com min_stock = 0
       -- e current_qty = 0 contaria em zerados E em estaveis, e a soma passaria
@@ -937,7 +978,7 @@ AS $$
         ELSE (pf.min_stock - pf.current_qty)::numeric / NULLIF(pf.min_stock, 0)
       END AS deficit_relativo
     FROM produtos_filtrados pf
-    WHERE pf.current_qty = 0 OR (pf.current_qty < pf.min_stock AND pf.current_qty > 0)
+    WHERE pf.current_qty = 0 OR (pf.current_qty <> 0 AND pf.current_qty < pf.min_stock)
   ),
   top_urgencia AS (
     SELECT * FROM urgencia
@@ -1250,8 +1291,8 @@ REVOKE EXECUTE ON FUNCTION dashboard_dimensao(DATE, DATE, TEXT, UUID, UUID, INT)
 
 -- 13. dashboard_destaques — TABLE(tipo, texto, valor), 0 a 4 linhas na ordem
 -- fixa: maior_alta_custo, setor_acima_media, categoria_maior_share (todos
--- omitidos se não houver dado qualificado no período), encalhe (sempre
--- presente, mesmo com valor 0).
+-- omitidos se não houver dado qualificado no período), encalhe (presente
+-- sem filtro de setor, mesmo com valor 0; omitido com filtro de setor).
 CREATE OR REPLACE FUNCTION dashboard_destaques(
   p_from DATE,
   p_to DATE,
@@ -1372,21 +1413,27 @@ BEGIN
   ORDER BY cc.consumo DESC, cc.category_id
   LIMIT 1;
 
-  -- 4. Encalhe: produtos ativos sem movimento há 90+ dias (referência: p_to)
-  RETURN QUERY
-  SELECT
-    'encalhe'::text,
-    format('%s produto(s) ativo(s) sem movimentação há mais de 90 dias', COUNT(*)),
-    COUNT(*)::numeric
-  FROM products p
-  WHERE p.is_active = true
-    AND (p_category_id IS NULL OR p.category_id = p_category_id)
-    AND NOT EXISTS (
-      SELECT 1 FROM movements m
-      WHERE m.product_id = p.id
-        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date > (p_to - 90)
-        AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= p_to
-    );
+  -- 4. Encalhe: saldo parado no catálogo. Com filtro de setor o destaque
+  -- some: entrada não tem setor, e "este setor não mexeu no produto"
+  -- contaria quase o catálogo inteiro. Saldo zero também não entra —
+  -- não há material parado.
+  IF p_department_id IS NULL THEN
+    RETURN QUERY
+    SELECT
+      'encalhe'::text,
+      format('%s produto(s) ativo(s) com saldo parado há mais de 90 dias', COUNT(*)),
+      COUNT(*)::numeric
+    FROM products p
+    WHERE p.is_active = true
+      AND p.current_qty > 0
+      AND (p_category_id IS NULL OR p.category_id = p_category_id)
+      AND NOT EXISTS (
+        SELECT 1 FROM movements m
+        WHERE m.product_id = p.id
+          AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date > (p_to - 90)
+          AND (m.created_at AT TIME ZONE 'America/Sao_Paulo')::date <= p_to
+      );
+  END IF;
 END;
 $$;
 

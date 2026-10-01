@@ -169,6 +169,32 @@ export default function SectorsPage() {
 
     setIsDeleting(true);
     try {
+      const [employeesRes, movementsRes] = await Promise.all([
+        supabase
+          .from('employees')
+          .select('id', { count: 'exact', head: true })
+          .eq('department_id', departmentToDelete.id),
+        supabase
+          .from('movements')
+          .select('id', { count: 'exact', head: true })
+          .eq('department_id', departmentToDelete.id),
+      ]);
+      if (employeesRes.error) throw employeesRes.error;
+      if (movementsRes.error) throw movementsRes.error;
+
+      const linkedEmployees = employeesRes.count ?? 0;
+      const linkedMovements = movementsRes.count ?? 0;
+      if (linkedEmployees > 0 || linkedMovements > 0) {
+        const parts = [
+          linkedEmployees > 0 ? 'colaboradores vinculados' : null,
+          linkedMovements > 0 ? 'saídas já lançadas' : null,
+        ].filter(Boolean);
+        toast.error(
+          `Este setor tem ${parts.join(' e ')}. O histórico não é apagado, por isso o setor permanece.`
+        );
+        return;
+      }
+
       const { error } = await supabase.from('departments').delete().eq('id', departmentToDelete.id);
       if (error) throw error;
 
@@ -179,7 +205,7 @@ export default function SectorsPage() {
     } catch (error: unknown) {
       toast.error(
         getDbErrorMessage(error, 'Erro ao excluir setor', {
-          '23503': 'Existem colaboradores vinculados a este setor.',
+          '23503': 'Este setor está em uso por colaboradores ou por saídas já lançadas. O histórico não é apagado.',
         })
       );
     } finally {

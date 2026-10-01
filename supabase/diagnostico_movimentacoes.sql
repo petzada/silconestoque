@@ -75,11 +75,11 @@ order by 1;
 -- =====================================================================
 -- 6. Regra ON DELETE da FK price_history.movement_id
 -- =====================================================================
--- Resultado ruim: delete_rule = 'CASCADE'. Isso significa que excluir uma
--- movimentacao de entrada apaga junto o ponto correspondente em
--- price_history, destruindo permanentemente um dado do grafico de variacao
--- de precos. O esperado, apos a correcao (migration_integridade_historico.sql),
--- e delete_rule = 'SET NULL'.
+-- Esperado: delete_rule = 'SET NULL' (migration_integridade_historico.sql).
+-- CASCADE aqui seria a FK apagando a linha sozinha. A exclusao normal da
+-- Entrada apaga a variacao dentro de reconcile_product_on_delete
+-- (0001_desfaz_variacao_preco_entrada.sql); SET NULL so resta como fallback
+-- se esse trigger nao rodar. Resultado ruim: delete_rule = 'CASCADE'.
 select
   tc.constraint_name,
   rc.delete_rule

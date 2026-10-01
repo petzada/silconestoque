@@ -1,15 +1,8 @@
 'use client';
 
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Panel, PanelEmpty } from '@/components/dashboard/panel';
 import { KpiTile } from '@/components/dashboard/kpi-tile';
-import {
-  CHART_AXIS_TICK_STYLE,
-  CHART_CURSOR_FILL,
-  CHART_TOOLTIP_STYLE,
-  getSequentialRampColor,
-} from '@/lib/chart';
 import { formatCoberturaDias, formatInt, formatPercent } from '@/lib/format';
 import type { DashboardOperacao } from '@/lib/types';
 
@@ -20,6 +13,30 @@ import type { DashboardOperacao } from '@/lib/types';
  * cor carrega, e é a razão pela qual `lib/chart.ts` separa ALERT_PALETTE da
  * paleta de série.
  */
+const DIA = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+function coberturaNumero(value: number | null): number | null {
+  if (value == null) return null;
+  const numero = Number(value);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+/** Abaixo de 1 dia o formatador compartilhado colapsa tudo em "menos de 1 dia".
+ * Nesta lista os itens competem entre si, então o décimo importa. */
+function coberturaLabel(value: number | null): string {
+  if (value == null) return 'Sem consumo';
+  if (value < 0.05) return '0 dias';
+  if (value < 1) return `${DIA.format(value)} dia`;
+  return formatCoberturaDias(value);
+}
+
+function coberturaTom(value: number | null): string {
+  if (value == null) return 'text-foreground';
+  if (value < 7) return 'text-destructive';
+  if (value < 15) return 'text-warning';
+  return 'text-foreground';
+}
+
 const FAIXAS = [
   { key: 'zerados', label: 'Zerado', color: 'var(--destructive)' },
   { key: 'criticos', label: 'Crítico', color: 'var(--warning)' },
@@ -30,11 +47,11 @@ export function OperacaoTab({ data }: { data: DashboardOperacao }) {
   const emRisco = data.zerados + data.criticos;
   const percentualRisco = data.total_ativos > 0 ? (emRisco / data.total_ativos) * 100 : null;
 
-  const coberturaChart = data.cobertura_criticos.slice(0, 10).map((item, index, list) => ({
+  const coberturaLista = data.cobertura_criticos.slice(0, 10).map((item) => ({
     ...item,
-    label: item.product_name.length > 22 ? `${item.product_name.slice(0, 22)}…` : item.product_name,
-    fill: getSequentialRampColor(index, list.length),
+    dias: coberturaNumero(item.cobertura_dias),
   }));
+  const maxCobertura = Math.max(0, ...coberturaLista.map((item) => item.dias ?? 0));
 
   return (
     <div className="space-y-4">
@@ -135,45 +152,46 @@ export function OperacaoTab({ data }: { data: DashboardOperacao }) {
 
         <Panel
           title="Cobertura em dias"
-          description="Saldo dividido pelo consumo médio diário dos últimos 90 dias"
+          description="Os 10 que acabam antes, pelo consumo médio dos últimos 90 dias. A barra compara só estes itens."
         >
-          {coberturaChart.length === 0 ? (
+          {coberturaLista.length === 0 ? (
             <PanelEmpty
               title="Sem cobertura calculável"
               hint="Nenhum produto ativo teve saída nos últimos 90 dias, então não há consumo médio para projetar."
             />
           ) : (
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={coberturaChart} layout="vertical" margin={{ left: 4, right: 16, top: 4, bottom: 4 }}>
-                  <XAxis
-                    type="number"
-                    tick={CHART_AXIS_TICK_STYLE}
-                    axisLine={false}
-                    tickLine={false}
-                    unit=" d"
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    width={140}
-                    tick={CHART_AXIS_TICK_STYLE}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={CHART_TOOLTIP_STYLE}
-                    cursor={{ fill: CHART_CURSOR_FILL }}
-                    formatter={(value: number | undefined) => [formatCoberturaDias(value), 'Cobertura']}
-                  />
-                  <Bar dataKey="cobertura_dias" radius={0}>
-                    {coberturaChart.map((item) => (
-                      <Cell key={item.product_id} fill={item.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ul className="divide-y divide-border">
+              {coberturaLista.map((item) => {
+                const largura = maxCobertura > 0 ? ((item.dias ?? 0) / maxCobertura) * 100 : 0;
+                const cor =
+                  item.dias == null || item.dias >= 15
+                    ? 'var(--foreground)'
+                    : item.dias < 7
+                      ? 'var(--destructive)'
+                      : 'var(--warning)';
+                return (
+                  <li key={item.product_id} className="py-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-foreground" title={item.product_name}>
+                          {item.product_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {item.sku_code ? `${item.sku_code} · ` : ''}
+                          Saldo {formatInt(item.current_qty)}
+                        </p>
+                      </div>
+                      <p className={`shrink-0 text-sm tabular-nums ${coberturaTom(item.dias)}`}>
+                        {coberturaLabel(item.dias)}
+                      </p>
+                    </div>
+                    <div className="mt-1.5 h-1 w-full bg-muted" aria-hidden>
+                      <div className="h-full" style={{ width: `${largura}%`, backgroundColor: cor }} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </Panel>
       </div>

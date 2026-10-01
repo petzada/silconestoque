@@ -99,7 +99,7 @@ export default function ReplenishmentQueuePage() {
       .filter((product) => {
         if (selectedUrgency === 'all') return true;
         if (selectedUrgency === 'zerado') return product.current_qty === 0;
-        return product.current_qty > 0 && product.current_qty < product.min_stock;
+        return product.current_qty !== 0 && product.current_qty < product.min_stock;
       })
       .filter((product) => {
         if (!normalizedSearch) return true;
@@ -119,7 +119,7 @@ export default function ReplenishmentQueuePage() {
     () => ({
       total: replenishmentItems.length,
       zeroed: replenishmentItems.filter((item) => item.current_qty === 0).length,
-      critical: replenishmentItems.filter((item) => item.current_qty > 0 && item.current_qty < item.min_stock).length,
+      critical: replenishmentItems.filter((item) => item.current_qty !== 0 && item.current_qty < item.min_stock).length,
     }),
     [replenishmentItems]
   );

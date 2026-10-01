@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { supabase, fetchAllRows } from '@/lib/supabase';
+import { getDbErrorMessage } from '@/lib/db-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -319,6 +320,12 @@ export default function ProductsPage() {
   };
 
   const handleOpenDeleteDialog = (product: Product) => {
+    if (product.current_qty !== 0) {
+      toast.error(
+        'Não é possível desativar um produto com saldo. Ajuste o estoque até zero com uma movimentação antes.'
+      );
+      return;
+    }
     setProductToDelete(product);
     setIsDeleteDialogOpen(true);
   };
@@ -339,8 +346,8 @@ export default function ProductsPage() {
       setIsDeleteDialogOpen(false);
       setProductToDelete(null);
       fetchData();
-    } catch {
-      toast.error('Erro ao desativar produto');
+    } catch (error: unknown) {
+      toast.error(getDbErrorMessage(error, 'Erro ao desativar produto'));
     } finally {
       setIsDeleting(false);
     }
@@ -653,7 +660,20 @@ export default function ProductsPage() {
 
     setIsImporting(true);
     let imported = 0;
+    let skipped = 0;
     let errors = 0;
+
+    const bySku = new Map<string, string | 'ambiguous'>();
+    const byNameCategory = new Map<string, string>();
+    for (const product of products) {
+      const nameKey = `${product.name.toLowerCase().trim()}::${product.category_id}`;
+      if (!byNameCategory.has(nameKey)) byNameCategory.set(nameKey, product.id);
+      const sku = product.sku_code?.trim().toLowerCase();
+      if (!sku) continue;
+      const current = bySku.get(sku);
+      if (current && current !== product.id) bySku.set(sku, 'ambiguous');
+      else if (!current) bySku.set(sku, product.id);
+    }
 
     try {
       // Categorias que ainda não existem são criadas a partir do próprio CSV
@@ -688,11 +708,26 @@ export default function ProductsPage() {
           const categoryId = categoryIdByName.get(item.categoryName.toLowerCase().trim());
           if (!categoryId) throw new Error('Categoria não encontrada');
 
+          const rawSku = (item.row.sku || item.row.codigo || '').trim();
+          const skuKey = rawSku.toLowerCase();
+          const nameKey = `${item.row.nome.toLowerCase().trim()}::${categoryId}`;
+          if (skuKey && bySku.get(skuKey) === 'ambiguous') {
+            throw new Error(`SKU "${rawSku}" está em mais de um produto. Nada foi alterado nessa linha.`);
+          }
+          const existingId =
+            (skuKey ? bySku.get(skuKey) : undefined) || byNameCategory.get(nameKey);
+          if (existingId && existingId !== 'ambiguous') {
+            skipped++;
+            byNameCategory.set(nameKey, existingId);
+            if (skuKey) bySku.set(skuKey, existingId);
+            continue;
+          }
+
           const { data: newProduct, error: productError } = await supabase
             .from('products')
             .insert({
               name: item.row.nome,
-              sku_code: item.row.sku || item.row.codigo || null,
+              sku_code: rawSku || null,
               unit: item.validUnit,
               category_id: categoryId,
               current_qty: 0,
@@ -703,15 +738,18 @@ export default function ProductsPage() {
             .select()
             .single();
 
-          if (productError) {
-            throw new Error(`Falha ao criar produto "${item.row.nome}": ${productError.message}`);
+          if (productError || !newProduct) {
+            throw new Error(`Falha ao criar produto "${item.row.nome}": ${productError?.message || 'sem retorno'}`);
           }
+
+          byNameCategory.set(nameKey, newProduct.id);
+          if (skuKey) bySku.set(skuKey, newProduct.id);
 
           // Produto criado sem a movimentação de saldo inicial conta como
           // erro, não sucesso: antes, o resultado deste insert era descartado
           // e `imported++` rodava de qualquer forma, mesmo quando a
           // movimentação falhava e o saldo nunca era estabelecido.
-          if (item.initialQty > 0 && newProduct) {
+          if (item.initialQty > 0) {
             const { error: movementError } = await supabase.from('movements').insert({
               product_id: newProduct.id,
               type: 'IN',
@@ -736,7 +774,9 @@ export default function ProductsPage() {
         }
       }
 
-      toast.success(`Importados: ${imported} | Erros: ${errors}`);
+      toast.success(
+        `Importados: ${imported} | Já cadastrados, sem alterar saldo nem custo: ${skipped} | Erros: ${errors}`
+      );
       setIsImportDialogOpen(false);
       setImportFile(null);
       setValidationResult(null);

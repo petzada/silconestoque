@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchAllRows } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -42,7 +42,7 @@ import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawPdfBrandHeader, PDF_HEAD_STYLES, PDF_BLACK, PDF_WHITE } from '@/lib/pdf';
-import type { PurchaseOrderItem, PurchaseOrderType, Category } from '@/lib/types';
+import type { PurchaseOrderItem, PurchaseOrderType, Category, Product } from '@/lib/types';
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -74,10 +74,17 @@ export default function PurchaseOrdersPage() {
     setOrderType(type);
 
     try {
-      let query = supabase.from('products').select('*, category:categories(*)').eq('is_active', true);
-      if (selectedCategory !== 'all') query = query.eq('category_id', selectedCategory);
-
-      const { data: products } = await query;
+      const { data: products, error } = await fetchAllRows<Product>(() => {
+        let query = supabase
+          .from('products')
+          .select('*, category:categories(*)')
+          .eq('is_active', true)
+          .order('name')
+          .order('id', { ascending: true });
+        if (selectedCategory !== 'all') query = query.eq('category_id', selectedCategory);
+        return query;
+      });
+      if (error) throw error;
       const filtered = products?.filter(p => type === 'emergency' ? p.current_qty === 0 || p.current_qty < p.min_stock : p.current_qty < p.max_stock) || [];
 
       const items: PurchaseOrderItem[] = filtered.map(p => ({
