@@ -25,7 +25,7 @@ function coberturaNumero(value: number | null): number | null {
  * Nesta lista os itens competem entre si, então o décimo importa. */
 function coberturaLabel(value: number | null): string {
   if (value == null) return 'Sem consumo';
-  if (value < 0.05) return '0 dias';
+  if (value < 0.05) return 'no mínimo';
   if (value < 1) return `${DIA.format(value)} dia`;
   return formatCoberturaDias(value);
 }
@@ -74,10 +74,10 @@ export function OperacaoTab({ data }: { data: DashboardOperacao }) {
           note={`${formatInt(emRisco)} de ${formatInt(data.total_ativos)} produtos ativos`}
         />
         <KpiTile
-          label="Cobertura abaixo de 15 dias"
+          label="Ao mínimo em 15 dias"
           value={formatInt(data.cobertura_abaixo_15_dias)}
           tone={data.cobertura_abaixo_15_dias > 0 ? 'warning' : 'neutral'}
-          note="Pelo consumo médio de 90 dias"
+          note="Ainda estáveis, no ritmo de 90 dias"
         />
         <KpiTile
           label="Pedidos em atraso"
@@ -151,13 +151,13 @@ export function OperacaoTab({ data }: { data: DashboardOperacao }) {
         </Panel>
 
         <Panel
-          title="Cobertura em dias"
-          description="Os 10 que acabam antes, pelo consumo médio dos últimos 90 dias. A barra compara só estes itens."
+          title="Dias até o mínimo"
+          description="Ainda no mínimo ou acima. Quanto falta para o saldo chegar ao mínimo, no ritmo dos últimos 90 dias."
         >
           {coberturaLista.length === 0 ? (
             <PanelEmpty
-              title="Sem cobertura calculável"
-              hint="Nenhum produto ativo teve saída nos últimos 90 dias, então não há consumo médio para projetar."
+              title="Nenhum estável com saída recente"
+              hint="Quem já está abaixo do mínimo aparece em Itens por urgência. Aqui só entra quem ainda está no mínimo ou acima e teve saída nos últimos 90 dias."
             />
           ) : (
             <ul className="divide-y divide-border">
@@ -178,7 +178,7 @@ export function OperacaoTab({ data }: { data: DashboardOperacao }) {
                         </p>
                         <p className="text-xs text-muted-foreground tabular-nums">
                           {item.sku_code ? `${item.sku_code} · ` : ''}
-                          Saldo {formatInt(item.current_qty)}
+                          Saldo {formatInt(item.current_qty)} · mínimo {formatInt(item.min_stock)}
                         </p>
                       </div>
                       <p className={`shrink-0 text-sm tabular-nums ${coberturaTom(item.dias)}`}>

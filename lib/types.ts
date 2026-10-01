@@ -260,8 +260,10 @@ export type DashboardCoberturaItem = {
   product_name: string;
   sku_code: string | null;
   current_qty: number;
-  // NULL = cobertura infinita (produto sem nenhuma saída nos últimos 90
-  // dias). Nunca aparece em `cobertura_criticos` (que só lista finitas).
+  min_stock: number;
+  // Dias até o saldo chegar ao mínimo, no ritmo dos últimos 90 dias.
+  // NULL = sem saída no período (projeção infinita); não entra na lista.
+  // 0 = já está no mínimo, a próxima saída torna o item crítico.
   cobertura_dias: number | null;
 };
 
@@ -281,7 +283,7 @@ export type DashboardOperacao = {
   cobertura_abaixo_15_dias: number;
   // Top 10: zerados primeiro, depois críticos por déficit relativo desc.
   top_urgencia: DashboardUrgenciaItem[];
-  // Top 15 com cobertura finita, ASC (mais urgente primeiro).
+  // Top 15 estáveis que chegam ao mínimo antes, ASC.
   cobertura_criticos: DashboardCoberturaItem[];
   // NÃO filtrado por categoria (follow_up_purchase_orders não tem FK de produto/categoria).
   pedidos_atraso: DashboardPedidoAtraso[];

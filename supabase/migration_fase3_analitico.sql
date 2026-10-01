@@ -222,12 +222,19 @@ AS $$
       pf.name AS product_name,
       pf.sku_code,
       pf.current_qty,
+      pf.min_stock,
+      -- Dias até o saldo chegar ao mínimo, não até zerar. Só estáveis
+      -- (saldo no mínimo ou acima, e acima de zero): quem já está crítico
+      -- ou zerado fica na lista de urgência. Sem saída em 90 dias não há
+      -- ritmo, então a projeção fica de fora.
       CASE
-        WHEN COALESCE(c.qty_90d, 0) = 0 THEN NULL -- sem consumo => cobertura infinita
-        ELSE pf.current_qty / (c.qty_90d / 90.0)
+        WHEN COALESCE(c.qty_90d, 0) = 0 THEN NULL
+        ELSE (pf.current_qty - pf.min_stock)::numeric / (c.qty_90d / 90.0)
       END AS cobertura_dias
     FROM produtos_filtrados pf
     LEFT JOIN consumo_90d c ON c.product_id = pf.id
+    WHERE pf.current_qty >= pf.min_stock
+      AND pf.current_qty > 0
   ),
   contagens AS (
     SELECT
