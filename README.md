@@ -1,157 +1,136 @@
-# 🏭 Silcon Ambiental - Sistema de Gestão de Estoque
+# Silcon Estoque
 
-Sistema completo de gerenciamento de estoque desenvolvido para a **Silcon Ambiental**, empresa especializada em gestão de resíduos hospitalares.
+![Status](https://img.shields.io/badge/status-em%20desenvolvimento%20ativo-brightgreen) ![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js) ![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?logo=supabase&logoColor=white)
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
-![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?style=flat-square&logo=supabase)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=flat-square&logo=tailwindcss)
+Sistema web de **controle de estoque do almoxarifado** da Silcon Ambiental (gestão de resíduos hospitalares): substitui planilhas por um painel com saldos, custos, alertas de reposição e pedidos de compra.
 
----
+🔗 **Em produção:** [silconestoque.vercel.app](https://silconestoque.vercel.app)
 
-## 📋 Funcionalidades
+## Índice
 
-### Dashboard
-- **KPIs em tempo real**: Entradas (R$), Saídas (R$), Itens Críticos, Estoque Zerado
-- **Filtros dinâmicos**: Por mês, ano e setor
-- **Gráfico de Gastos por Setor**: Visualização de consumo financeiro por departamento
-- **Consumo por Produto**: Top 8 produtos mais consumidos (por setor)
-- **Alertas de Inflação**: Notificação automática quando preço sobe ≥15%
-- **Fila de Reposição**: Produtos abaixo do estoque mínimo
+- [Status do projeto](#status-do-projeto)
+- [Demonstração](#demonstração)
+- [Tecnologias utilizadas](#tecnologias-utilizadas)
+- [Pré-requisitos e instalação](#pré-requisitos-e-instalação)
+- [Como utilizar](#como-utilizar)
+- [Segurança](#segurança)
+- [Testes](#testes)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
+- [Autor e contato](#autor-e-contato)
 
-### Catálogo de Produtos
-- Cadastro completo com SKU, unidade de medida, setor alocado
-- Controle de estoque mínimo e máximo
-- Status visual: ESTÁVEL, CRÍTICO, ZERADO
-- **Importação em massa via CSV**
-- **Histórico de preços por produto**
-- Exclusão com deleção em cascata
+## Status do projeto
 
-### Movimentações
-- Registro de entradas (compras) e saídas (consumo)
-- Vinculação com número de Nota Fiscal
-- Atualização automática de estoque via triggers SQL
-- Rastreamento de preço pago vs custo cadastrado
-- Exclusão individual com reversão de estoque
+🟢 **Em desenvolvimento ativo**: em uso pela empresa, com melhorias e correções contínuas.
 
-### Setores
-- Cadastro de departamentos/setores da empresa
-- Vinculação automática com produtos
+## Demonstração
 
-### Pedidos de Compra
-- Geração automática de pedidos emergenciais (estoque zerado)
-- Geração de reposição mensal (até estoque máximo)
-- Filtro por setor
-- **Exportação em PDF**
+**Painel (dashboard)**
+- KPIs de entradas e saídas em R$, itens críticos e estoque zerado, com filtros por mês, ano e setor.
+- Gráfico de gastos por setor e ranking dos produtos mais consumidos.
+- **Alerta de inflação** quando o preço de um item sobe 15% ou mais e projeção de dias até atingir o estoque mínimo.
+- Fila de reposição com os produtos abaixo do mínimo.
 
----
+**Catálogo de produtos**
+- Cadastro com SKU, unidade, categoria, setor, estoque mínimo e máximo.
+- Status visual **ESTÁVEL**, **CRÍTICO** e **ZERADO**, importação em massa por CSV e histórico de preços.
 
-## 🛠️ Tecnologias Utilizadas
+**Movimentações**
+- Entradas (compras com nota fiscal) e saídas (consumo por solicitante), com saldo atualizado por *triggers* SQL e custo congelado no momento da saída.
+
+**Outros módulos**
+- **Pedidos de compra** emergenciais e de reposição mensal, com exportação em **PDF**.
+- **Colaboradores** (importação por CSV), **armários** e **quiz de segurança** do trabalho.
+- Setores e categorias.
+
+## Tecnologias utilizadas
 
 | Tecnologia | Uso |
-|------------|-----|
-| **Next.js 16** | Framework React com App Router |
-| **TypeScript** | Tipagem estática |
-| **Tailwind CSS** | Estilização utility-first |
-| **Shadcn/UI** | Componentes de interface |
-| **Supabase** | Backend (PostgreSQL + Auth) |
-| **Recharts** | Gráficos e visualizações |
-| **Lucide React** | Ícones |
-| **jsPDF** | Geração de PDFs |
-| **Sonner** | Notificações toast |
-| **date-fns** | Formatação de datas |
+|---|---|
+| **Next.js 16** + **React 19** + **TypeScript** | Aplicação web (App Router) |
+| **Tailwind CSS** + **shadcn/ui** (Radix) | Interface |
+| **Supabase** (Postgres + Auth + RLS) | Banco, autenticação e regras de acesso |
+| **Recharts** | Gráficos |
+| **jsPDF** + jspdf-autotable | Geração de PDFs |
+| **React Hook Form** + **Zod** | Formulários e validação |
+| **Vercel** | Hospedagem |
 
----
+## Pré-requisitos e instalação
 
-## 🚀 Como Executar
+**Pré-requisitos**
 
-### Pré-requisitos
-- Node.js 18+
-- Conta no Supabase
+- **Node.js 18** ou superior e npm
+- Um projeto no [Supabase](https://supabase.com)
 
-### 1. Clone o repositório
+**Instalação**
+
 ```bash
 git clone https://github.com/petzada/silconestoque.git
 cd silconestoque
-```
-
-### 2. Instale as dependências
-```bash
 npm install
 ```
 
-### 3. Configure as variáveis de ambiente
-Crie um arquivo `.env.local` na raiz do projeto:
+Crie o arquivo `.env.local` na raiz:
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key_aqui
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key
 ```
 
-### 4. Configure o banco de dados
-Execute o schema SQL no Supabase SQL Editor (arquivo disponível na documentação do projeto).
+No **SQL Editor** do Supabase, rode `supabase/schema.sql` e depois as migrations da pasta `supabase/` na ordem descrita em [`supabase/README.md`](supabase/README.md). Crie os usuários em **Authentication → Users** (o acesso é por e-mail e senha).
 
-### 5. Execute em desenvolvimento
+## Como utilizar
+
 ```bash
-npm run dev
+npm run dev       # http://localhost:3000
+npm run build     # build de produção
+npm run start     # serve o build
 ```
 
-Acesse: [http://localhost:3000](http://localhost:3000)
+1. Entre com um usuário criado no Supabase.
+2. Cadastre setores e produtos (ou importe um CSV).
+3. Registre entradas e saídas e acompanhe o painel.
+4. Gere o pedido de compra em PDF na tela de pedidos.
 
----
+O passo a passo de uso diário está em [`docs/como-eu-uso-o-sistema.md`](docs/como-eu-uso-o-sistema.md). Na Vercel, basta importar o repositório e configurar as duas variáveis de ambiente.
 
-## 📦 Deploy
+## Segurança
 
-### Vercel (Recomendado)
-1. Importe o repositório na [Vercel](https://vercel.com)
-2. Configure as variáveis de ambiente
-3. Deploy automático a cada push
+- Autenticação individual pelo Supabase Auth; usuários criados só pelo painel.
+- **Row Level Security** com políticas `TO authenticated`: a chave anônima sozinha não lê nenhum dado.
+- `proxy.ts` (Next.js 16 + `@supabase/ssr`) renova a sessão e protege as rotas no servidor.
 
----
+## Testes
 
-## 🔐 Segurança
+O projeto ainda **não tem testes automatizados**. A verificação disponível é o lint:
 
-- Autenticação individual via Supabase Auth (e-mail + senha; usuários criados no painel)
-- Row Level Security: políticas `TO authenticated` — a anon key sozinha não acessa dados
-- Proxy Next.js 16 (`proxy.ts` + `@supabase/ssr`) renova a sessão e protege rotas no servidor
-- Variáveis de ambiente para URL e anon key; `.gitignore` protege `.env*`
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-silconestoque/
-├── app/
-│   ├── (dashboard)/
-│   │   ├── dashboard/     # Página principal
-│   │   ├── products/      # Catálogo de produtos
-│   │   ├── movements/     # Movimentações
-│   │   ├── sectors/       # Setores
-│   │   └── purchase-orders/ # Pedidos de compra
-│   ├── login/             # Autenticação
-│   └── layout.tsx         # Layout raiz
-├── components/
-│   ├── ui/                # Componentes Shadcn
-│   ├── sidebar.tsx        # Navegação lateral
-│   └── auth-provider.tsx  # Contexto de autenticação
-├── lib/
-│   ├── supabase.ts        # Cliente Supabase
-│   ├── types.ts           # Tipos TypeScript
-│   └── utils.ts           # Utilitários
-└── public/
-    └── logo.png           # Logo da empresa
+```bash
+npm run lint
 ```
 
----
+As regras de integridade de saldo ficam no banco (triggers e constraints) e há um script de diagnóstico em `supabase/diagnostico_movimentacoes.sql`.
 
-## 👨‍💻 Desenvolvido por
+## Contribuição
 
-Projeto desenvolvido com assistência de IA (Claude/Gemini) para **Silcon Ambiental**.
+Contribuições são bem-vindas! Para propor uma melhoria:
 
----
+1. Abra uma **issue** descrevendo o problema ou a ideia antes de começar algo grande.
+2. Faça um **fork** e crie um branch a partir da `main`: `<tipo>/<nome-kebab>` (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`).
+3. Use **commits semânticos** em português: `<tipo>(<escopo>): <descrição no imperativo>`.
+4. Rode lint e testes antes de enviar (veja [Testes](#testes)).
+5. Abra o **Pull Request** em *draft*, explicando o quê e o porquê. O merge é feito pelo autor.
 
-## 📄 Licença
+Não inclua segredos (`.env`, chaves de API, tokens) em commits ou PRs.
 
-Este projeto é privado e de uso exclusivo da Silcon Ambiental.
+## Licença
 
-_Última atualização de deploy: 03/02/2026 - 11:57_
+Distribuído sob a licença **MIT**, de código aberto. Isso significa que você **pode** usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e até vender cópias do código, inclusive em projetos comerciais, **desde que** mantenha o aviso de copyright e o texto da licença. O software é fornecido "no estado em que se encontra", **sem garantias**, e o autor não se responsabiliza por danos decorrentes do uso.
+
+Texto completo em [`LICENSE`](LICENSE).
+
+## Autor e contato
+
+**Marcio Petigrosso** ("petzada"): idealização e desenvolvimento.
+
+- GitHub: [@petzada](https://github.com/petzada)
+- LinkedIn: [in/petigrosso](https://www.linkedin.com/in/petigrosso)
